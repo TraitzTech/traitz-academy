@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import AdminLayout from '@/layouts/AdminLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth'
 import { disable, enable } from '@/routes/two-factor'
 import { send } from '@/routes/verification'
@@ -28,7 +28,7 @@ interface Props {
 const props = defineProps<Props>()
 
 defineOptions({
-  layout: AdminLayout
+  layout: AppLayout
 })
 
 const page = usePage()

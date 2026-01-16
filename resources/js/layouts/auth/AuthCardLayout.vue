@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import {
     Card,
     CardContent,
@@ -15,6 +15,11 @@ defineProps<{
     title?: string;
     description?: string;
 }>();
+
+const page = usePage();
+const siteSettings = computed(() => page.props.siteSettings as Record<string, string> | undefined);
+const logoUrl = computed(() => siteSettings.value?.logo_url || '/images/Tratz Academy-Horizontal Profile.svg');
+const siteName = computed(() => siteSettings.value?.site_title || 'Traitz Academy');
 </script>
 
 <template>
@@ -26,9 +31,11 @@ defineProps<{
                 :href="home()"
                 class="flex items-center gap-2 self-center font-medium"
             >
-                <div class="flex h-9 w-9 items-center justify-center">
-                    <AppLogoIcon
-                        class="size-9 fill-current text-black dark:text-white"
+                <div class="flex h-12 w-auto items-center justify-center">
+                    <img 
+                        :src="logoUrl" 
+                        :alt="siteName" 
+                        class="h-12 w-auto object-contain"
                     />
                 </div>
             </Link>

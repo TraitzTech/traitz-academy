@@ -1,6 +1,19 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { 
+    BookOpen, 
+    Calendar,
+    ClipboardList,
+    Folder, 
+    LayoutGrid,
+    Mail,
+    Settings,
+    Users,
+    GraduationCap,
+    FileText,
+    Home
+} from 'lucide-vue-next';
+import { computed } from 'vue';
 
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -14,28 +27,87 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 
 import AppLogo from './AppLogo.vue';
 
-const mainNavItems: NavItem[] = [
+const page = usePage();
+const user = computed(() => page.props.auth?.user);
+const isAdmin = computed(() => user.value?.role === 'admin');
+
+// Admin navigation items
+const adminNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: '/admin/dashboard',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Programs',
+        href: '/admin/programs',
+        icon: GraduationCap,
+    },
+    {
+        title: 'Events',
+        href: '/admin/events',
+        icon: Calendar,
+    },
+    {
+        title: 'Applications',
+        href: '/admin/applications',
+        icon: ClipboardList,
+    },
+    {
+        title: 'Users',
+        href: '/admin/users',
+        icon: Users,
+    },
+    {
+        title: 'Emails',
+        href: '/admin/emails',
+        icon: Mail,
+    },
+    {
+        title: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
     },
 ];
 
-const footerNavItems: NavItem[] = [
+// User navigation items
+const userNavItems: NavItem[] = [
     {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutGrid,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
+        title: 'My Applications',
+        href: '/dashboard#applications',
+        icon: FileText,
+    },
+    {
+        title: 'My Registrations',
+        href: '/dashboard#registrations',
+        icon: Calendar,
+    },
+];
+
+// Main navigation based on role
+const mainNavItems = computed(() => isAdmin.value ? adminNavItems : userNavItems);
+
+// Home link based on role
+const homeLink = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard');
+
+const footerNavItems: NavItem[] = [
+    {
+        title: 'Visit Website',
+        href: '/',
+        icon: Home,
+    },
+    {
+        title: 'Programs',
+        href: '/programs',
         icon: BookOpen,
     },
 ];
@@ -47,7 +119,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="homeLink">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { useToast } from '@/composables/useToast'
 
 interface Setting {
@@ -25,7 +25,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineOptions({ layout: AdminLayout })
+defineOptions({ layout: AppLayout })
 
 const toast = useToast()
 const activeTab = ref('branding')

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { useToast } from '@/composables/useToast'
 
 interface Program {
@@ -32,7 +32,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineOptions({ layout: AdminLayout })
+defineOptions({ layout: AppLayout })
 
 const toast = useToast()
 

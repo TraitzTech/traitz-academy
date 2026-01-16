@@ -2,7 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import { debounce } from 'lodash-es'
-import AdminLayout from '@/layouts/AdminLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { useToast } from '@/composables/useToast'
 
 interface User {
@@ -28,7 +28,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineOptions({ layout: AdminLayout })
+defineOptions({ layout: AppLayout })
 
 const toast = useToast()
 
