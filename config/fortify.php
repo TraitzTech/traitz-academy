@@ -147,7 +147,7 @@ return [
         Features::registration(),
         Features::resetPasswords(),
         Features::updateProfileInformation(),
-        Features::updatePasswords(),
+        // Features::updatePasswords(), // Disabled - using custom password settings at /settings/password
         Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
