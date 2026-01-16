@@ -30,20 +30,20 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
         ]);
 
-        // Create programs
-        $programs = Program::factory(15)->create();
+        // // Create programs
+        // $programs = Program::factory(15)->create();
 
-        // Create events
-        $events = Event::factory(8)->create();
+        // // Create events
+        // $events = Event::factory(8)->create();
 
-        // Create applications for each program
-        foreach ($programs as $program) {
-            Application::factory(fake()->numberBetween(5, 20))->for($program)->create();
-        }
+        // // Create applications for each program
+        // foreach ($programs as $program) {
+        //     Application::factory(fake()->numberBetween(5, 20))->for($program)->create();
+        // }
 
-        // Create event registrations for each event
-        foreach ($events as $event) {
-            EventRegistration::factory(fake()->numberBetween(10, 50))->for($event)->create();
-        }
+        // // Create event registrations for each event
+        // foreach ($events as $event) {
+        //     EventRegistration::factory(fake()->numberBetween(10, 50))->for($event)->create();
+        // }
     }
 }

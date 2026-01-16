@@ -406,11 +406,12 @@ const getStatusColor = (status: string) => {
     </div>
 
     <!-- Reject Modal -->
-    <div v-if="showRejectModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-black bg-opacity-50" @click="showRejectModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Reject Application</h3>
+    <Teleport to="body">
+      <div v-if="showRejectModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showRejectModal = false"></div>
+          <div class="relative inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Reject Application</h3>
           <p class="text-sm text-gray-600 mb-4">
             Are you sure you want to reject the application from 
             <strong>{{ rejectingApp?.first_name }} {{ rejectingApp?.last_name }}</strong>?
@@ -438,16 +439,18 @@ const getStatusColor = (status: string) => {
               Reject Application
             </button>
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Delete Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-black bg-opacity-50" @click="showDeleteModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Application</h3>
+    <Teleport to="body">
+      <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showDeleteModal = false"></div>
+          <div class="relative inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Application</h3>
           <p class="text-sm text-gray-600 mb-4">
             Are you sure you want to delete the application from
             <strong>{{ deletingApp?.first_name }} {{ deletingApp?.last_name }}</strong>? This action cannot be undone.
@@ -466,16 +469,18 @@ const getStatusColor = (status: string) => {
               Delete
             </button>
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Bulk Delete Modal -->
-    <div v-if="showBulkDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-black bg-opacity-50" @click="showBulkDeleteModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Selected Applications</h3>
+    <Teleport to="body">
+      <div v-if="showBulkDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showBulkDeleteModal = false"></div>
+          <div class="relative inline-block align-middle bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Delete Selected Applications</h3>
           <p class="text-sm text-gray-600 mb-4">
             Are you sure you want to delete <strong>{{ selectedIds.length }}</strong> selected application(s)? This action cannot be undone.
           </p>
@@ -493,8 +498,9 @@ const getStatusColor = (status: string) => {
               Delete Selected
             </button>
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
