@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface Program {
@@ -35,12 +36,31 @@ interface Props {
   userApplication?: Application | null;
 }
 
-defineProps<Props>();
+interface PageProps {
+  siteSettings: {
+    contact_whatsapp?: string | null;
+  };
+}
+
+const props = defineProps<Props>();
+const page = usePage<PageProps>();
 
 const formatCategory = (cat: string) => cat.replace('-', ' ').toUpperCase();
 const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 const isAcademic = (cat: string) => cat === 'academic-internship';
 const isProfessional = (cat: string) => cat === 'professional-internship';
+
+const contactWhatsApp = computed(() => page.props.siteSettings?.contact_whatsapp ?? null);
+const whatsAppLink = computed(() => {
+  if (!contactWhatsApp.value) {
+    return null;
+  }
+  const digits = contactWhatsApp.value.replace(/[^0-9]/g, '');
+  if (!digits) {
+    return contactWhatsApp.value;
+  }
+  return `https://wa.me/${digits}`;
+});
 </script>
 
 <template>
@@ -238,7 +258,8 @@ const isProfessional = (cat: string) => cat === 'professional-internship';
             Apply Now
           </Link>
           <a
-            href="https://wa.me/234xxxxxxxxxx"
+            v-if="whatsAppLink"
+            :href="whatsAppLink"
             target="_blank"
             class="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-white rounded-lg font-bold text-lg hover:bg-white hover:text-[#000928] transition-all duration-200"
           >
