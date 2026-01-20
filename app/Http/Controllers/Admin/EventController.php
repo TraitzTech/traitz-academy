@@ -108,14 +108,14 @@ class EventController extends Controller
     public function update(Request $request, Event $event): RedirectResponse
     {
         $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
-            'event_date' => 'sometimes|required|date',
-            'location' => 'sometimes|required|string|max:255',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'event_date' => 'required|date',
+            'location' => 'required|string|max:255',
             'is_online' => 'boolean',
             'event_url' => 'nullable|url|required_if:is_online,true',
-            'capacity' => 'sometimes|required|integer|min:1',
-            'category' => 'sometimes|required|string|in:webinar,workshop,networking,info-session,hackathon',
+            'capacity' => 'required|integer|min:1',
+            'category' => 'required|string|in:webinar,workshop,networking,info-session,hackathon',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'is_active' => 'boolean',
             'agenda' => 'nullable|string',
