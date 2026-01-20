@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, onMounted, computed } from 'vue';
+import { computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface SuccessStory {
@@ -30,22 +30,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Typing effect
-const displayText = ref('');
-const typingSpeed = 100;
-
-onMounted(() => {
-  let index = 0;
-  const fullText = props.siteSettings.hero_title || 'World-Class Tech Education';
-  const typeNextCharacter = () => {
-    if (index < fullText.length) {
-      displayText.value += fullText.charAt(index);
-      index++;
-      setTimeout(typeNextCharacter, typingSpeed);
-    }
-  };
-  typeNextCharacter();
-});
+// Hero title
+const heroTitle = computed(() => props.siteSettings.hero_title || 'World-Class Tech Education');
 
 // Convert YouTube URL to embed URL
 const youtubeEmbedUrl = computed(() => {
@@ -95,14 +81,14 @@ const getImageUrl = (imageUrl: string | null) => {
       </div>
 
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div class="animate-fade-in">
+        <div class="animate-fade-in relative z-10">
           <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            <span class="typing-text">{{ displayText }}<span class="typing-cursor"></span></span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#42b6c5]">{{ heroTitle }}</span>
           </h1>
           <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
             {{ siteSettings.hero_subtitle || 'Bridging the gap between academic learning and real-world industry needs. Join 300+ professionals transformed through structured learning and mentorship.' }}
           </p>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <div class="flex flex-col sm:flex-row gap-4 justify-center relative z-20">
             <Link
               href="/programs"
               class="inline-flex items-center justify-center px-8 py-3 bg-[#42b6c5] text-[#000928] rounded-lg font-bold text-lg hover:bg-white transition-all duration-200 transform hover:scale-105"
@@ -122,8 +108,8 @@ const getImageUrl = (imageUrl: string | null) => {
         </div>
 
         <!-- Floating accent shapes -->
-        <div class="absolute top-20 right-0 w-96 h-96 bg-[#42b6c5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div class="absolute -bottom-32 left-0 w-96 h-96 bg-[#381998] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div class="absolute top-20 right-0 w-96 h-96 bg-[#42b6c5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse pointer-events-none"></div>
+        <div class="absolute -bottom-32 left-0 w-96 h-96 bg-[#381998] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse pointer-events-none"></div>
       </div>
     </section>
 
@@ -155,29 +141,18 @@ const getImageUrl = (imageUrl: string | null) => {
           <p class="text-gray-600 text-lg max-w-2xl mx-auto">Discover what makes Traitz Academy the leading tech education platform</p>
         </div>
 
-        <div class="relative overflow-hidden rounded-2xl shadow-2xl group">
+        <div class="relative overflow-hidden rounded-2xl shadow-2xl">
           <!-- Video container with aspect ratio -->
           <div class="relative w-full bg-black" style="padding-bottom: 56.25%">
             <iframe
-              class="absolute inset-0 w-full h-full transition-opacity duration-300 group-hover:opacity-95"
+              class="absolute inset-0 w-full h-full"
               :src="youtubeEmbedUrl"
               title="Traitz Academy Overview"
               frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
               allowfullscreen
             ></iframe>
-
-            <!-- Overlay gradient -->
-            <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          </div>
-
-          <!-- Play button hint -->
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div class="w-20 h-20 bg-[#42b6c5] rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-              <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </div>
           </div>
         </div>
 
@@ -318,6 +293,99 @@ const getImageUrl = (imageUrl: string | null) => {
       </div>
     </section>
 
+    <!-- How to Apply Section -->
+    <section class="py-20 bg-gradient-to-br from-[#000928] via-[#1a0a52] to-[#381998] text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+          <h2 class="text-4xl md:text-5xl font-bold mb-4">How to Apply</h2>
+          <p class="text-gray-300 text-lg max-w-2xl mx-auto">Getting started is easy! Follow these simple steps to begin your learning journey</p>
+        </div>
+
+        <div class="relative">
+          <!-- Connection Line (Desktop) -->
+          <div class="hidden lg:block absolute top-24 left-1/2 transform -translate-x-1/2 w-3/4 h-1 bg-gradient-to-r from-[#42b6c5]/30 via-[#42b6c5] to-[#42b6c5]/30 rounded-full"></div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <!-- Step 1 -->
+            <div class="relative text-center group">
+              <div class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#42b6c5] to-[#35919e] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#42b6c5]/30 group-hover:scale-110 transition-transform duration-300">
+                <span class="text-3xl font-bold text-white">1</span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors">
+                <div class="w-12 h-12 bg-[#42b6c5]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-6 h-6 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Browse Programs</h3>
+                <p class="text-gray-300 text-sm">Explore our range of training programs and internships to find the perfect fit for your career goals.</p>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative text-center group">
+              <div class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#42b6c5] to-[#35919e] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#42b6c5]/30 group-hover:scale-110 transition-transform duration-300">
+                <span class="text-3xl font-bold text-white">2</span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors">
+                <div class="w-12 h-12 bg-[#42b6c5]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-6 h-6 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Create Account</h3>
+                <p class="text-gray-300 text-sm">Sign up for a free account to access the application portal and track your progress.</p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative text-center group">
+              <div class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#42b6c5] to-[#35919e] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#42b6c5]/30 group-hover:scale-110 transition-transform duration-300">
+                <span class="text-3xl font-bold text-white">3</span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors">
+                <div class="w-12 h-12 bg-[#42b6c5]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-6 h-6 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Submit Application</h3>
+                <p class="text-gray-300 text-sm">Fill out the application form with your details and submit it for review by our team.</p>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="relative text-center group">
+              <div class="relative z-10 w-20 h-20 bg-gradient-to-br from-[#42b6c5] to-[#35919e] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#42b6c5]/30 group-hover:scale-110 transition-transform duration-300">
+                <span class="text-3xl font-bold text-white">4</span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 hover:bg-white/15 transition-colors">
+                <div class="w-12 h-12 bg-[#42b6c5]/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-6 h-6 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Start Learning</h3>
+                <p class="text-gray-300 text-sm">Once accepted, begin your journey with access to world-class training and mentorship.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mt-12">
+          <Link
+            href="/programs"
+            class="inline-flex items-center px-8 py-4 bg-[#42b6c5] text-[#000928] rounded-lg font-bold text-lg hover:bg-white transition-all duration-200 transform hover:scale-105 shadow-lg shadow-[#42b6c5]/30"
+          >
+            Get Started Today
+            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+      </div>
+    </section>
+
     <!-- Testimonials -->
     <section v-if="successStories.length > 0" class="py-20 bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -358,6 +426,19 @@ const getImageUrl = (imageUrl: string | null) => {
             </div>
             <p class="text-gray-600 italic">"{{ story.story }}"</p>
           </div>
+        </div>
+
+        <!-- View More Link -->
+        <div class="text-center mt-12">
+          <Link 
+            href="/success-stories" 
+            class="inline-flex items-center px-8 py-4 bg-white border-2 border-[#42b6c5] text-[#42b6c5] rounded-xl font-semibold text-lg hover:bg-[#42b6c5] hover:text-white shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            View All Success Stories
+            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
         </div>
       </div>
     </section>
@@ -450,24 +531,5 @@ const getImageUrl = (imageUrl: string | null) => {
 
 .animate-fade-in {
   animation: fade-in 0.8s ease-out;
-}
-
-/* Typing effect styles */
-@keyframes typing-cursor {
-  0%, 49% {
-    border-right-color: rgba(255, 255, 255, 0.8);
-  }
-  50%, 100% {
-    border-right-color: transparent;
-  }
-}
-
-.typing-text {
-  display: inline-block;
-  border-right: 3px solid rgba(255, 255, 255, 0.8);
-}
-
-.typing-cursor {
-  animation: typing-cursor 1s infinite;
 }
 </style>

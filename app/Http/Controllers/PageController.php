@@ -36,13 +36,24 @@ class PageController extends Controller
 
         $successStories = SuccessStory::active()
             ->ordered()
-            ->limit(6)
+            ->limit(3)
             ->get();
 
         return Inertia::render('Home', [
             'stats' => $stats,
             'featuredPrograms' => $featuredPrograms,
             'upcomingEvents' => $upcomingEvents,
+            'successStories' => $successStories,
+        ]);
+    }
+
+    public function successStories(): \Inertia\Response
+    {
+        $successStories = SuccessStory::active()
+            ->ordered()
+            ->get();
+
+        return Inertia::render('SuccessStories/Index', [
             'successStories' => $successStories,
         ]);
     }
