@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
+use App\Notifications\ApplicationAcceptanceNotification;
 use App\Notifications\BatchEmailNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,14 +69,9 @@ class ApplicationController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        // Notify the applicant
+        // Notify the applicant with acceptance notification (includes WhatsApp community link)
         if ($application->user) {
-            $application->user->notify(new BatchEmailNotification(
-                subject: "Congratulations! Your Application Has Been Accepted",
-                message: "We are delighted to inform you that your application for {$application->program->title} has been accepted. Welcome to Traitz Academy!",
-                actionText: 'View Your Dashboard',
-                actionUrl: url('/dashboard')
-            ));
+            $application->user->notify(new ApplicationAcceptanceNotification($application));
         }
 
         return back()->with('success', 'Application accepted successfully.');
@@ -96,7 +92,7 @@ class ApplicationController extends Controller
         // Notify the applicant
         if ($application->user) {
             $application->user->notify(new BatchEmailNotification(
-                subject: "Update on Your Application",
+                subject: 'Update on Your Application',
                 message: "Thank you for your interest in {$application->program->title}. After careful review, we regret to inform you that we are unable to proceed with your application at this time. Please feel free to apply for other programs that match your profile.",
                 actionText: 'Explore Programs',
                 actionUrl: url('/programs')
@@ -119,6 +115,9 @@ class ApplicationController extends Controller
         foreach ($applications as $application) {
             if ($validated['action'] === 'accept') {
                 $application->update(['status' => 'accepted', 'reviewed_at' => now()]);
+                if ($application->user) {
+                    $application->user->notify(new ApplicationAcceptanceNotification($application));
+                }
             } elseif ($validated['action'] === 'reject') {
                 $application->update(['status' => 'rejected', 'reviewed_at' => now()]);
             } elseif ($validated['action'] === 'delete') {

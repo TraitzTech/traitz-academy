@@ -66,9 +66,8 @@ const handleImageChange = (e: Event) => {
 }
 
 const submit = () => {
-  form.post(`/admin/events/${props.event.id}`, {
+  form.put(`/admin/events/${props.event.id}`, {
     forceFormData: true,
-    _method: 'PUT',
     onSuccess: () => {
       toast.success('Event updated successfully!')
     },

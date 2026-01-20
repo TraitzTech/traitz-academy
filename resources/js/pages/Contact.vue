@@ -17,7 +17,7 @@ const form = useForm({
 const settings = computed(() => page.props.siteSettings);
 
 const submitForm = () => {
-  form.post(route('contact.submit'), {
+  form.post('/contact', {
     onSuccess: () => {
       form.reset();
       toast.success('Message sent successfully! We\'ll get back to you soon.');

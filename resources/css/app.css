@@ -170,3 +170,14 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Inertia progress bar - make it thicker */
+#nprogress .bar {
+    height: 4px !important;
+    background: linear-gradient(90deg, #42b6c5 0%, #35919e 50%, #42b6c5 100%) !important;
+    box-shadow: 0 0 10px #42b6c5, 0 0 5px #42b6c5 !important;
+}
+
+#nprogress .peg {
+    box-shadow: 0 0 10px #42b6c5, 0 0 5px #42b6c5 !important;
+}

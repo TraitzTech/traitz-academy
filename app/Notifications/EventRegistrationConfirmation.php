@@ -29,11 +29,11 @@ class EventRegistrationConfirmation extends Notification
             ->line("Thank you for registering for **{$this->registration->event->title}**.")
             ->line('We have received your registration and saved your spot.')
             ->line('Event Details:')
-            ->line("- Date: " . optional($this->registration->event->event_date)->format('F j, Y g:i A'))
+            ->line('- Date: '.optional($this->registration->event->event_date)->format('F j, Y g:i A'))
             ->when($this->registration->event->is_online && $this->registration->event->event_url, function (MailMessage $message) {
                 return $message->line("- Online Link: {$this->registration->event->event_url}");
             })
-            ->when(!$this->registration->event->is_online && $this->registration->event->location, function (MailMessage $message) {
+            ->when(! $this->registration->event->is_online && $this->registration->event->location, function (MailMessage $message) {
                 return $message->line("- Location: {$this->registration->event->location}");
             })
             ->action('View Event', route('events.show', $this->registration->event->slug))

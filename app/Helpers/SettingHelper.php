@@ -102,4 +102,12 @@ class SettingHelper
     {
         return self::get('hero_subtitle', 'Bridging the gap between academic learning and real-world industry needs.');
     }
+
+    /**
+     * Get WhatsApp community link for joining.
+     */
+    public static function whatsAppCommunityLink(): ?string
+    {
+        return self::get('social_whatsapp_community');
+    }
 }

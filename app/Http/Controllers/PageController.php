@@ -7,7 +7,7 @@ use App\Http\Requests\ContactFormRequest;
 use App\Models\Application;
 use App\Models\Event;
 use App\Models\Program;
-use App\Models\User;
+use App\Notifications\ContactFormConfirmation;
 use App\Notifications\ContactFormSubmission;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Inertia\Inertia;
@@ -57,12 +57,21 @@ class PageController extends Controller
         // Get recipient email from database or environment variable
         $recipientEmail = SettingHelper::contactEmail() ?? config('mail.from.address');
 
-        // Send notification to the configured email
-        $notifiable = new AnonymousNotifiable;
-        $notifiable->route('mail', $recipientEmail)
+        // Send notification to the configured admin email
+        $adminNotifiable = new AnonymousNotifiable;
+        $adminNotifiable->route('mail', $recipientEmail)
             ->notify(new ContactFormSubmission(
                 $validated['name'],
                 $validated['email'],
+                $validated['subject'],
+                $validated['message'],
+            ));
+
+        // Send confirmation email to the sender
+        $senderNotifiable = new AnonymousNotifiable;
+        $senderNotifiable->route('mail', $validated['email'])
+            ->notify(new ContactFormConfirmation(
+                $validated['name'],
                 $validated['subject'],
                 $validated['message'],
             ));
