@@ -25,6 +25,7 @@ interface Props {
     youtube_video_url: string | null;
     hero_title: string;
     hero_subtitle: string;
+    contact_whatsapp: string | null;
   };
 }
 
@@ -505,7 +506,7 @@ const getImageUrl = (imageUrl: string | null) => {
             Start Your Journey
           </Link>
           <a
-            href="https://wa.me/234xxxxxxxxxx"
+            :href="`https://wa.me/${(siteSettings.contact_whatsapp || '').replace(/[^0-9]/g, '')}`"
             target="_blank"
             class="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-white rounded-lg font-bold text-lg hover:bg-white hover:text-[#000928] transition-all duration-200"
           >

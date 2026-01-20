@@ -354,6 +354,7 @@
             <ul class="space-y-2 text-sm text-gray-300">
               <li><Link href="/about" class="hover:text-[#42b6c5] transition-colors">About Us</Link></li>
               <li><Link href="/events" class="hover:text-[#42b6c5] transition-colors">Events</Link></li>
+              <li><Link href="/success-stories" class="hover:text-[#42b6c5] transition-colors">Success Stories</Link></li>
               <li><Link href="/contact" class="hover:text-[#42b6c5] transition-colors">Contact</Link></li>
             </ul>
           </div>
