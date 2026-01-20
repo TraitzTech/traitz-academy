@@ -76,6 +76,22 @@ class UserController extends Controller
         ]);
     }
 
+    public function show(User $user): Response
+    {
+        $user->load(['applications' => function ($query) {
+            $query->with('program:id,title,category')->latest()->limit(10);
+        }]);
+
+        return Inertia::render('Admin/Users/Show', [
+            'user' => $user,
+            'stats' => [
+                'total_applications' => $user->applications()->count(),
+                'accepted_applications' => $user->applications()->where('status', 'accepted')->count(),
+                'pending_applications' => $user->applications()->where('status', 'pending')->count(),
+            ],
+        ]);
+    }
+
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([

@@ -61,6 +61,11 @@ const whatsAppLink = computed(() => {
   }
   return `https://wa.me/${digits}`;
 });
+
+const formatPrice = (price: number) => {
+  if (price === 0) return 'Free'
+  return new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(price)
+}
 </script>
 
 <template>
@@ -158,7 +163,7 @@ const whatsAppLink = computed(() => {
             <div class="bg-gray-50 rounded-lg p-8 sticky top-20">
               <div class="mb-6">
                 <div class="text-4xl font-bold text-[#42b6c5] mb-2">
-                  <span v-if="program.price">XAF {{ program.price.toLocaleString() }}</span>
+                  <span v-if="program.price">{{ formatPrice(program.price) }}</span>
                   <span v-else class="text-[#000928]">Free</span>
                 </div>
                 <p class="text-gray-600">Program fee (if applicable)</p>

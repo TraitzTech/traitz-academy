@@ -61,10 +61,8 @@ const formatDate = (date: string) => {
 }
 
 const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(price)
+  if (price === 0) return 'Free'
+  return new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(price)
 }
 
 const getStatusColor = (status: string) => {
@@ -269,7 +267,7 @@ const deleteApplication = () => {
           <div class="space-y-2">
             <p class="font-medium text-gray-900">{{ application.user.name }}</p>
             <p class="text-sm text-gray-600">{{ application.user.email }}</p>
-            <Link :href="`/admin/users/${application.user.id}`" class="text-[#42b6c5] hover:underline text-sm">
+            <Link :href="`/admin/users/${application.user.id}`" class="text-[#42b6c5] hover:underline text-sm inline-block mt-2">
               View User Profile →
             </Link>
           </div>
