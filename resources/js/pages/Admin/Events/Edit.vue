@@ -66,13 +66,16 @@ const handleImageChange = (e: Event) => {
 }
 
 const submit = () => {
+  console.log('Submitting form with data:', form.data())
   form.put(`/admin/events/${props.event.id}`, {
     forceFormData: true,
     preserveScroll: true,
     onSuccess: () => {
+      console.log('Update successful!')
       toast.success('Event updated successfully!')
     },
-    onError: () => {
+    onError: (errors) => {
+      console.error('Update failed with errors:', errors)
       toast.error('Failed to update event. Please check the form for errors.')
     },
   } as any)
