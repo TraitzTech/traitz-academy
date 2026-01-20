@@ -7,6 +7,7 @@ use App\Http\Requests\ContactFormRequest;
 use App\Models\Application;
 use App\Models\Event;
 use App\Models\Program;
+use App\Models\SuccessStory;
 use App\Notifications\ContactFormConfirmation;
 use App\Notifications\ContactFormSubmission;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -33,10 +34,16 @@ class PageController extends Controller
             ->limit(3)
             ->get();
 
+        $successStories = SuccessStory::active()
+            ->ordered()
+            ->limit(6)
+            ->get();
+
         return Inertia::render('Home', [
             'stats' => $stats,
             'featuredPrograms' => $featuredPrograms,
             'upcomingEvents' => $upcomingEvents,
+            'successStories' => $successStories,
         ]);
     }
 

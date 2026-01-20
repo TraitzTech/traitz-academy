@@ -3,6 +3,15 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
+interface SuccessStory {
+  id: number;
+  name: string;
+  role: string | null;
+  company: string | null;
+  story: string;
+  image_url: string | null;
+}
+
 interface Props {
   stats: {
     students_trained: number;
@@ -11,6 +20,7 @@ interface Props {
   };
   featuredPrograms: any[];
   upcomingEvents: any[];
+  successStories: SuccessStory[];
   siteSettings: {
     youtube_video_url: string | null;
     hero_title: string;
@@ -58,29 +68,12 @@ const youtubeEmbedUrl = computed(() => {
   return null;
 });
 
-const testimonials = [
-  {
-    name: 'Chioma Okoro',
-    role: 'Software Engineer',
-    company: 'Tech Startup Lagos',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
-    quote: 'Traitz Academy transformed my career. The hands-on approach and mentorship made all the difference.'
-  },
-  {
-    name: 'Tunde Adebayo',
-    role: 'Product Designer',
-    company: 'Global Tech Company',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
-    quote: 'The real-world projects and exposure to industry standards were invaluable.'
-  },
-  {
-    name: 'Zainab Mohammed',
-    role: 'Data Analyst',
-    company: 'Finance Company',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop',
-    quote: 'I went from zero to confident professional. The academy\'s structure is world-class.'
-  }
-];
+// Get image URL helper
+const getImageUrl = (imageUrl: string | null) => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  return `/storage/${imageUrl}`;
+};
 </script>
 
 <template>
@@ -326,7 +319,7 @@ const testimonials = [
     </section>
 
     <!-- Testimonials -->
-    <section class="py-20 bg-gray-50">
+    <section v-if="successStories.length > 0" class="py-20 bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <h2 class="text-4xl md:text-5xl font-bold text-[#000928] mb-4">Student Success Stories</h2>
@@ -335,15 +328,27 @@ const testimonials = [
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div
-            v-for="(testimonial, index) in testimonials"
-            :key="index"
+            v-for="story in successStories"
+            :key="story.id"
             class="bg-white rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <div class="flex items-center mb-4">
-              <img :src="testimonial.image" :alt="testimonial.name" class="w-14 h-14 rounded-full object-cover mr-4" />
+              <img 
+                v-if="story.image_url" 
+                :src="getImageUrl(story.image_url)" 
+                :alt="story.name" 
+                class="w-14 h-14 rounded-full object-cover mr-4" 
+              />
+              <div v-else class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center mr-4">
+                <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
               <div>
-                <p class="font-bold text-[#000928]">{{ testimonial.name }}</p>
-                <p class="text-sm text-gray-600">{{ testimonial.role }} @ {{ testimonial.company }}</p>
+                <p class="font-bold text-[#000928]">{{ story.name }}</p>
+                <p v-if="story.role || story.company" class="text-sm text-gray-600">
+                  {{ story.role }}<span v-if="story.role && story.company"> @ </span>{{ story.company }}
+                </p>
               </div>
             </div>
             <div class="flex text-[#42b6c5] mb-3">
@@ -351,7 +356,7 @@ const testimonials = [
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
-            <p class="text-gray-600 italic">{{ testimonial.quote }}</p>
+            <p class="text-gray-600 italic">"{{ story.story }}"</p>
           </div>
         </div>
       </div>

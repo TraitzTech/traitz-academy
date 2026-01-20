@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SuccessStoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\DashboardController;
@@ -83,6 +84,11 @@ Route::prefix('admin')
         Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
         Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
         Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
+
+        // Success Stories CRUD
+        Route::resource('success-stories', SuccessStoryController::class)->except(['show']);
+        Route::post('/success-stories/{success_story}/toggle-status', [SuccessStoryController::class, 'toggleStatus'])->name('success-stories.toggle-status');
+        Route::post('/success-stories/bulk-destroy', [SuccessStoryController::class, 'bulkDestroy'])->name('success-stories.bulk-destroy');
 
         // Account Settings
         Route::get('/account', AccountController::class)->name('account');

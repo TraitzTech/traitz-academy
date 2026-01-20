@@ -11,7 +11,8 @@ import {
     Users,
     GraduationCap,
     FileText,
-    Home
+    Home,
+    Star,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -61,6 +62,11 @@ const adminNavItems: NavItem[] = [
         title: 'Users',
         href: '/admin/users',
         icon: Users,
+    },
+    {
+        title: 'Success Stories',
+        href: '/admin/success-stories',
+        icon: Star,
     },
     {
         title: 'Emails',
