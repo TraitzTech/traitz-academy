@@ -75,6 +75,7 @@ const handleImageChange = (e: Event) => {
 const submit = () => {
   form.put(`/admin/programs/${props.program.id}`, {
     forceFormData: true,
+    preserveScroll: true,
     onSuccess: () => {
       toast.success('Program updated successfully!')
     },
