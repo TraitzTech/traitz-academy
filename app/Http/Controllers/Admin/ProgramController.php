@@ -132,7 +132,9 @@ class ProgramController extends Controller
             'curriculum' => 'nullable|string',
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        if (isset($validated['title'])) {
+            $validated['slug'] = Str::slug($validated['title']);
+        }
 
         if ($request->hasFile('image')) {
             // Delete old image if exists
