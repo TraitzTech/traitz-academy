@@ -139,8 +139,8 @@ const getImageUrl = (value: string | null) => {
     <!-- Header -->
     <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h2 class="text-3xl font-bold text-gray-900">Site Settings</h2>
-        <p class="text-gray-600 mt-2">Manage your site branding, content, and configuration</p>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Site Settings</h2>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">Manage your site branding, content, and configuration</p>
       </div>
       <button
         @click="saveSettings"
@@ -156,8 +156,8 @@ const getImageUrl = (value: string | null) => {
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white rounded-lg shadow">
-      <div class="border-b border-gray-200">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="flex -mb-px overflow-x-auto">
           <button
             v-for="tab in tabs"
@@ -167,13 +167,13 @@ const getImageUrl = (value: string | null) => {
               'group inline-flex items-center px-6 py-4 border-b-2 font-medium text-sm whitespace-nowrap',
               activeTab === tab.key
                 ? 'border-[#42b6c5] text-[#42b6c5]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
             ]"
           >
             <svg
               :class="[
                 'mr-2 h-5 w-5',
-                activeTab === tab.key ? 'text-[#42b6c5]' : 'text-gray-400 group-hover:text-gray-500'
+                activeTab === tab.key ? 'text-[#42b6c5]' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
               ]"
               fill="none"
               stroke="currentColor"
@@ -192,49 +192,49 @@ const getImageUrl = (value: string | null) => {
           <div v-for="setting in currentSettings" :key="setting.key">
             <!-- Text Input -->
             <div v-if="setting.type === 'text'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 mb-1">
+              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="text"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- Textarea -->
             <div v-else-if="setting.type === 'textarea'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 mb-1">
+              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ setting.label }}
               </label>
               <textarea
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 rows="4"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
               ></textarea>
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- URL Input -->
             <div v-else-if="setting.type === 'url'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 mb-1">
+              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="url"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
                 placeholder="https://..."
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
               
               <!-- YouTube Preview -->
               <div v-if="setting.key === 'youtube_video_url' && formData[setting.key]" class="mt-4 max-w-xl">
-                <div class="aspect-video rounded-lg overflow-hidden bg-gray-100">
+                <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
                   <iframe
                     :src="formData[setting.key]?.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')"
                     class="w-full h-full"
@@ -248,21 +248,21 @@ const getImageUrl = (value: string | null) => {
 
             <!-- Email Input -->
             <div v-else-if="setting.type === 'email'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 mb-1">
+              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="email"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- Image Upload -->
             <div v-else-if="setting.type === 'image'">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ setting.label }}
               </label>
               <div class="flex items-start gap-4">
@@ -271,7 +271,7 @@ const getImageUrl = (value: string | null) => {
                   <img
                     :src="getImageUrl(formData[setting.key])"
                     :alt="setting.label"
-                    class="h-20 w-auto object-contain border border-gray-200 rounded-lg bg-gray-50 p-2"
+                    class="h-20 w-auto object-contain border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2"
                   />
                   <button
                     @click="deleteImage(setting)"
@@ -285,12 +285,12 @@ const getImageUrl = (value: string | null) => {
                 </div>
                 <!-- Upload Button -->
                 <div>
-                  <label class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <label class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">
                     <svg v-if="uploadingKey === setting.key" class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <svg v-else class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg v-else class="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span>{{ formData[setting.key] ? 'Change Image' : 'Upload Image' }}</span>
@@ -301,20 +301,20 @@ const getImageUrl = (value: string | null) => {
                       @change="uploadImage($event, setting)"
                     />
                   </label>
-                  <p v-if="setting.description" class="mt-2 text-sm text-gray-500">{{ setting.description }}</p>
+                  <p v-if="setting.description" class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Empty State -->
-          <div v-if="currentSettings.length === 0" class="text-center py-12 text-gray-500">
-            <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div v-if="currentSettings.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <p>No settings found in this category.</p>
-            <p class="text-sm mt-1">Settings will be added automatically when needed.</p>
+            <p class="text-sm mt-1 dark:text-gray-500">Settings will be added automatically when needed.</p>
           </div>
         </div>
       </div>

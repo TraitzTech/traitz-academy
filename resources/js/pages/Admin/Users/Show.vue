@@ -47,9 +47,9 @@ const formatDate = (date: string) => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'accepted': return 'bg-green-100 text-green-800'
-    case 'rejected': return 'bg-red-100 text-red-800'
-    default: return 'bg-yellow-100 text-yellow-800'
+    case 'accepted': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+    default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
   }
 }
 
@@ -66,13 +66,13 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
         <Link href="/admin/users" class="text-[#42b6c5] hover:text-[#35919e] text-sm mb-2 inline-block">
           ← Back to Users
         </Link>
-        <h2 class="text-3xl font-bold text-gray-900">{{ user.name }}</h2>
-        <p class="text-gray-600 mt-1">Member since {{ formatDate(user.created_at) }}</p>
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ user.name }}</h2>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">Member since {{ formatDate(user.created_at) }}</p>
       </div>
       <div class="flex items-center gap-3">
         <span :class="[
           'px-3 py-1 text-sm font-medium rounded-full',
-          user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+          user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
         ]">
           {{ user.role.charAt(0).toUpperCase() + user.role.slice(1) }}
         </span>
@@ -89,30 +89,30 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
       <!-- Main Content -->
       <div class="lg:col-span-2 space-y-6">
         <!-- User Information -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">User Information</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">User Information</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-500">Full Name</label>
-              <p class="mt-1 text-gray-900">{{ user.name }}</p>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label>
+              <p class="mt-1 text-gray-900 dark:text-gray-100">{{ user.name }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-500">Email Address</label>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Address</label>
               <p class="mt-1">
                 <a :href="`mailto:${user.email}`" class="text-[#42b6c5] hover:underline">{{ user.email }}</a>
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-500">Phone Number</label>
-              <p class="mt-1 text-gray-900">{{ user.phone || 'Not provided' }}</p>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Phone Number</label>
+              <p class="mt-1 text-gray-900 dark:text-gray-100">{{ user.phone || 'Not provided' }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-500">Email Verified</label>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Email Verified</label>
               <p class="mt-1">
-                <span v-if="user.email_verified_at" class="text-green-600 font-medium">
+                <span v-if="user.email_verified_at" class="text-green-600 dark:text-green-400 font-medium">
                   ✓ Verified on {{ formatDate(user.email_verified_at) }}
                 </span>
-                <span v-else class="text-yellow-600 font-medium">
+                <span v-else class="text-yellow-600 dark:text-yellow-400 font-medium">
                   ⚠ Not verified
                 </span>
               </p>
@@ -121,13 +121,13 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
         </div>
 
         <!-- Recent Applications -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Recent Applications</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Recent Applications</h3>
           <div v-if="user.applications.length > 0" class="space-y-4">
             <div
               v-for="application in user.applications"
               :key="application.id"
-              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
             >
               <div>
                 <Link
@@ -136,7 +136,7 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
                 >
                   {{ application.program?.title || 'Unknown Program' }}
                 </Link>
-                <p class="text-sm text-gray-600">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
                   {{ formatCategory(application.program?.category || '') }} • Applied {{ formatDate(application.created_at) }}
                 </p>
               </div>
@@ -145,34 +145,34 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
               </span>
             </div>
           </div>
-          <p v-else class="text-gray-500 text-center py-8">No applications yet</p>
+          <p v-else class="text-gray-500 dark:text-gray-400 text-center py-8">No applications yet</p>
         </div>
       </div>
 
       <!-- Sidebar -->
       <div class="space-y-6">
         <!-- Stats -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Application Stats</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Application Stats</h3>
           <div class="space-y-4">
             <div class="flex justify-between items-center">
-              <span class="text-gray-600">Total Applications</span>
-              <span class="font-bold text-gray-900">{{ stats.total_applications }}</span>
+              <span class="text-gray-600 dark:text-gray-400">Total Applications</span>
+              <span class="font-bold text-gray-900 dark:text-gray-100">{{ stats.total_applications }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-gray-600">Accepted</span>
-              <span class="font-bold text-green-600">{{ stats.accepted_applications }}</span>
+              <span class="text-gray-600 dark:text-gray-400">Accepted</span>
+              <span class="font-bold text-green-600 dark:text-green-400">{{ stats.accepted_applications }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-gray-600">Pending</span>
-              <span class="font-bold text-yellow-600">{{ stats.pending_applications }}</span>
+              <span class="text-gray-600 dark:text-gray-400">Pending</span>
+              <span class="font-bold text-yellow-600 dark:text-yellow-400">{{ stats.pending_applications }}</span>
             </div>
           </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">Quick Actions</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Quick Actions</h3>
           <div class="space-y-3">
             <Link
               :href="`/admin/users/${user.id}/edit`"
@@ -182,7 +182,7 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
             </Link>
             <a
               :href="`mailto:${user.email}`"
-              class="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              class="block w-full text-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Send Email
             </a>

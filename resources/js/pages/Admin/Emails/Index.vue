@@ -88,17 +88,17 @@ const togglePreview = () => {
 
     <!-- Header -->
     <div class="mb-8">
-      <h2 class="text-3xl font-bold text-gray-900">Email Notifications</h2>
-      <p class="text-gray-600 mt-2">Send batch email notifications to users</p>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Email Notifications</h2>
+      <p class="text-gray-600 dark:text-gray-400 mt-2">Send batch email notifications to users</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Email Form -->
       <div class="lg:col-span-2">
-        <form @submit.prevent="sendEmails" class="bg-white rounded-lg shadow p-6 space-y-6">
+        <form @submit.prevent="sendEmails" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
           <!-- Recipients -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Recipients</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipients</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 v-for="option in recipientOptions"
@@ -106,7 +106,7 @@ const togglePreview = () => {
                 @click="form.recipients = option.value"
                 :class="[
                   'p-4 border-2 rounded-lg cursor-pointer transition-all',
-                  form.recipients === option.value ? 'border-[#42b6c5] bg-cyan-50' : 'border-gray-200 hover:border-gray-300'
+                  form.recipients === option.value ? 'border-[#42b6c5] bg-cyan-50 dark:bg-cyan-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                 ]"
               >
                 <div class="flex items-center gap-2">
@@ -116,72 +116,72 @@ const togglePreview = () => {
                     v-model="form.recipients"
                     class="text-[#42b6c5] focus:ring-[#42b6c5]"
                   />
-                  <span class="font-medium text-gray-900">{{ option.label }}</span>
+                  <span class="font-medium text-gray-900 dark:text-gray-100">{{ option.label }}</span>
                 </div>
-                <p class="text-sm text-gray-500 mt-1 ml-6">{{ option.description }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
               </div>
             </div>
           </div>
 
           <!-- Custom Emails (if custom selected) -->
           <div v-if="form.recipients === 'custom'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email Addresses</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Addresses</label>
             <textarea
               v-model="form.custom_emails"
               rows="4"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
               placeholder="Enter email addresses separated by commas or new lines..."
             ></textarea>
-            <p class="mt-1 text-sm text-gray-500">{{ currentRecipientCount }} email(s) detected</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ currentRecipientCount }} email(s) detected</p>
             <p v-if="form.errors.custom_emails" class="mt-1 text-sm text-red-600">{{ form.errors.custom_emails }}</p>
           </div>
 
           <!-- Subject -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Subject Line</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Line</label>
             <input
               v-model="form.subject"
               type="text"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
               placeholder="Enter email subject..."
             />
-            <p v-if="form.errors.subject" class="mt-1 text-sm text-red-600">{{ form.errors.subject }}</p>
+            <p v-if="form.errors.subject" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.subject }}</p>
           </div>
 
           <!-- Message -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
             <textarea
               v-model="form.message"
               rows="8"
               required
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
               placeholder="Enter your message..."
             ></textarea>
-            <p class="mt-1 text-sm text-gray-500">You can use basic formatting. The message will be sent in a styled email template.</p>
-            <p v-if="form.errors.message" class="mt-1 text-sm text-red-600">{{ form.errors.message }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">You can use basic formatting. The message will be sent in a styled email template.</p>
+            <p v-if="form.errors.message" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.message }}</p>
           </div>
 
           <!-- Action Button (optional) -->
-          <div class="border-t pt-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-4">Action Button (optional)</h4>
+          <div class="border-t dark:border-gray-700 pt-6">
+            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Action Button (optional)</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Button Text</label>
                 <input
                   v-model="form.action_text"
                   type="text"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="e.g., View Programs"
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Button URL</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Button URL</label>
                 <input
                   v-model="form.action_url"
                   type="url"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="https://..."
                 />
               </div>
@@ -189,7 +189,7 @@ const togglePreview = () => {
           </div>
 
           <!-- Submit -->
-          <div class="flex items-center justify-between pt-4 border-t">
+          <div class="flex items-center justify-between pt-4 border-t dark:border-gray-700">
             <button
               type="button"
               @click="togglePreview"
@@ -212,43 +212,43 @@ const togglePreview = () => {
       <!-- Sidebar / Preview -->
       <div class="space-y-6">
         <!-- Recipient Stats -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Recipient Statistics</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recipient Statistics</h3>
           <div class="space-y-3">
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">All Users</span>
-              <span class="font-medium">{{ recipientCounts.all }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400">All Users</span>
+              <span class="font-medium dark:text-gray-100">{{ recipientCounts.all }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">With Applications</span>
-              <span class="font-medium">{{ recipientCounts.with_applications }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400">With Applications</span>
+              <span class="font-medium dark:text-gray-100">{{ recipientCounts.with_applications }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">Accepted</span>
-              <span class="font-medium text-green-600">{{ recipientCounts.accepted_applicants }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
+              <span class="font-medium text-green-600 dark:text-green-400">{{ recipientCounts.accepted_applicants }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">Pending</span>
-              <span class="font-medium text-yellow-600">{{ recipientCounts.pending_applicants }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Pending</span>
+              <span class="font-medium text-yellow-600 dark:text-yellow-400">{{ recipientCounts.pending_applicants }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">Rejected</span>
-              <span class="font-medium text-red-600">{{ recipientCounts.rejected_applicants }}</span>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Rejected</span>
+              <span class="font-medium text-red-600 dark:text-red-400">{{ recipientCounts.rejected_applicants }}</span>
             </div>
           </div>
         </div>
 
         <!-- Email Preview -->
-        <div v-if="previewMode" class="bg-white rounded-lg shadow overflow-hidden">
-          <div class="bg-gray-100 px-4 py-2 border-b">
-            <span class="text-sm font-medium text-gray-600">Email Preview</span>
+        <div v-if="previewMode" class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b dark:border-gray-600">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Email Preview</span>
           </div>
           <div class="p-4">
-            <div class="border rounded-lg p-4 bg-gray-50">
-              <div class="text-sm text-gray-500 mb-2">Subject:</div>
-              <div class="font-medium text-gray-900 mb-4">{{ form.subject || '(No subject)' }}</div>
-              <div class="text-sm text-gray-500 mb-2">Message:</div>
-              <div class="text-gray-900 whitespace-pre-line">{{ form.message || '(No message)' }}</div>
+            <div class="border dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700/50">
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Subject:</div>
+              <div class="font-medium text-gray-900 dark:text-gray-100 mb-4">{{ form.subject || '(No subject)' }}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Message:</div>
+              <div class="text-gray-900 dark:text-gray-100 whitespace-pre-line">{{ form.message || '(No message)' }}</div>
               <div v-if="form.action_text && form.action_url" class="mt-4">
                 <a
                   :href="form.action_url"
@@ -263,9 +263,9 @@ const togglePreview = () => {
         </div>
 
         <!-- Tips -->
-        <div class="bg-blue-50 rounded-lg p-4">
-          <h4 class="font-medium text-blue-900 mb-2">Tips</h4>
-          <ul class="text-sm text-blue-800 space-y-1">
+        <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
+          <h4 class="font-medium text-blue-900 dark:text-blue-300 mb-2">Tips</h4>
+          <ul class="text-sm text-blue-800 dark:text-blue-400 space-y-1">
             <li>• Emails are sent in the background using a queue</li>
             <li>• Each recipient receives an individual email</li>
             <li>• Test with a small group first before mass sending</li>
@@ -279,15 +279,15 @@ const togglePreview = () => {
     <div v-if="showSendModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black bg-opacity-50" @click="showSendModal = false"></div>
-        <div class="relative bg-white rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Send Bulk Emails</h3>
-          <p class="text-sm text-gray-600 mb-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Send Bulk Emails</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Are you sure you want to send this email to <strong>{{ currentRecipientCount }}</strong> recipient(s)?
           </p>
           <div class="flex justify-end gap-3">
             <button
               @click="showSendModal = false"
-              class="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Cancel
             </button>
