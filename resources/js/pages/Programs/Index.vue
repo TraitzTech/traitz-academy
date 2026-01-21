@@ -74,10 +74,10 @@ const categoryLabels: Record<string, string> = {
 const formatCategory = (cat: string) => categoryLabels[cat] || cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
 // Format price
-const formatPrice = (price: number | null) => {
-  if (!price) return 'Free';
-  return new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(price);
-};
+const formatPrice = (price: number) => {
+  if (price === 0) return 'Free'
+  return new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(price)
+}
 
 // Fetch search options
 onMounted(async () => {
