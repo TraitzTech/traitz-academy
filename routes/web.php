@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 
 // Public pages
@@ -22,6 +23,13 @@ Route::get('/about', [PageController::class, 'about'])->name('about');
 Route::get('/success-stories', [PageController::class, 'successStories'])->name('success-stories');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::post('/contact', [PageController::class, 'submitContact'])->name('contact.submit');
+
+// Search API Routes
+Route::prefix('api/search')->name('search.')->group(function () {
+    Route::get('/options', [SearchController::class, 'options'])->name('options');
+    Route::get('/programs', [SearchController::class, 'programs'])->name('programs');
+    Route::get('/events', [SearchController::class, 'events'])->name('events');
+});
 
 // Programs
 Route::get('/programs', [ProgramController::class, 'index'])->name('programs.index');

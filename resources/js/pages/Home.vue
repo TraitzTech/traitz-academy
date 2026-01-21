@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import ProgramSearch from '@/components/ProgramSearch.vue';
 
 interface SuccessStory {
   id: number;
@@ -81,31 +82,19 @@ const getImageUrl = (imageUrl: string | null) => {
         </svg>
       </div>
 
-      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <div class="animate-fade-in relative z-10">
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+        <div class="animate-fade-in relative z-10 text-center mb-12">
           <h1 class="text-5xl md:text-7xl font-bold mb-6 leading-tight">
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#42b6c5]">{{ heroTitle }}</span>
           </h1>
           <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
             {{ siteSettings.hero_subtitle || 'Bridging the gap between academic learning and real-world industry needs. Join 300+ professionals transformed through structured learning and mentorship.' }}
           </p>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center relative z-20">
-            <Link
-              href="/programs"
-              class="inline-flex items-center justify-center px-8 py-3 bg-[#42b6c5] text-[#000928] rounded-lg font-bold text-lg hover:bg-white transition-all duration-200 transform hover:scale-105"
-            >
-              Explore Programs
-              <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-            <a
-              href="#featured"
-              class="inline-flex items-center justify-center px-8 py-3 border-2 border-white text-white rounded-lg font-bold text-lg hover:bg-white hover:text-[#000928] transition-all duration-200"
-            >
-              Learn More
-            </a>
-          </div>
+        </div>
+
+        <!-- Search Component -->
+        <div class="relative z-20 max-w-4xl mx-auto">
+          <ProgramSearch />
         </div>
 
         <!-- Floating accent shapes -->
