@@ -24,4 +24,6 @@
     <body class="font-sans antialiased bg-white text-[#000928]">
         @inertia
     </body>
+
+    <script src="//code.jivosite.com/widget/U7aiCDWe9L" async></script>
 </html>
