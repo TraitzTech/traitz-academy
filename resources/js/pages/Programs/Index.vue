@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import PublicLayout from '@/layouts/PublicLayout.vue';
 import { computed, ref, onMounted, watch } from 'vue';
+
+import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface Program {
   id: number;

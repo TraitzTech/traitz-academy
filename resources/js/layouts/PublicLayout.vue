@@ -423,6 +423,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
+
 import { Toaster } from '@/components/ui/toast';
 
 const page = usePage();

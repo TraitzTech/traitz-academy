@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
+
 import { useToast } from '@/composables/useToast'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Setting {
   id: number

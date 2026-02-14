@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
+
 import { useToast } from '@/composables/useToast'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Event {
   id: number

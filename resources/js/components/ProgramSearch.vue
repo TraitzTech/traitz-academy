@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
 
 interface SearchOptions {
   programCategories: string[];

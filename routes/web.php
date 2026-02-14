@@ -92,6 +92,7 @@ Route::prefix('admin')
         // Email Notifications
         Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
         Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
+        Route::post('/emails/media', [EmailController::class, 'uploadMedia'])->name('emails.upload-media');
         Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
 
         // Success Stories CRUD

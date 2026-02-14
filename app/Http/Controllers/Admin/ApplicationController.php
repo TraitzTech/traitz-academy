@@ -93,7 +93,7 @@ class ApplicationController extends Controller
         if ($application->user) {
             $application->user->notify(new BatchEmailNotification(
                 subject: 'Update on Your Application',
-                message: "Thank you for your interest in {$application->program->title}. After careful review, we regret to inform you that we are unable to proceed with your application at this time. Please feel free to apply for other programs that match your profile.",
+                messageHtml: "<p>Thank you for your interest in {$application->program->title}. After careful review, we regret to inform you that we are unable to proceed with your application at this time. Please feel free to apply for other programs that match your profile.</p>",
                 actionText: 'Explore Programs',
                 actionUrl: url('/programs')
             ));

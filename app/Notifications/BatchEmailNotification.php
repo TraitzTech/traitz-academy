@@ -17,7 +17,7 @@ class BatchEmailNotification extends Notification implements ShouldQueue
      */
     public function __construct(
         public string $subject,
-        public string $message,
+        public string $messageHtml,
         public ?string $actionText = null,
         public ?string $actionUrl = null
     ) {}
@@ -40,17 +40,16 @@ class BatchEmailNotification extends Notification implements ShouldQueue
         $name = $notifiable->name ?? 'there';
         $siteName = SettingHelper::get('site_name', config('app.name'));
 
-        $mail = (new MailMessage)
+        return (new MailMessage)
             ->subject($this->subject)
-            ->greeting("Hello {$name},")
-            ->line($this->message);
-
-        if ($this->actionText && $this->actionUrl) {
-            $mail->action($this->actionText, $this->actionUrl);
-        }
-
-        return $mail->line("Thank you for being part of {$siteName}!")
-            ->salutation("Regards,\n{$siteName}");
+            ->view('emails.batch-notification', [
+                'recipientName' => $name,
+                'siteName' => $siteName,
+                'subject' => $this->subject,
+                'messageHtml' => $this->messageHtml,
+                'actionText' => $this->actionText,
+                'actionUrl' => $this->actionUrl,
+            ]);
     }
 
     /**
@@ -62,7 +61,7 @@ class BatchEmailNotification extends Notification implements ShouldQueue
     {
         return [
             'subject' => $this->subject,
-            'message' => $this->message,
+            'message_html' => $this->messageHtml,
         ];
     }
 }

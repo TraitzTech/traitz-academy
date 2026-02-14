@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -52,13 +53,23 @@ class User extends Authenticatable
         ];
     }
 
-    public function applications()
+    public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
     }
 
-    public function registrations()
+    public function registrations(): HasMany
     {
         return $this->hasMany(EventRegistration::class);
+    }
+
+    public function sentEmailCampaigns(): HasMany
+    {
+        return $this->hasMany(EmailCampaign::class, 'admin_id');
+    }
+
+    public function emailCampaignRecipients(): HasMany
+    {
+        return $this->hasMany(EmailCampaignRecipient::class);
     }
 }

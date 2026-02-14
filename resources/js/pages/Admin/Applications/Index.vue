@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref, watch, computed } from 'vue'
 import { debounce } from 'lodash-es'
-import AppLayout from '@/layouts/AppLayout.vue'
+import { ref, watch, computed } from 'vue'
+
 import { useToast } from '@/composables/useToast'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Application {
   id: number

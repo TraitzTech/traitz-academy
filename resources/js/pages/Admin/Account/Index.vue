@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3'
-import { onUnmounted, ref } from 'vue'
 import { ShieldBan, ShieldCheck } from 'lucide-vue-next'
+import { onUnmounted, ref } from 'vue'
 
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController'
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
 import HeadingSmall from '@/components/HeadingSmall.vue'
 import InputError from '@/components/InputError.vue'
 import TwoFactorRecoveryCodes from '@/components/TwoFactorRecoveryCodes.vue'
@@ -13,8 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import AppLayout from '@/layouts/AppLayout.vue'
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { disable, enable } from '@/routes/two-factor'
 import { send } from '@/routes/verification'
 

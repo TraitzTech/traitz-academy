@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import PublicLayout from '@/layouts/PublicLayout.vue';
+
 import ProgramSearch from '@/components/ProgramSearch.vue';
+import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface SuccessStory {
   id: number;

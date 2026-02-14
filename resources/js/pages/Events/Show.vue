@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import PublicLayout from '@/layouts/PublicLayout.vue';
 import { onMounted } from 'vue';
+
 import { useToast } from '@/composables/useToast';
+import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface Event {
   id: number;

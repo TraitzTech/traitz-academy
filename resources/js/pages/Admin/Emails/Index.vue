@@ -1,18 +1,37 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
+import { computed, ref } from 'vue'
+
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
+import AppLayout from '@/layouts/AppLayout.vue'
+
+interface RecipientCounts {
+  all: number
+  with_applications: number
+  without_applications: number
+  accepted_applicants: number
+  pending_applicants: number
+  rejected_applicants: number
+}
+
+interface EmailHistoryItem {
+  id: number
+  subject: string
+  audience: string
+  audience_label: string
+  message_html: string
+  action_text: string | null
+  action_url: string | null
+  recipient_count: number
+  sent_by: string
+  sent_at: string | null
+  preview_recipients: string[]
+}
 
 interface Props {
-  recipientCounts: {
-    all: number
-    with_applications: number
-    without_applications: number
-    accepted_applicants: number
-    pending_applicants: number
-    rejected_applicants: number
-  }
+  recipientCounts: RecipientCounts
+  emailHistory: EmailHistoryItem[]
 }
 
 const props = defineProps<Props>()
@@ -31,6 +50,8 @@ const form = useForm({
 })
 
 const previewMode = ref(false)
+const showSendModal = ref(false)
+const selectedHistory = ref<EmailHistoryItem | null>(null)
 
 const recipientOptions = [
   { value: 'all', label: 'All Users', description: 'Send to all registered users' },
@@ -42,43 +63,91 @@ const recipientOptions = [
   { value: 'custom', label: 'Custom List', description: 'Enter email addresses manually' },
 ]
 
+const stripHtml = (html: string) => {
+  const doc = new DOMParser().parseFromString(html || '', 'text/html')
+  return (doc.body.textContent || '').trim()
+}
+
+const plainMessage = computed(() => stripHtml(form.message).toLowerCase())
+
+const startsWithGreeting = computed(() => {
+  return /^(hi|hello|dear)\b/.test(plainMessage.value)
+})
+
 const currentRecipientCount = computed(() => {
   if (form.recipients === 'custom') {
     const emails = form.custom_emails.split(/[\n,]/).filter(e => e.trim())
     return emails.length
   }
-  return props.recipientCounts?.[form.recipients as keyof typeof props.recipientCounts] || 0
+
+  return props.recipientCounts?.[form.recipients as keyof RecipientCounts] || 0
 })
 
-const showSendModal = ref(false)
-
 const sendEmails = () => {
+  if (!stripHtml(form.message)) {
+    toast.error('Please enter your email content before sending.')
+    return
+  }
+
+  if (currentRecipientCount.value === 0) {
+    toast.error('No recipients found for the selected audience.')
+    return
+  }
+
   showSendModal.value = true
 }
 
 const confirmSendEmails = () => {
-  // Transform custom_emails string to array for backend validation
-  form.transform((data) => ({
-    ...data,
-    custom_emails: data.custom_emails
-      ? data.custom_emails.split(/[\n,]/).map((e: string) => e.trim()).filter((e: string) => e)
-      : [],
-  })).post('/admin/emails', {
-    preserveScroll: true,
-    onSuccess: () => {
-      toast.success(`Email queued for ${currentRecipientCount.value} recipient(s)!`)
-      form.reset()
-      showSendModal.value = false
-    },
-    onError: (errors) => {
-      const errorMessage = Object.values(errors)[0] || 'Failed to send emails. Please try again.'
-      toast.error(errorMessage as string)
-    }
-  })
+  form
+    .transform((data) => ({
+      ...data,
+      custom_emails: data.custom_emails
+        ? data.custom_emails
+            .split(/[\n,]/)
+            .map((e: string) => e.trim())
+            .filter((e: string) => e)
+        : [],
+    }))
+    .post('/admin/emails', {
+      preserveScroll: true,
+      onSuccess: () => {
+        form.reset()
+        showSendModal.value = false
+        previewMode.value = false
+      },
+      onError: (errors) => {
+        const errorMessage = Object.values(errors)[0] || 'Failed to send emails. Please try again.'
+        toast.error(errorMessage as string)
+      },
+    })
 }
 
 const togglePreview = () => {
   previewMode.value = !previewMode.value
+}
+
+const handleEditorUploadError = (message: string) => {
+  toast.error(message)
+}
+
+const formatDateTime = (value: string | null) => {
+  if (!value) return 'Unknown time'
+
+  return new Date(value).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+const openHistoryDetails = (entry: EmailHistoryItem) => {
+  selectedHistory.value = entry
+}
+
+const closeHistoryDetails = () => {
+  selectedHistory.value = null
 }
 </script>
 
@@ -86,17 +155,14 @@ const togglePreview = () => {
   <div>
     <Head title="Email Notifications" />
 
-    <!-- Header -->
     <div class="mb-8">
       <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Email Notifications</h2>
-      <p class="text-gray-600 dark:text-gray-400 mt-2">Send batch email notifications to users</p>
+      <p class="text-gray-600 dark:text-gray-400 mt-2">Send rich, personalized email notifications to users</p>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Email Form -->
       <div class="lg:col-span-2">
         <form @submit.prevent="sendEmails" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
-          <!-- Recipients -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipients</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -121,9 +187,9 @@ const togglePreview = () => {
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
               </div>
             </div>
+            <p v-if="form.errors.recipients" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.recipients }}</p>
           </div>
 
-          <!-- Custom Emails (if custom selected) -->
           <div v-if="form.recipients === 'custom'">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Addresses</label>
             <textarea
@@ -133,10 +199,9 @@ const togglePreview = () => {
               placeholder="Enter email addresses separated by commas or new lines..."
             ></textarea>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ currentRecipientCount }} email(s) detected</p>
-            <p v-if="form.errors.custom_emails" class="mt-1 text-sm text-red-600">{{ form.errors.custom_emails }}</p>
+            <p v-if="form.errors.custom_emails" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.custom_emails }}</p>
           </div>
 
-          <!-- Subject -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Line</label>
             <input
@@ -149,21 +214,22 @@ const togglePreview = () => {
             <p v-if="form.errors.subject" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.subject }}</p>
           </div>
 
-          <!-- Message -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
-            <textarea
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message</label>
+            <RichTextEditor
               v-model="form.message"
-              rows="8"
-              required
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Enter your message..."
-            ></textarea>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">You can use basic formatting. The message will be sent in a styled email template.</p>
+              placeholder="Write your email body with formatting, links, lists, and images..."
+              @upload-error="handleEditorUploadError"
+            />
+            <p class="mt-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+              Do not include "Hi" or "Hello" at the beginning. The system already sends a personalized greeting with each recipient's name.
+            </p>
+            <p v-if="startsWithGreeting" class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+              Your message currently starts with a greeting. Consider removing it to avoid duplicate greetings.
+            </p>
             <p v-if="form.errors.message" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.message }}</p>
           </div>
 
-          <!-- Action Button (optional) -->
           <div class="border-t dark:border-gray-700 pt-6">
             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Action Button (optional)</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,6 +241,7 @@ const togglePreview = () => {
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="e.g., View Programs"
                 />
+                <p v-if="form.errors.action_text" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.action_text }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Button URL</label>
@@ -184,11 +251,11 @@ const togglePreview = () => {
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="https://..."
                 />
+                <p v-if="form.errors.action_url" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.action_url }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Submit -->
           <div class="flex items-center justify-between pt-4 border-t dark:border-gray-700">
             <button
               type="button"
@@ -209,9 +276,7 @@ const togglePreview = () => {
         </form>
       </div>
 
-      <!-- Sidebar / Preview -->
       <div class="space-y-6">
-        <!-- Recipient Stats -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recipient Statistics</h3>
           <div class="space-y-3">
@@ -238,7 +303,6 @@ const togglePreview = () => {
           </div>
         </div>
 
-        <!-- Email Preview -->
         <div v-if="previewMode" class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b dark:border-gray-600">
             <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Email Preview</span>
@@ -248,7 +312,7 @@ const togglePreview = () => {
               <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Subject:</div>
               <div class="font-medium text-gray-900 dark:text-gray-100 mb-4">{{ form.subject || '(No subject)' }}</div>
               <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Message:</div>
-              <div class="text-gray-900 dark:text-gray-100 whitespace-pre-line">{{ form.message || '(No message)' }}</div>
+              <div class="email-content" v-html="form.message || '<p>(No message)</p>'"></div>
               <div v-if="form.action_text && form.action_url" class="mt-4">
                 <a
                   :href="form.action_url"
@@ -262,20 +326,117 @@ const togglePreview = () => {
           </div>
         </div>
 
-        <!-- Tips -->
         <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
           <h4 class="font-medium text-blue-900 dark:text-blue-300 mb-2">Tips</h4>
           <ul class="text-sm text-blue-800 dark:text-blue-400 space-y-1">
+            <li>• Rich text and images are supported</li>
+            <li>• The greeting line is automatically personalized</li>
             <li>• Emails are sent in the background using a queue</li>
-            <li>• Each recipient receives an individual email</li>
             <li>• Test with a small group first before mass sending</li>
-            <li>• Action buttons are optional but improve engagement</li>
           </ul>
         </div>
       </div>
     </div>
 
-    <!-- Confirmation Modal -->
+    <div class="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Sent Email History</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Recent emails you sent. Click details to view full content.</p>
+      </div>
+
+      <div v-if="emailHistory.length === 0" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+        No email history yet.
+      </div>
+
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-700/40">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Subject</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Audience</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Recipients</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Sent By</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Sent At</th>
+              <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tr v-for="entry in emailHistory" :key="entry.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">{{ entry.subject }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">
+                  {{ entry.audience_label }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ entry.recipient_count }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ entry.sent_by }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{{ formatDateTime(entry.sent_at) }}</td>
+              <td class="px-6 py-4 text-right">
+                <button
+                  type="button"
+                  @click="openHistoryDetails(entry)"
+                  class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#42b6c5] text-white hover:bg-[#35919e] transition-colors"
+                >
+                  View Details
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-if="selectedHistory" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50" @click="closeHistoryDetails"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-6 shadow-xl">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ selectedHistory.subject }}</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {{ selectedHistory.audience_label }} • {{ selectedHistory.recipient_count }} recipient(s) • {{ formatDateTime(selectedHistory.sent_at) }}
+              </p>
+            </div>
+            <button
+              type="button"
+              @click="closeHistoryDetails"
+              class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="mb-4">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipient Preview</p>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+              <span v-if="selectedHistory.preview_recipients.length > 0">
+                {{ selectedHistory.preview_recipients.join(', ') }}
+                <span v-if="selectedHistory.recipient_count > selectedHistory.preview_recipients.length">
+                  and {{ selectedHistory.recipient_count - selectedHistory.preview_recipients.length }} more
+                </span>
+              </span>
+              <span v-else>None</span>
+            </p>
+          </div>
+
+          <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 max-h-[55vh] overflow-y-auto">
+            <div class="email-content" v-html="selectedHistory.message_html"></div>
+            <div v-if="selectedHistory.action_text && selectedHistory.action_url" class="mt-4">
+              <a
+                :href="selectedHistory.action_url"
+                target="_blank"
+                class="inline-block px-4 py-2 rounded-lg bg-[#42b6c5] text-white text-sm font-semibold hover:bg-[#35919e] transition-colors"
+              >
+                {{ selectedHistory.action_text }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showSendModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen px-4">
         <div class="fixed inset-0 bg-black bg-opacity-50" @click="showSendModal = false"></div>
@@ -305,3 +466,115 @@ const togglePreview = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+:deep(.email-content) {
+  color: rgb(17 24 39);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+:deep(.email-content h1),
+:deep(.email-content h2),
+:deep(.email-content h3) {
+  color: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.65rem 0;
+}
+
+:deep(.email-content h1) {
+  font-size: 1.6rem;
+}
+
+:deep(.email-content h2) {
+  font-size: 1.3rem;
+}
+
+:deep(.email-content h3) {
+  font-size: 1.1rem;
+}
+
+:deep(.email-content p),
+:deep(.email-content div),
+:deep(.email-content span),
+:deep(.email-content li) {
+  color: inherit;
+}
+
+:deep(.email-content ul),
+:deep(.email-content ol) {
+  padding-left: 1.45rem;
+  margin: 0.45rem 0 0.8rem;
+}
+
+:deep(.email-content ul) {
+  list-style: disc;
+}
+
+:deep(.email-content ol) {
+  list-style: decimal;
+}
+
+:deep(.email-content li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(.email-content li::marker) {
+  color: #42b6c5;
+}
+
+:deep(.email-content blockquote) {
+  border-left: 3px solid #42b6c5;
+  padding-left: 0.8rem;
+  margin: 0.6rem 0 0.8rem;
+  color: rgb(75 85 99);
+}
+
+:deep(.email-content pre) {
+  margin: 0.6rem 0 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.5rem;
+  background: rgba(17, 24, 39, 0.07);
+  overflow-x: auto;
+}
+
+:deep(.email-content code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+:deep(.email-content hr) {
+  border: 0;
+  border-top: 1px solid rgba(107, 114, 128, 0.35);
+  margin: 0.9rem 0;
+}
+
+:deep(.email-content a) {
+  color: #0f94a2;
+  text-decoration: underline;
+}
+
+:global(.dark) :deep(.email-content) {
+  color: rgb(243 244 246);
+}
+
+:global(.dark) :deep(.email-content li::marker) {
+  color: #6ad7e5;
+}
+
+:global(.dark) :deep(.email-content blockquote) {
+  color: rgb(209 213 219);
+}
+
+:global(.dark) :deep(.email-content pre) {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+:global(.dark) :deep(.email-content hr) {
+  border-top-color: rgba(209, 213, 219, 0.35);
+}
+
+:global(.dark) :deep(.email-content a) {
+  color: #7fe0ec;
+}
+</style>

@@ -4,18 +4,18 @@ import { useToast } from '@/composables/useToast'
 const { toasts, removeToast } = useToast()
 
 const getToastClasses = (type: string) => {
-  const base = 'flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border backdrop-blur-sm'
+  const base = 'relative overflow-hidden flex items-start gap-3 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md'
   switch (type) {
     case 'success':
-      return `${base} bg-green-50 border-green-200 text-green-800`
+      return `${base} bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-900`
     case 'error':
-      return `${base} bg-red-50 border-red-200 text-red-800`
+      return `${base} bg-gradient-to-r from-rose-50 to-red-50 border-rose-200 text-rose-900`
     case 'warning':
-      return `${base} bg-yellow-50 border-yellow-200 text-yellow-800`
+      return `${base} bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-900`
     case 'info':
-      return `${base} bg-blue-50 border-blue-200 text-blue-800`
+      return `${base} bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-200 text-sky-900`
     default:
-      return `${base} bg-gray-50 border-gray-200 text-gray-800`
+      return `${base} bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200 text-gray-900`
   }
 }
 
@@ -36,11 +36,11 @@ const getIcon = (type: string) => {
 
 const getIconColor = (type: string) => {
   switch (type) {
-    case 'success': return 'text-green-500'
-    case 'error': return 'text-red-500'
-    case 'warning': return 'text-yellow-500'
-    case 'info': return 'text-blue-500'
-    default: return 'text-gray-500'
+    case 'success': return 'text-emerald-600 bg-emerald-100'
+    case 'error': return 'text-rose-600 bg-rose-100'
+    case 'warning': return 'text-amber-600 bg-amber-100'
+    case 'info': return 'text-sky-600 bg-sky-100'
+    default: return 'text-gray-600 bg-gray-100'
   }
 }
 </script>
@@ -53,15 +53,17 @@ const getIconColor = (type: string) => {
           v-for="toast in toasts"
           :key="toast.id"
           :class="getToastClasses(toast.type)"
-          class="pointer-events-auto animate-in slide-in-from-right-5"
+          class="pointer-events-auto animate-in slide-in-from-right-5 ring-1 ring-black/5"
         >
-          <svg :class="['w-5 h-5 flex-shrink-0', getIconColor(toast.type)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getIcon(toast.type)" />
-          </svg>
-          <span class="flex-1 text-sm font-medium">{{ toast.message }}</span>
+          <div :class="['w-8 h-8 rounded-lg grid place-items-center flex-shrink-0', getIconColor(toast.type)]">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getIcon(toast.type)" />
+            </svg>
+          </div>
+          <span class="flex-1 text-sm font-semibold leading-5">{{ toast.message }}</span>
           <button
             @click="removeToast(toast.id)"
-            class="flex-shrink-0 p-1 rounded hover:bg-black/10 transition-colors"
+            class="flex-shrink-0 p-1 rounded-md hover:bg-black/10 transition-colors"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

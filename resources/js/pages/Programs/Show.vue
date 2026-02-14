@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
 import PublicLayout from '@/layouts/PublicLayout.vue';
 
 interface Program {
