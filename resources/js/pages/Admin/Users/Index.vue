@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { debounce } from 'lodash-es'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { useToast } from '@/composables/useToast'
@@ -11,6 +11,7 @@ interface User {
   id: number
   name: string
   email: string
+  phone: string | null
   role: 'user' | 'admin'
   email_verified_at: string | null
   created_at: string
@@ -72,6 +73,7 @@ const userToDelete = ref<User | null>(null)
 const createForm = useForm({
   name: '',
   email: '',
+  phone: '',
   password: '',
   password_confirmation: '',
   role: 'user',
@@ -80,6 +82,7 @@ const createForm = useForm({
 const editForm = useForm({
   name: '',
   email: '',
+  phone: '',
   password: '',
   password_confirmation: '',
   role: 'user',
@@ -116,6 +119,7 @@ const openEditModal = (user: User) => {
   editingUser.value = user
   editForm.name = user.name
   editForm.email = user.email
+  editForm.phone = user.phone || ''
   editForm.role = user.role
   editForm.password = ''
   editForm.password_confirmation = ''
@@ -201,6 +205,27 @@ const formatDate = (date: string) => {
 const getRoleBadgeColor = (role: string) => {
   return role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 }
+
+// Export
+const showExportDropdown = ref(false)
+const exportDropdownRef = ref<HTMLElement | null>(null)
+
+const exportUrl = (format: string) => {
+  const params = new URLSearchParams()
+  params.set('format', format)
+  if (search.value) params.set('search', search.value)
+  if (role.value) params.set('role', role.value)
+  return `/admin/users/export?${params.toString()}`
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (exportDropdownRef.value && !exportDropdownRef.value.contains(event.target as Node)) {
+    showExportDropdown.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -213,7 +238,7 @@ const getRoleBadgeColor = (role: string) => {
         <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">User Management</h2>
         <p class="text-gray-600 dark:text-gray-400 mt-2">Manage all users and assign roles</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
         <button
           v-if="selectedIds.length > 0"
           @click="openBulkDeleteModal"
@@ -224,6 +249,59 @@ const getRoleBadgeColor = (role: string) => {
           </svg>
           Delete Selected ({{ selectedIds.length }})
         </button>
+        <!-- Export Dropdown -->
+        <div class="relative" ref="exportDropdownRef">
+          <button
+            @click="showExportDropdown = !showExportDropdown"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div
+            v-if="showExportDropdown"
+            class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+          >
+            <div class="py-1">
+              <a
+                :href="exportUrl('csv')"
+                @click="showExportDropdown = false"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg class="w-4 h-4 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export as CSV
+              </a>
+              <a
+                :href="exportUrl('xlsx')"
+                @click="showExportDropdown = false"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg class="w-4 h-4 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export as Excel
+              </a>
+              <hr class="my-1 border-gray-200 dark:border-gray-700" />
+              <a
+                :href="exportUrl('phones')"
+                @click="showExportDropdown = false"
+                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg class="w-4 h-4 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Export Phone Numbers
+              </a>
+            </div>
+          </div>
+        </div>
         <button
           @click="openCreateModal"
           class="inline-flex items-center px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors"
@@ -277,6 +355,7 @@ const getRoleBadgeColor = (role: string) => {
                 />
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applications</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Verified</th>
@@ -304,6 +383,10 @@ const getRoleBadgeColor = (role: string) => {
                     <div class="text-sm text-gray-500 dark:text-gray-400">{{ user.email }}</div>
                   </div>
                 </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <span v-if="user.phone">{{ user.phone }}</span>
+                <span v-else class="text-gray-300 dark:text-gray-600">—</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <button
@@ -350,7 +433,7 @@ const getRoleBadgeColor = (role: string) => {
               </td>
             </tr>
             <tr v-if="users.data.length === 0">
-              <td colspan="7" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+              <td colspan="8" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
                 No users found.
               </td>
             </tr>
@@ -407,6 +490,16 @@ const getRoleBadgeColor = (role: string) => {
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 />
                 <p v-if="createForm.errors.email" class="mt-1 text-sm text-red-600">{{ createForm.errors.email }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone (WhatsApp)</label>
+                <input
+                  v-model="createForm.phone"
+                  type="text"
+                  placeholder="e.g. +1234567890"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                />
+                <p v-if="createForm.errors.phone" class="mt-1 text-sm text-red-600">{{ createForm.errors.phone }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
@@ -486,6 +579,16 @@ const getRoleBadgeColor = (role: string) => {
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 />
                 <p v-if="editForm.errors.email" class="mt-1 text-sm text-red-600">{{ editForm.errors.email }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone (WhatsApp)</label>
+                <input
+                  v-model="editForm.phone"
+                  type="text"
+                  placeholder="e.g. +1234567890"
+                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                />
+                <p v-if="editForm.errors.phone" class="mt-1 text-sm text-red-600">{{ editForm.errors.phone }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password (leave blank to keep current)</label>

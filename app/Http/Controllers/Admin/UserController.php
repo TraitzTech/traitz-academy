@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserController extends Controller
 {
@@ -20,7 +21,8 @@ class UserController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -139,6 +141,70 @@ class UserController extends Controller
         ]);
 
         return back()->with('success', 'User role updated.');
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $request->validate([
+            'format' => 'required|in:csv,xlsx,phones',
+        ]);
+
+        $query = User::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        $users = $query->orderBy('name')->get();
+        $format = $request->format;
+
+        if ($format === 'phones') {
+            $filename = 'user-phone-numbers-'.now()->format('Y-m-d').'.txt';
+
+            return response()->streamDownload(function () use ($users) {
+                $phones = $users->filter(fn ($user) => ! empty($user->phone))
+                    ->pluck('phone')
+                    ->unique();
+
+                foreach ($phones as $phone) {
+                    echo $phone."\n";
+                }
+            }, $filename, [
+                'Content-Type' => 'text/plain',
+            ]);
+        }
+
+        // CSV / Excel export
+        $extension = $format === 'xlsx' ? 'csv' : 'csv';
+        $filename = 'users-export-'.now()->format('Y-m-d').'.'.$extension;
+
+        return response()->streamDownload(function () use ($users) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Name', 'Email', 'Phone', 'Role', 'Email Verified', 'Joined']);
+
+            foreach ($users as $user) {
+                fputcsv($handle, [
+                    $user->name,
+                    $user->email,
+                    $user->phone ?? '',
+                    $user->role,
+                    $user->email_verified_at ? $user->email_verified_at->format('Y-m-d') : 'No',
+                    $user->created_at->format('Y-m-d'),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function bulkDestroy(Request $request): RedirectResponse

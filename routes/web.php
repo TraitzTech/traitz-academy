@@ -90,6 +90,7 @@ Route::prefix('admin')
         Route::delete('/applications/{application}', [AdminApplicationController::class, 'destroy'])->name('applications.destroy');
 
         // Users Management
+        Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
         Route::resource('users', UserController::class);
         Route::post('/users/{user}/toggle-role', [UserController::class, 'toggleRole'])->name('users.toggle-role');
         Route::post('/users/bulk-destroy', [UserController::class, 'bulkDestroy'])->name('users.bulk-destroy');
