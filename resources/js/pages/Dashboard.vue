@@ -54,13 +54,36 @@
     <!-- Applications Section -->
     <div id="applications" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden mb-8">
       <div class="px-4 sm:px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">My Applications</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Track your program applications</p>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">My Applications</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Track your program applications</p>
+          </div>
+          <span v-if="hasApplications" class="text-sm text-gray-500 dark:text-gray-400">
+            Showing {{ filteredApplications.length }} of {{ applications.length }}
+          </span>
+        </div>
+        <!-- Status Filter Tabs -->
+        <div v-if="hasApplications" class="flex flex-wrap gap-2 mt-4">
+          <button
+            v-for="tab in applicationTabs"
+            :key="tab.value"
+            @click="activeAppTab = tab.value"
+            :class="[
+              'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
+              activeAppTab === tab.value
+                ? 'bg-[#42b6c5] text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+            ]"
+          >
+            {{ tab.label }} ({{ tab.count }})
+          </button>
+        </div>
       </div>
 
       <!-- Applications List -->
-      <div v-if="hasApplications" class="divide-y divide-gray-100 dark:divide-gray-700">
-        <div v-for="application in applications" :key="application.id" class="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+      <div v-if="hasApplications && filteredApplications.length > 0" class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="application in paginatedApplications" :key="application.id" class="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
           <!-- Mobile View -->
           <div class="sm:hidden">
             <div class="flex items-start justify-between mb-3">
@@ -80,6 +103,18 @@
               <span>Applied: {{ formatDate(application.created_at) }}</span>
               <span>#{{ application.id }}</span>
             </div>
+            <!-- Internship Letter (Mobile) -->
+            <a
+              v-if="application.internship_letter_path"
+              :href="`/storage/${application.internship_letter_path}`"
+              target="_blank"
+              class="w-full inline-flex items-center justify-center px-4 py-2 mb-2 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View Internship Letter
+            </a>
             <Link
               :href="`/programs/${application.program?.slug}`"
               class="w-full inline-flex items-center justify-center px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
@@ -106,12 +141,25 @@
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{{ application.program?.description || 'No description' }}</p>
               </div>
-              <Link
-                :href="`/programs/${application.program?.slug}`"
-                class="ml-4 px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors flex-shrink-0"
-              >
-                View Program
-              </Link>
+              <div class="ml-4 flex items-center gap-2 flex-shrink-0">
+                <a
+                  v-if="application.internship_letter_path"
+                  :href="`/storage/${application.internship_letter_path}`"
+                  target="_blank"
+                  class="px-3 py-2 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  title="View Internship Letter"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </a>
+                <Link
+                  :href="`/programs/${application.program?.slug}`"
+                  class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
+                >
+                  View Program
+                </Link>
+              </div>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm">
               <div>
@@ -127,8 +175,11 @@
                 <p class="font-medium text-gray-900 dark:text-gray-100">{{ formatDate(application.updated_at) }}</p>
               </div>
               <div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID</p>
-                <p class="font-medium text-gray-900 dark:text-gray-100">#{{ application.id }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Attachments</p>
+                <p class="font-medium text-gray-900 dark:text-gray-100">
+                  <span v-if="application.internship_letter_path" class="text-blue-600 dark:text-blue-400">📎 Letter</span>
+                  <span v-else class="text-gray-400 dark:text-gray-600">None</span>
+                </p>
               </div>
             </div>
             
@@ -160,8 +211,23 @@
         </div>
       </div>
 
+      <!-- Show More / Less -->
+      <div v-if="filteredApplications.length > appsPerPage" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-center">
+        <button
+          @click="showAllApps = !showAllApps"
+          class="text-sm font-medium text-[#42b6c5] hover:text-[#35919e] transition-colors"
+        >
+          {{ showAllApps ? 'Show Less' : `Show All (${filteredApplications.length - appsPerPage} more)` }}
+        </button>
+      </div>
+
+      <!-- No Results for Filter -->
+      <div v-if="hasApplications && filteredApplications.length === 0" class="px-6 py-10 text-center">
+        <p class="text-gray-500 dark:text-gray-400">No {{ activeAppTab }} applications found.</p>
+      </div>
+
       <!-- Empty State -->
-      <div v-else class="px-6 py-12 text-center">
+      <div v-if="!hasApplications" class="px-6 py-12 text-center">
         <div class="inline-block p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
           <svg class="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -370,6 +436,7 @@
 
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -393,6 +460,28 @@ const hasApplications = applications.length > 0
 const hasRegistrations = registrations.length > 0
 const hasInterviews = interviews.length > 0
 const hasScheduledInterviews = scheduledInterviews.length > 0
+
+// Applications filtering & pagination
+const activeAppTab = ref('all')
+const showAllApps = ref(false)
+const appsPerPage = 5
+
+const applicationTabs = computed(() => [
+  { label: 'All', value: 'all', count: applications.length },
+  { label: 'Pending', value: 'pending', count: applications.filter(a => a.status === 'pending').length },
+  { label: 'Accepted', value: 'accepted', count: applications.filter(a => a.status === 'accepted').length },
+  { label: 'Rejected', value: 'rejected', count: applications.filter(a => a.status === 'rejected').length },
+])
+
+const filteredApplications = computed(() => {
+  if (activeAppTab.value === 'all') return applications
+  return applications.filter(a => a.status === activeAppTab.value)
+})
+
+const paginatedApplications = computed(() => {
+  if (showAllApps.value) return filteredApplications.value
+  return filteredApplications.value.slice(0, appsPerPage)
+})
 
 // Format date utility
 const formatDate = (date) => {
