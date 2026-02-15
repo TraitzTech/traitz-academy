@@ -27,6 +27,13 @@ class ApplicationController extends Controller
         $validated['user_id'] = auth()->id();
         $validated['application_type'] = $request->input('application_type', 'professional');
 
+        // Handle internship letter upload
+        if ($request->hasFile('internship_letter')) {
+            $validated['internship_letter_path'] = $request->file('internship_letter')
+                ->store('internship-letters', 'public');
+        }
+        unset($validated['internship_letter']);
+
         $application = Application::create($validated);
 
         // Send notification email to admin

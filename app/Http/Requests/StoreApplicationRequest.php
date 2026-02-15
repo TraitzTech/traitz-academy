@@ -26,6 +26,7 @@ class StoreApplicationRequest extends FormRequest
             'academic_duration' => ['nullable', 'string', 'max:255'],
             'motivation' => ['required', 'string', 'min:20', 'max:2000'],
             'experience' => ['nullable', 'string', 'max:2000'],
+            'internship_letter' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:5120'],
         ];
     }
 

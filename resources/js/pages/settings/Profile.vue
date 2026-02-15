@@ -13,6 +13,7 @@ import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem } from '@/types';
+import { computed } from 'vue';
 
 interface Props {
     mustVerifyEmail: boolean;
@@ -30,6 +31,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = page.props.auth.user;
+const phoneRequired = computed(() => page.props.flash?.status === 'phone-required' || !user.phone);
 </script>
 
 <template>
@@ -39,10 +41,27 @@ const user = page.props.auth.user;
         <h1 class="sr-only">Profile Settings</h1>
 
         <SettingsLayout>
+            <!-- Phone Required Banner -->
+            <div v-if="phoneRequired && !user.phone" class="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600 p-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <svg class="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-amber-800 dark:text-amber-300">Phone Number Required</h3>
+                        <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                            Please add your phone/WhatsApp number to continue using the platform. This helps us reach you for important updates about your applications and interviews.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
                     title="Profile information"
-                    description="Update your name and email address"
+                    description="Update your name, email address, and phone number"
                 />
 
                 <Form
@@ -77,6 +96,23 @@ const user = page.props.auth.user;
                             placeholder="Email address"
                         />
                         <InputError class="mt-2" :message="errors.email" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="phone">Phone / WhatsApp Number <span class="text-red-500">*</span></Label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            class="mt-1 block w-full"
+                            :class="{ 'border-amber-400 ring-2 ring-amber-200': !user.phone }"
+                            name="phone"
+                            :default-value="user.phone || ''"
+                            required
+                            autocomplete="tel"
+                            placeholder="+234xxxxxxxxxx"
+                        />
+                        <p class="text-xs text-muted-foreground">Include country code (e.g., +234 for Nigeria). Used for offline calls and WhatsApp.</p>
+                        <InputError class="mt-2" :message="errors.phone" />
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">

@@ -2,6 +2,17 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -21,6 +32,16 @@ interface Application {
   created_at: string
   reviewed_at: string | null
   reviewed_by: number | null
+  interview_id: number | null
+  interview_scheduled_at: string | null
+  interview_status: string | null
+  interview: {
+    id: number
+    title: string
+    description: string | null
+    passing_score: number
+    time_limit_minutes: number | null
+  } | null
   program: {
     id: number
     title: string
@@ -40,8 +61,45 @@ interface Application {
   } | null
 }
 
+interface AvailableInterview {
+  id: number
+  title: string
+  description: string | null
+  passing_score: number
+  time_limit_minutes: number | null
+  questions_count: number
+}
+
+interface InterviewAnswer {
+  id: number
+  answer: string | null
+  is_correct: boolean
+  points_earned: number
+  question: {
+    id: number
+    question: string
+    type: string
+    correct_answer: string | null
+    points: number
+  }
+}
+
+interface InterviewResponse {
+  id: number
+  score: number
+  total_points: number
+  percentage: number
+  status: string
+  passed: boolean
+  started_at: string | null
+  completed_at: string | null
+  answers: InterviewAnswer[]
+}
+
 const props = defineProps<{
   application: Application
+  availableInterviews: AvailableInterview[]
+  interviewResponse: InterviewResponse | null
 }>()
 
 defineOptions({ layout: AppLayout })
@@ -49,7 +107,12 @@ defineOptions({ layout: AppLayout })
 const toast = useToast()
 
 const showRejectModal = ref(false)
+const showInterviewModal = ref(false)
+const showDeleteModal = ref(false)
+const showAcceptModal = ref(false)
 const rejectNotes = ref('')
+const selectedInterviewId = ref<number | null>(null)
+const schedulingInterview = ref(false)
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('en-US', {
@@ -78,6 +141,7 @@ const acceptApplication = () => {
   router.post(`/admin/applications/${props.application.id}/accept`, {}, {
     preserveState: true,
     onSuccess: () => {
+      showAcceptModal.value = false
       toast.success(`Application from ${props.application.first_name} ${props.application.last_name} accepted!`)
     },
     onError: () => {
@@ -102,15 +166,52 @@ const rejectApplication = () => {
 }
 
 const deleteApplication = () => {
-  if (confirm(`Are you sure you want to delete this application?`)) {
-    router.delete(`/admin/applications/${props.application.id}`, {
-      onSuccess: () => {
-        toast.success('Application deleted successfully!')
-      },
-      onError: () => {
-        toast.error('Failed to delete application.')
-      },
-    })
+  router.delete(`/admin/applications/${props.application.id}`, {
+    onSuccess: () => {
+      showDeleteModal.value = false
+      toast.success('Application deleted successfully!')
+    },
+    onError: () => {
+      toast.error('Failed to delete application.')
+    },
+  })
+}
+
+const openInterviewModal = () => {
+  selectedInterviewId.value = null
+  showInterviewModal.value = true
+}
+
+const scheduleInterview = () => {
+  if (!selectedInterviewId.value) {
+    toast.error('Please select an interview.')
+    return
+  }
+
+  schedulingInterview.value = true
+  router.post(`/admin/applications/${props.application.id}/schedule-interview`, {
+    interview_id: selectedInterviewId.value,
+  }, {
+    preserveState: true,
+    onSuccess: () => {
+      showInterviewModal.value = false
+      schedulingInterview.value = false
+      toast.success('Interview scheduled and invitation email sent!')
+    },
+    onError: (errors) => {
+      schedulingInterview.value = false
+      const errorMessage = Object.values(errors)[0] || 'Failed to schedule interview.'
+      toast.error(errorMessage as string)
+    },
+  })
+}
+
+const getInterviewStatusColor = (status: string | null) => {
+  switch (status) {
+    case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    case 'scheduled': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+    case 'expired': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+    default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
   }
 }
 </script>
@@ -134,10 +235,17 @@ const deleteApplication = () => {
         </span>
         <template v-if="application.status === 'pending'">
           <button
-            @click="acceptApplication"
+            @click="showAcceptModal = true"
             class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
           >
             Accept
+          </button>
+          <button
+            v-if="application.user && availableInterviews.length > 0"
+            @click="openInterviewModal"
+            class="px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors"
+          >
+            Schedule Interview
           </button>
           <button
             @click="showRejectModal = true"
@@ -147,7 +255,7 @@ const deleteApplication = () => {
           </button>
         </template>
         <button
-          @click="deleteApplication"
+          @click="showDeleteModal = true"
           class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Delete
@@ -273,44 +381,198 @@ const deleteApplication = () => {
             </Link>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Reject Modal -->
-    <div v-if="showRejectModal" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-black bg-opacity-50" @click="showRejectModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Reject Application</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Are you sure you want to reject the application from 
-            <strong>{{ application.first_name }} {{ application.last_name }}</strong>?
-          </p>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optional)</label>
-            <textarea
-              v-model="rejectNotes"
-              rows="3"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
-              placeholder="Internal notes about rejection reason..."
-            ></textarea>
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showRejectModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              @click="rejectApplication"
-              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Reject Application
-            </button>
+        <!-- Interview Status -->
+        <div v-if="application.interview" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-[#42b6c5]">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Scheduled Interview</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Interview</label>
+              <p class="mt-1 font-medium text-gray-900 dark:text-gray-100">{{ application.interview.title }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+              <p class="mt-1">
+                <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getInterviewStatusColor(application.interview_status)]">
+                  {{ application.interview_status ? application.interview_status.charAt(0).toUpperCase() + application.interview_status.slice(1) : 'Unknown' }}
+                </span>
+              </p>
+            </div>
+            <div v-if="application.interview_scheduled_at">
+              <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Scheduled On</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ formatDate(application.interview_scheduled_at) }}</p>
+            </div>
+
+            <!-- Interview Result -->
+            <template v-if="interviewResponse && interviewResponse.status === 'completed'">
+              <div class="mt-2 p-4 rounded-lg" :class="interviewResponse.passed ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-semibold" :class="interviewResponse.passed ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'">
+                    {{ interviewResponse.passed ? '✅ Passed' : '❌ Not Passed' }}
+                  </span>
+                  <span class="text-lg font-bold" :class="interviewResponse.passed ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'">
+                    {{ interviewResponse.percentage }}%
+                  </span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    class="h-2 rounded-full transition-all duration-500"
+                    :class="interviewResponse.passed ? 'bg-green-500' : 'bg-red-500'"
+                    :style="{ width: `${Math.min(interviewResponse.percentage, 100)}%` }"
+                  ></div>
+                </div>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                  Score: {{ interviewResponse.score }}/{{ interviewResponse.total_points }} • Passing: {{ application.interview.passing_score }}%
+                </p>
+              </div>
+              <Link
+                :href="`/admin/interviews/${application.interview.id}/responses/${interviewResponse.id}`"
+                class="inline-flex items-center text-sm text-[#42b6c5] hover:text-[#35919e] font-medium"
+              >
+                View Full Response →
+              </Link>
+            </template>
+
+            <!-- Resend / Change Interview -->
+            <div v-if="application.status === 'pending' && availableInterviews.length > 0" class="pt-2 border-t dark:border-gray-700">
+              <button
+                @click="openInterviewModal"
+                class="text-sm text-[#42b6c5] hover:text-[#35919e] font-medium"
+              >
+                {{ application.interview_status === 'completed' ? 'Schedule Different Interview' : 'Change or Resend Interview' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Accept Confirmation Modal -->
+    <ConfirmationModal
+      :open="showAcceptModal"
+      title="Accept Application"
+      :description="`Are you sure you want to accept the application from ${application.first_name} ${application.last_name}? They will be notified via email.`"
+      confirm-text="Accept Application"
+      variant="default"
+      @update:open="showAcceptModal = $event"
+      @confirm="acceptApplication"
+    />
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmationModal
+      :open="showDeleteModal"
+      title="Delete Application"
+      :description="`Are you sure you want to delete the application from ${application.first_name} ${application.last_name}? This action cannot be undone.`"
+      confirm-text="Delete"
+      variant="destructive"
+      @update:open="showDeleteModal = $event"
+      @confirm="deleteApplication"
+    />
+
+    <!-- Reject Modal -->
+    <Dialog :open="showRejectModal" @update:open="showRejectModal = $event">
+      <DialogContent>
+        <DialogHeader class="space-y-3">
+          <DialogTitle>Reject Application</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to reject the application from
+            {{ application.first_name }} {{ application.last_name }}?
+          </DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-2">
+          <label class="text-sm font-medium">Notes (optional)</label>
+          <textarea
+            v-model="rejectNotes"
+            rows="3"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+            placeholder="Internal notes about rejection reason..."
+          ></textarea>
+        </div>
+        <DialogFooter class="gap-2">
+          <DialogClose as-child>
+            <Button variant="secondary">Cancel</Button>
+          </DialogClose>
+          <Button variant="destructive" @click="rejectApplication">
+            Reject Application
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Schedule Interview Modal -->
+    <Dialog :open="showInterviewModal" @update:open="showInterviewModal = $event">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader class="space-y-3">
+          <DialogTitle>Schedule Interview</DialogTitle>
+          <DialogDescription>
+            Select an interview to send to {{ application.first_name }} {{ application.last_name }}.
+            They will receive an email invitation with a link to begin.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div v-if="availableInterviews.length === 0" class="text-center py-6">
+          <p class="text-gray-500 dark:text-gray-400">No active interviews available for this program.</p>
+          <Link href="/admin/interviews/create" class="text-[#42b6c5] hover:underline text-sm mt-2 inline-block">
+            Create an Interview →
+          </Link>
+        </div>
+
+        <div v-else class="space-y-3 max-h-72 overflow-y-auto">
+          <label
+            v-for="interview in availableInterviews"
+            :key="interview.id"
+            :class="[
+              'block p-4 border-2 rounded-xl cursor-pointer transition-all',
+              selectedInterviewId === interview.id
+                ? 'border-[#42b6c5] bg-cyan-50 dark:bg-cyan-900/20 shadow-sm'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            ]"
+          >
+            <div class="flex items-start gap-3">
+              <input
+                type="radio"
+                :value="interview.id"
+                v-model="selectedInterviewId"
+                class="mt-1 text-[#42b6c5] focus:ring-[#42b6c5]"
+              />
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-900 dark:text-gray-100">{{ interview.title }}</p>
+                <p v-if="interview.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ interview.description }}</p>
+                <div class="flex flex-wrap gap-3 mt-2">
+                  <span class="inline-flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    📝 {{ interview.questions_count }} question{{ interview.questions_count !== 1 ? 's' : '' }}
+                  </span>
+                  <span v-if="interview.time_limit_minutes" class="inline-flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    ⏱️ {{ interview.time_limit_minutes }} min
+                  </span>
+                  <span class="inline-flex items-center text-xs text-gray-600 dark:text-gray-400">
+                    🎯 Pass: {{ interview.passing_score }}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div v-if="application.interview_id" class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p class="text-sm text-amber-800 dark:text-amber-300">
+            ⚠️ This applicant already has an interview scheduled. Proceeding will replace it and send a new invitation email.
+          </p>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <DialogClose as-child>
+            <Button variant="secondary">Cancel</Button>
+          </DialogClose>
+          <Button
+            :disabled="!selectedInterviewId || schedulingInterview"
+            @click="scheduleInterview"
+          >
+            <span v-if="schedulingInterview">Sending...</span>
+            <span v-else>Send Interview Invitation</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

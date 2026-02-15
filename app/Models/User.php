@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'phone_required_prompted',
     ];
 
     /**
@@ -71,5 +72,10 @@ class User extends Authenticatable
     public function emailCampaignRecipients(): HasMany
     {
         return $this->hasMany(EmailCampaignRecipient::class);
+    }
+
+    public function interviewResponses(): HasMany
+    {
+        return $this->hasMany(InterviewResponse::class);
     }
 }

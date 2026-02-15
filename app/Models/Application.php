@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Application extends Model
 {
@@ -25,16 +26,21 @@ class Application extends Model
         'academic_duration',
         'motivation',
         'experience',
+        'internship_letter_path',
         'status',
         'application_type',
         'notes',
         'reviewed_at',
+        'interview_id',
+        'interview_scheduled_at',
+        'interview_status',
     ];
 
     protected function casts(): array
     {
         return [
             'reviewed_at' => 'datetime',
+            'interview_scheduled_at' => 'datetime',
         ];
     }
 
@@ -46,5 +52,15 @@ class Application extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function interview(): BelongsTo
+    {
+        return $this->belongsTo(Interview::class);
+    }
+
+    public function interviewResponses(): HasMany
+    {
+        return $this->hasMany(InterviewResponse::class);
     }
 }

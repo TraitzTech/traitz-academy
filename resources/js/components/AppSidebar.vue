@@ -7,6 +7,7 @@ import {
     Folder, 
     LayoutGrid,
     Mail,
+    MessageSquare,
     Settings,
     Users,
     GraduationCap,
@@ -67,6 +68,11 @@ const adminNavItems: NavItem[] = [
         title: 'Success Stories',
         href: '/admin/success-stories',
         icon: Star,
+    },
+    {
+        title: 'Interviews',
+        href: '/admin/interviews',
+        icon: MessageSquare,
     },
     {
         title: 'Emails',

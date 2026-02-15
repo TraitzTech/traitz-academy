@@ -3,6 +3,17 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { debounce } from 'lodash-es'
 import { ref, watch, computed } from 'vue'
 
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -33,6 +44,13 @@ interface Program {
   title: string
 }
 
+interface InterviewOption {
+  id: number
+  title: string
+  program_id: number | null
+  questions_count: number
+}
+
 interface Props {
   applications: {
     data: Application[]
@@ -50,6 +68,7 @@ interface Props {
     rejected: number
   }
   programs: Program[]
+  interviews: InterviewOption[]
 }
 
 const props = defineProps<Props>()
@@ -65,6 +84,8 @@ const selectedIds = ref<number[]>([])
 const showRejectModal = ref(false)
 const rejectingApp = ref<Application | null>(null)
 const rejectNotes = ref('')
+const showAcceptModal = ref(false)
+const acceptingApp = ref<Application | null>(null)
 
 const applyFilters = debounce(() => {
   router.get('/admin/applications', {
@@ -89,10 +110,19 @@ const toggleSelectAll = () => {
   }
 }
 
-const acceptApplication = (app: Application) => {
+const openAcceptModal = (app: Application) => {
+  acceptingApp.value = app
+  showAcceptModal.value = true
+}
+
+const acceptApplication = () => {
+  if (!acceptingApp.value) return
+  const app = acceptingApp.value
   router.post(`/admin/applications/${app.id}/accept`, {}, {
     preserveState: true,
     onSuccess: () => {
+      showAcceptModal.value = false
+      acceptingApp.value = null
       toast.success(`Application from ${app.first_name} ${app.last_name} accepted!`)
     },
     onError: () => {
@@ -148,6 +178,8 @@ const confirmDelete = () => {
 }
 
 const showBulkDeleteModal = ref(false)
+const showBulkAcceptModal = ref(false)
+const showBulkRejectModal = ref(false)
 
 const bulkAction = (action: string) => {
   if (selectedIds.value.length === 0) {
@@ -158,18 +190,48 @@ const bulkAction = (action: string) => {
     showBulkDeleteModal.value = true
     return
   }
+  if (action === 'accept') {
+    showBulkAcceptModal.value = true
+    return
+  }
+  if (action === 'reject') {
+    showBulkRejectModal.value = true
+    return
+  }
+}
+
+const confirmBulkAccept = () => {
   router.post('/admin/applications/bulk', {
     ids: selectedIds.value,
-    action,
+    action: 'accept',
   }, {
     preserveState: true,
     onSuccess: () => {
       const count = selectedIds.value.length
       selectedIds.value = []
-      toast.success(`Bulk ${action} completed for ${count} application(s)!`)
+      showBulkAcceptModal.value = false
+      toast.success(`Accepted ${count} application(s)!`)
     },
     onError: () => {
-      toast.error(`Failed to perform bulk ${action}.`)
+      toast.error('Failed to accept selected applications.')
+    },
+  })
+}
+
+const confirmBulkReject = () => {
+  router.post('/admin/applications/bulk', {
+    ids: selectedIds.value,
+    action: 'reject',
+  }, {
+    preserveState: true,
+    onSuccess: () => {
+      const count = selectedIds.value.length
+      selectedIds.value = []
+      showBulkRejectModal.value = false
+      toast.success(`Rejected ${count} application(s)!`)
+    },
+    onError: () => {
+      toast.error('Failed to reject selected applications.')
     },
   })
 }
@@ -188,6 +250,42 @@ const confirmBulkDelete = () => {
     },
     onError: () => {
       toast.error('Failed to delete selected applications.')
+    },
+  })
+}
+
+// Bulk Schedule Interview
+const showBulkScheduleModal = ref(false)
+const selectedInterviewId = ref<number | null>(null)
+
+const openBulkScheduleModal = () => {
+  if (selectedIds.value.length === 0) {
+    toast.warning('Please select at least one application')
+    return
+  }
+  selectedInterviewId.value = null
+  showBulkScheduleModal.value = true
+}
+
+const confirmBulkSchedule = () => {
+  if (!selectedInterviewId.value) {
+    toast.warning('Please select an interview')
+    return
+  }
+  router.post('/admin/applications/bulk-schedule-interview', {
+    ids: selectedIds.value,
+    interview_id: selectedInterviewId.value,
+  }, {
+    preserveState: true,
+    onSuccess: () => {
+      const count = selectedIds.value.length
+      selectedIds.value = []
+      showBulkScheduleModal.value = false
+      selectedInterviewId.value = null
+      toast.success(`Interview scheduled for ${count} applicant(s)!`)
+    },
+    onError: () => {
+      toast.error('Failed to schedule interviews.')
     },
   })
 }
@@ -288,6 +386,12 @@ const getStatusColor = (status: string) => {
               Reject
             </button>
             <button
+              @click="openBulkScheduleModal"
+              class="px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors text-sm"
+            >
+              Schedule Interview
+            </button>
+            <button
               @click="bulkAction('delete')"
               class="px-4 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-black transition-colors text-sm"
             >
@@ -354,7 +458,7 @@ const getStatusColor = (status: string) => {
                   </Link>
                   <template v-if="app.status === 'pending'">
                     <button
-                      @click="acceptApplication(app)"
+                      @click="openAcceptModal(app)"
                       class="text-green-600 hover:text-green-900"
                     >
                       Accept
@@ -406,102 +510,121 @@ const getStatusColor = (status: string) => {
       </div>
     </div>
 
+    <!-- Accept Confirmation Modal -->
+    <ConfirmationModal
+      :open="showAcceptModal"
+      title="Accept Application"
+      :description="`Are you sure you want to accept the application from ${acceptingApp?.first_name} ${acceptingApp?.last_name}? They will be notified via email.`"
+      confirm-text="Accept Application"
+      variant="default"
+      @update:open="showAcceptModal = $event"
+      @confirm="acceptApplication"
+    />
+
     <!-- Reject Modal -->
-    <Teleport to="body">
-      <div v-if="showRejectModal" class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showRejectModal = false"></div>
-          <div class="relative inline-block align-middle bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Reject Application</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Are you sure you want to reject the application from 
-            <strong class="text-gray-900 dark:text-gray-100">{{ rejectingApp?.first_name }} {{ rejectingApp?.last_name }}</strong>?
-          </p>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optional)</label>
-            <textarea
-              v-model="rejectNotes"
-              rows="3"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
-              placeholder="Internal notes about rejection reason..."
-            ></textarea>
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showRejectModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              @click="rejectApplication"
-              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Reject Application
-            </button>
-          </div>
-          </div>
+    <Dialog :open="showRejectModal" @update:open="showRejectModal = $event">
+      <DialogContent>
+        <DialogHeader class="space-y-3">
+          <DialogTitle>Reject Application</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to reject the application from
+            {{ rejectingApp?.first_name }} {{ rejectingApp?.last_name }}?
+          </DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-2">
+          <label class="text-sm font-medium">Notes (optional)</label>
+          <textarea
+            v-model="rejectNotes"
+            rows="3"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+            placeholder="Internal notes about rejection reason..."
+          ></textarea>
         </div>
-      </div>
-    </Teleport>
+        <DialogFooter class="gap-2">
+          <DialogClose as-child>
+            <Button variant="secondary">Cancel</Button>
+          </DialogClose>
+          <Button variant="destructive" @click="rejectApplication">
+            Reject Application
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- Delete Modal -->
-    <Teleport to="body">
-      <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showDeleteModal = false"></div>
-          <div class="relative inline-block align-middle bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Delete Application</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Are you sure you want to delete the application from
-            <strong class="text-gray-900 dark:text-gray-100">{{ deletingApp?.first_name }} {{ deletingApp?.last_name }}</strong>? This action cannot be undone.
-          </p>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showDeleteModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              @click="confirmDelete"
-              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <ConfirmationModal
+      :open="showDeleteModal"
+      title="Delete Application"
+      :description="`Are you sure you want to delete the application from ${deletingApp?.first_name} ${deletingApp?.last_name}? This action cannot be undone.`"
+      confirm-text="Delete"
+      variant="destructive"
+      @update:open="showDeleteModal = $event"
+      @confirm="confirmDelete"
+    />
+
+    <!-- Bulk Accept Modal -->
+    <ConfirmationModal
+      :open="showBulkAcceptModal"
+      title="Accept Selected Applications"
+      :description="`Are you sure you want to accept ${selectedIds.length} selected application(s)? Each applicant will be notified via email.`"
+      confirm-text="Accept Selected"
+      variant="default"
+      @update:open="showBulkAcceptModal = $event"
+      @confirm="confirmBulkAccept"
+    />
+
+    <!-- Bulk Reject Modal -->
+    <ConfirmationModal
+      :open="showBulkRejectModal"
+      title="Reject Selected Applications"
+      :description="`Are you sure you want to reject ${selectedIds.length} selected application(s)? Each applicant will be notified via email.`"
+      confirm-text="Reject Selected"
+      variant="destructive"
+      @update:open="showBulkRejectModal = $event"
+      @confirm="confirmBulkReject"
+    />
 
     <!-- Bulk Delete Modal -->
-    <Teleport to="body">
-      <div v-if="showBulkDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-          <div class="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" @click="showBulkDeleteModal = false"></div>
-          <div class="relative inline-block align-middle bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md sm:w-full p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Delete Selected Applications</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Are you sure you want to delete <strong class="text-gray-900 dark:text-gray-100">{{ selectedIds.length }}</strong> selected application(s)? This action cannot be undone.
-          </p>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showBulkDeleteModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              @click="confirmBulkDelete"
-              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete Selected
-            </button>
-          </div>
-          </div>
+    <ConfirmationModal
+      :open="showBulkDeleteModal"
+      title="Delete Selected Applications"
+      :description="`Are you sure you want to delete ${selectedIds.length} selected application(s)? This action cannot be undone.`"
+      confirm-text="Delete Selected"
+      variant="destructive"
+      @update:open="showBulkDeleteModal = $event"
+      @confirm="confirmBulkDelete"
+    />
+
+    <!-- Bulk Schedule Interview Modal -->
+    <Dialog :open="showBulkScheduleModal" @update:open="showBulkScheduleModal = $event">
+      <DialogContent>
+        <DialogHeader class="space-y-3">
+          <DialogTitle>Schedule Interview</DialogTitle>
+          <DialogDescription>
+            Select an interview to send to {{ selectedIds.length }} selected applicant(s). Each applicant will receive an email invitation.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-2">
+          <label class="text-sm font-medium">Choose Interview</label>
+          <select
+            v-model="selectedInterviewId"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option :value="null" disabled>Select an interview...</option>
+            <option v-for="interview in interviews" :key="interview.id" :value="interview.id">
+              {{ interview.title }} ({{ interview.questions_count }} questions)
+            </option>
+          </select>
         </div>
-      </div>
-    </Teleport>
+        <DialogFooter class="gap-2">
+          <DialogClose as-child>
+            <Button variant="secondary">Cancel</Button>
+          </DialogClose>
+          <Button :disabled="!selectedInterviewId" class="bg-[#42b6c5] hover:bg-[#35919e]" @click="confirmBulkSchedule">
+            Schedule Interview
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

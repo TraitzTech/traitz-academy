@@ -82,7 +82,20 @@ class ProgramController extends Controller
             'curriculum' => 'nullable|string',
         ]);
 
-        $validated['slug'] = Str::slug($validated['title']);
+        $slug = Str::slug($validated['title']);
+
+        // Check if slug+category combination already exists
+        $existingProgram = Program::where('slug', $slug)
+            ->where('category', $validated['category'])
+            ->first();
+
+        if ($existingProgram) {
+            return back()->withErrors([
+                'title' => "A program with this title already exists in the \"{$validated['category']}\" category. Please use a different title or category.",
+            ])->withInput();
+        }
+
+        $validated['slug'] = $slug;
 
         if ($request->hasFile('image')) {
             $validated['image_url'] = $request->file('image')->store('programs', 'public');
@@ -133,7 +146,21 @@ class ProgramController extends Controller
         ]);
 
         if (isset($validated['title'])) {
-            $validated['slug'] = Str::slug($validated['title']);
+            $slug = Str::slug($validated['title']);
+
+            // Check if slug+category combination already exists (excluding current program)
+            $existingProgram = Program::where('slug', $slug)
+                ->where('category', $validated['category'])
+                ->where('id', '!=', $program->id)
+                ->first();
+
+            if ($existingProgram) {
+                return back()->withErrors([
+                    'title' => "A program with this title already exists in the \"{$validated['category']}\" category. Please use a different title or category.",
+                ])->withInput();
+            }
+
+            $validated['slug'] = $slug;
         }
 
         if ($request->hasFile('image')) {
@@ -167,14 +194,14 @@ class ProgramController extends Controller
 
     public function toggleStatus(Program $program): RedirectResponse
     {
-        $program->update(['is_active' => !$program->is_active]);
+        $program->update(['is_active' => ! $program->is_active]);
 
         return back()->with('success', 'Program status updated.');
     }
 
     public function toggleFeatured(Program $program): RedirectResponse
     {
-        $program->update(['is_featured' => !$program->is_featured]);
+        $program->update(['is_featured' => ! $program->is_featured]);
 
         return back()->with('success', 'Program featured status updated.');
     }

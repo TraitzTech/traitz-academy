@@ -9,8 +9,8 @@ use App\Models\User;
 use App\Notifications\BatchEmailNotification;
 use App\Support\EmailContentSanitizer;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -35,6 +35,18 @@ class EmailController extends Controller
                 ->count(),
             'rejected_applicants' => User::where('role', 'user')
                 ->whereHas('applications', fn ($q) => $q->where('status', 'rejected'))
+                ->count(),
+            'interview_scheduled' => User::where('role', 'user')
+                ->whereHas('applications', fn ($q) => $q->where('interview_status', 'scheduled'))
+                ->count(),
+            'interview_completed' => User::where('role', 'user')
+                ->whereHas('applications', fn ($q) => $q->where('interview_status', 'completed'))
+                ->count(),
+            'interview_passed' => User::where('role', 'user')
+                ->whereHas('interviewResponses', fn ($q) => $q->where('passed', true))
+                ->count(),
+            'interview_not_passed' => User::where('role', 'user')
+                ->whereHas('interviewResponses', fn ($q) => $q->where('passed', false)->where('status', 'completed'))
                 ->count(),
         ];
 
@@ -75,7 +87,7 @@ class EmailController extends Controller
     public function send(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'recipients' => 'required|in:all,with_applications,without_applications,accepted_applicants,pending_applicants,rejected_applicants,custom',
+            'recipients' => 'required|in:all,with_applications,without_applications,accepted_applicants,pending_applicants,rejected_applicants,interview_scheduled,interview_completed,interview_passed,interview_not_passed,custom',
             'custom_emails' => 'nullable|array|required_if:recipients,custom',
             'custom_emails.*' => 'email',
             'subject' => 'required|string|max:255',
@@ -130,7 +142,7 @@ class EmailController extends Controller
     public function preview(Request $request): Response
     {
         $validated = $request->validate([
-            'recipients' => 'required|in:all,with_applications,without_applications,accepted_applicants,pending_applicants,rejected_applicants,custom',
+            'recipients' => 'required|in:all,with_applications,without_applications,accepted_applicants,pending_applicants,rejected_applicants,interview_scheduled,interview_completed,interview_passed,interview_not_passed,custom',
             'custom_emails' => 'nullable|array',
         ]);
 
@@ -160,7 +172,19 @@ class EmailController extends Controller
             'rejected_applicants' => User::where('role', 'user')
                 ->whereHas('applications', fn ($q) => $q->where('status', 'rejected'))
                 ->get(),
-            default => new EloquentCollection(),
+            'interview_scheduled' => User::where('role', 'user')
+                ->whereHas('applications', fn ($q) => $q->where('interview_status', 'scheduled'))
+                ->get(),
+            'interview_completed' => User::where('role', 'user')
+                ->whereHas('applications', fn ($q) => $q->where('interview_status', 'completed'))
+                ->get(),
+            'interview_passed' => User::where('role', 'user')
+                ->whereHas('interviewResponses', fn ($q) => $q->where('passed', true))
+                ->get(),
+            'interview_not_passed' => User::where('role', 'user')
+                ->whereHas('interviewResponses', fn ($q) => $q->where('passed', false)->where('status', 'completed'))
+                ->get(),
+            default => new EloquentCollection,
         };
     }
 
@@ -261,6 +285,10 @@ class EmailController extends Controller
             'accepted_applicants' => 'Accepted Applicants',
             'pending_applicants' => 'Pending Applicants',
             'rejected_applicants' => 'Rejected Applicants',
+            'interview_scheduled' => 'Interview Scheduled',
+            'interview_completed' => 'Interview Completed',
+            'interview_passed' => 'Interview Passed',
+            'interview_not_passed' => 'Interview Not Passed',
             'custom' => 'Custom List',
             default => ucfirst(str_replace('_', ' ', $audience)),
         };

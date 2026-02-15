@@ -139,6 +139,20 @@
             <div v-else-if="application.status === 'rejected'" class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg">
               <p class="text-sm text-red-800 dark:text-red-300"><span class="font-semibold">Not Selected.</span> We encourage you to apply again.</p>
             </div>
+            <div v-else-if="application.interview_id && application.interview_status === 'scheduled'" class="mt-3 p-3 bg-cyan-50 dark:bg-cyan-900/20 border-l-4 border-[#42b6c5] rounded-r-lg">
+              <div class="flex items-center justify-between">
+                <p class="text-sm text-cyan-800 dark:text-cyan-300"><span class="font-semibold">📋 Interview Required.</span> Please complete your assigned interview.</p>
+                <Link
+                  :href="`/interviews/${application.interview_id}`"
+                  class="ml-3 px-3 py-1 bg-[#42b6c5] text-white rounded text-xs font-medium hover:bg-[#35919e] transition-colors flex-shrink-0"
+                >
+                  Take Interview
+                </Link>
+              </div>
+            </div>
+            <div v-else-if="application.interview_status === 'completed'" class="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 rounded-r-lg">
+              <p class="text-sm text-purple-800 dark:text-purple-300"><span class="font-semibold">✅ Interview Completed.</span> Awaiting admin review.</p>
+            </div>
             <div v-else class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-[#42b6c5] rounded-r-lg">
               <p class="text-sm text-blue-800 dark:text-blue-300"><span class="font-semibold">Under Review.</span> You'll receive a decision within 2-4 weeks.</p>
             </div>
@@ -162,7 +176,7 @@
     </div>
 
     <!-- Event Registrations Section -->
-    <div id="registrations" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+    <div id="registrations" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden mb-8">
       <div class="px-4 sm:px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
         <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">My Event Registrations</h2>
         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Your upcoming and past events</p>
@@ -232,6 +246,125 @@
         </Link>
       </div>
     </div>
+
+    <!-- Scheduled Interviews Section -->
+    <div v-if="hasScheduledInterviews" id="scheduled-interviews" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden mb-8">
+      <div class="px-4 sm:px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">📋 Scheduled Interviews</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Interviews assigned to you by the admissions team</p>
+      </div>
+
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="interview in scheduledInterviews" :key="`scheduled-${interview.id}-${interview.application_id}`" class="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ interview.title }}</h3>
+                <!-- Status Badge -->
+                <span v-if="interview.interview_status === 'scheduled' && !interview.user_response" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  Awaiting You
+                </span>
+                <span v-else-if="interview.user_response?.requires_manual_review && !interview.user_response?.reviewed_at" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  ⏳ Under Review
+                </span>
+                <span v-else-if="interview.interview_status === 'completed' && interview.user_response?.passed" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                  ✓ Passed
+                </span>
+                <span v-else-if="interview.interview_status === 'completed' && interview.user_response && !interview.user_response.passed" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  ✗ Not Passed
+                </span>
+                <span v-else class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                  Pending
+                </span>
+              </div>
+              <p v-if="interview.program_title" class="text-sm text-[#42b6c5] font-medium mb-2">
+                For: {{ interview.program_title }}
+              </p>
+              <p v-if="interview.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{{ interview.description }}</p>
+              <div class="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span>📝 {{ interview.questions_count }} questions</span>
+                <span v-if="interview.time_limit_minutes">⏱ {{ interview.time_limit_minutes }} minutes</span>
+                <span>🎯 Passing score: {{ interview.passing_score }}%</span>
+                <span v-if="interview.user_response && !(interview.user_response.requires_manual_review && !interview.user_response.reviewed_at)">📊 Your score: {{ interview.user_response.percentage }}%</span>
+                <span v-if="interview.interview_scheduled_at">📅 Scheduled: {{ formatDate(interview.interview_scheduled_at) }}</span>
+              </div>
+            </div>
+            <div class="ml-4 flex-shrink-0">
+              <Link
+                v-if="!interview.user_response"
+                :href="`/interviews/${interview.id}`"
+                class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
+              >
+                Take Interview
+              </Link>
+              <Link
+                v-else
+                :href="`/interviews/${interview.id}/result`"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                View Results
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interviews Section -->
+    <div v-if="hasInterviews" id="interviews" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">My Interviews</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Complete interviews for your accepted programs</p>
+      </div>
+
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="interview in interviews" :key="interview.id" class="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ interview.title }}</h3>
+                <!-- Status Badge -->
+                <span v-if="!interview.user_response" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  Not Started
+                </span>
+                <span v-else-if="interview.user_response.requires_manual_review && !interview.user_response.reviewed_at" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  ⏳ Under Review
+                </span>
+                <span v-else-if="interview.user_response.passed" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                  ✓ Passed
+                </span>
+                <span v-else class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  ✗ Not Passed
+                </span>
+              </div>
+              <p v-if="interview.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{{ interview.description }}</p>
+              <div class="flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span>📝 {{ interview.questions_count }} questions</span>
+                <span v-if="interview.time_limit_minutes">⏱ {{ interview.time_limit_minutes }} minutes</span>
+                <span>🎯 Passing score: {{ interview.passing_score }}%</span>
+                <span v-if="interview.user_response && !(interview.user_response.requires_manual_review && !interview.user_response.reviewed_at)">📊 Your score: {{ interview.user_response.percentage }}%</span>
+              </div>
+            </div>
+            <div class="ml-4 flex-shrink-0">
+              <Link
+                v-if="!interview.user_response"
+                :href="`/interviews/${interview.id}`"
+                class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
+              >
+                Start Interview
+              </Link>
+              <Link
+                v-else
+                :href="`/interviews/${interview.id}/result`"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                View Results
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -248,6 +381,8 @@ const page = usePage()
 const authUser = page.props.auth?.user
 const applications = page.props.applications || []
 const registrations = page.props.registrations || []
+const interviews = page.props.interviews || []
+const scheduledInterviews = page.props.scheduledInterviews || []
 
 // Derived values
 const userName = authUser?.name ? authUser.name.split(' ')[0] : 'Student'
@@ -256,6 +391,8 @@ const acceptedCount = applications.filter(a => a.status === 'accepted').length
 const pendingCount = applications.filter(a => a.status === 'pending').length
 const hasApplications = applications.length > 0
 const hasRegistrations = registrations.length > 0
+const hasInterviews = interviews.length > 0
+const hasScheduledInterviews = scheduledInterviews.length > 0
 
 // Format date utility
 const formatDate = (date) => {

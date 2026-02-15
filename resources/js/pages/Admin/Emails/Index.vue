@@ -13,6 +13,10 @@ interface RecipientCounts {
   accepted_applicants: number
   pending_applicants: number
   rejected_applicants: number
+  interview_scheduled: number
+  interview_completed: number
+  interview_passed: number
+  interview_not_passed: number
 }
 
 interface EmailHistoryItem {
@@ -54,13 +58,17 @@ const showSendModal = ref(false)
 const selectedHistory = ref<EmailHistoryItem | null>(null)
 
 const recipientOptions = [
-  { value: 'all', label: 'All Users', description: 'Send to all registered users' },
-  { value: 'with_applications', label: 'Users with Applications', description: 'Users who have submitted at least one application' },
-  { value: 'without_applications', label: 'Users without Applications', description: 'Users who have not submitted any applications' },
-  { value: 'accepted_applicants', label: 'Accepted Applicants', description: 'Users with accepted applications' },
-  { value: 'pending_applicants', label: 'Pending Applicants', description: 'Users with pending applications' },
-  { value: 'rejected_applicants', label: 'Rejected Applicants', description: 'Users with rejected applications' },
-  { value: 'custom', label: 'Custom List', description: 'Enter email addresses manually' },
+  { value: 'all', label: 'All Users', description: 'Send to all registered users', group: 'general' },
+  { value: 'with_applications', label: 'Users with Applications', description: 'Users who have submitted at least one application', group: 'general' },
+  { value: 'without_applications', label: 'Users without Applications', description: 'Users who have not submitted any applications', group: 'general' },
+  { value: 'accepted_applicants', label: 'Accepted Applicants', description: 'Users with accepted applications', group: 'applications' },
+  { value: 'pending_applicants', label: 'Pending Applicants', description: 'Users with pending applications', group: 'applications' },
+  { value: 'rejected_applicants', label: 'Rejected Applicants', description: 'Users with rejected applications', group: 'applications' },
+  { value: 'interview_scheduled', label: 'Interview Scheduled', description: 'Users with a scheduled interview awaiting completion', group: 'interviews' },
+  { value: 'interview_completed', label: 'Interview Completed', description: 'Users who have completed their interview', group: 'interviews' },
+  { value: 'interview_passed', label: 'Interview Passed', description: 'Users who passed their interview', group: 'interviews' },
+  { value: 'interview_not_passed', label: 'Interview Not Passed', description: 'Users who did not pass their interview', group: 'interviews' },
+  { value: 'custom', label: 'Custom List', description: 'Enter email addresses manually', group: 'other' },
 ]
 
 const stripHtml = (html: string) => {
@@ -165,9 +173,11 @@ const closeHistoryDetails = () => {
         <form @submit.prevent="sendEmails" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recipients</label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">General</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div
-                v-for="option in recipientOptions"
+                v-for="option in recipientOptions.filter(o => o.group === 'general')"
                 :key="option.value"
                 @click="form.recipients = option.value"
                 :class="[
@@ -176,17 +186,70 @@ const closeHistoryDetails = () => {
                 ]"
               >
                 <div class="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    :value="option.value"
-                    v-model="form.recipients"
-                    class="text-[#42b6c5] focus:ring-[#42b6c5]"
-                  />
+                  <input type="radio" :value="option.value" v-model="form.recipients" class="text-[#42b6c5] focus:ring-[#42b6c5]" />
                   <span class="font-medium text-gray-900 dark:text-gray-100">{{ option.label }}</span>
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
               </div>
             </div>
+
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Applications</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <div
+                v-for="option in recipientOptions.filter(o => o.group === 'applications')"
+                :key="option.value"
+                @click="form.recipients = option.value"
+                :class="[
+                  'p-4 border-2 rounded-lg cursor-pointer transition-all',
+                  form.recipients === option.value ? 'border-[#42b6c5] bg-cyan-50 dark:bg-cyan-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                ]"
+              >
+                <div class="flex items-center gap-2">
+                  <input type="radio" :value="option.value" v-model="form.recipients" class="text-[#42b6c5] focus:ring-[#42b6c5]" />
+                  <span class="font-medium text-gray-900 dark:text-gray-100">{{ option.label }}</span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
+              </div>
+            </div>
+
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Interviews</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <div
+                v-for="option in recipientOptions.filter(o => o.group === 'interviews')"
+                :key="option.value"
+                @click="form.recipients = option.value"
+                :class="[
+                  'p-4 border-2 rounded-lg cursor-pointer transition-all',
+                  form.recipients === option.value ? 'border-[#42b6c5] bg-cyan-50 dark:bg-cyan-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                ]"
+              >
+                <div class="flex items-center gap-2">
+                  <input type="radio" :value="option.value" v-model="form.recipients" class="text-[#42b6c5] focus:ring-[#42b6c5]" />
+                  <span class="font-medium text-gray-900 dark:text-gray-100">{{ option.label }}</span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
+              </div>
+            </div>
+
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Other</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                v-for="option in recipientOptions.filter(o => o.group === 'other')"
+                :key="option.value"
+                @click="form.recipients = option.value"
+                :class="[
+                  'p-4 border-2 rounded-lg cursor-pointer transition-all',
+                  form.recipients === option.value ? 'border-[#42b6c5] bg-cyan-50 dark:bg-cyan-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                ]"
+              >
+                <div class="flex items-center gap-2">
+                  <input type="radio" :value="option.value" v-model="form.recipients" class="text-[#42b6c5] focus:ring-[#42b6c5]" />
+                  <span class="font-medium text-gray-900 dark:text-gray-100">{{ option.label }}</span>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-6">{{ option.description }}</p>
+              </div>
+            </div>
+
             <p v-if="form.errors.recipients" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.errors.recipients }}</p>
           </div>
 
@@ -299,6 +362,27 @@ const closeHistoryDetails = () => {
             <div class="flex justify-between items-center">
               <span class="text-sm text-gray-600 dark:text-gray-400">Rejected</span>
               <span class="font-medium text-red-600 dark:text-red-400">{{ recipientCounts.rejected_applicants }}</span>
+            </div>
+            <div class="border-t dark:border-gray-700 pt-3 mt-3">
+              <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Interviews</p>
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Scheduled</span>
+                  <span class="font-medium text-blue-600 dark:text-blue-400">{{ recipientCounts.interview_scheduled }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Completed</span>
+                  <span class="font-medium dark:text-gray-100">{{ recipientCounts.interview_completed }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Passed</span>
+                  <span class="font-medium text-green-600 dark:text-green-400">{{ recipientCounts.interview_passed }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600 dark:text-gray-400">Not Passed</span>
+                  <span class="font-medium text-red-600 dark:text-red-400">{{ recipientCounts.interview_not_passed }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -44,6 +44,23 @@
           <p v-if="form.errors.email" class="mt-2 text-sm text-red-600">{{ form.errors.email }}</p>
         </div>
 
+        <!-- Phone -->
+        <div>
+          <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">Phone / WhatsApp Number</label>
+          <input
+            id="phone"
+            v-model="form.phone"
+            type="tel"
+            required
+            autocomplete="tel"
+            placeholder="+234xxxxxxxxxx"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5] focus:ring-opacity-20 transition-all duration-200"
+            :class="{ 'border-red-500 focus:ring-red-500': form.errors.phone }"
+          />
+          <p class="mt-1 text-xs text-gray-500">Include country code (e.g., +234 for Nigeria)</p>
+          <p v-if="form.errors.phone" class="mt-1 text-sm text-red-600">{{ form.errors.phone }}</p>
+        </div>
+
         <!-- Password -->
         <div>
           <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
@@ -120,6 +137,7 @@ import { Link } from '@inertiajs/vue3'
 const form = useForm({
   name: '',
   email: '',
+  phone: '',
   password: '',
   password_confirmation: '',
 })

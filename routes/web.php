@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ApplicationController as AdminApplicationControll
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\SearchController;
@@ -36,7 +38,7 @@ Route::get('/programs', [ProgramController::class, 'index'])->name('programs.ind
 Route::get('/programs/{program:slug}', [ProgramController::class, 'show'])->name('programs.show');
 
 // Applications (Authenticated)
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'ensure.phone'])->group(function () {
     Route::get('/programs/{program}/apply', [ApplicationController::class, 'create'])->name('applications.create');
     Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 });
@@ -48,8 +50,15 @@ Route::post('/events/register', [EventController::class, 'register'])->name('eve
 
 // User Dashboard (Authenticated)
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'ensure.phone'])
     ->name('dashboard');
+
+// Interviews (Authenticated)
+Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->name('interviews.')->group(function () {
+    Route::get('/{interview}', [InterviewController::class, 'show'])->name('show');
+    Route::post('/{interview}/submit', [InterviewController::class, 'submit'])->name('submit');
+    Route::get('/{interview}/result', [InterviewController::class, 'result'])->name('result');
+});
 
 // Admin Routes (Protected)
 Route::prefix('admin')
@@ -75,7 +84,9 @@ Route::prefix('admin')
         Route::get('/applications/{application}', [AdminApplicationController::class, 'show'])->name('applications.show');
         Route::post('/applications/{application}/accept', [AdminApplicationController::class, 'accept'])->name('applications.accept');
         Route::post('/applications/{application}/reject', [AdminApplicationController::class, 'reject'])->name('applications.reject');
+        Route::post('/applications/{application}/schedule-interview', [AdminApplicationController::class, 'scheduleInterview'])->name('applications.schedule-interview');
         Route::post('/applications/bulk', [AdminApplicationController::class, 'bulkAction'])->name('applications.bulk');
+        Route::post('/applications/bulk-schedule-interview', [AdminApplicationController::class, 'bulkScheduleInterview'])->name('applications.bulk-schedule-interview');
         Route::delete('/applications/{application}', [AdminApplicationController::class, 'destroy'])->name('applications.destroy');
 
         // Users Management
@@ -99,6 +110,13 @@ Route::prefix('admin')
         Route::resource('success-stories', SuccessStoryController::class)->except(['show']);
         Route::post('/success-stories/{success_story}/toggle-status', [SuccessStoryController::class, 'toggleStatus'])->name('success-stories.toggle-status');
         Route::post('/success-stories/bulk-destroy', [SuccessStoryController::class, 'bulkDestroy'])->name('success-stories.bulk-destroy');
+
+        // Interviews Management
+        Route::resource('interviews', AdminInterviewController::class)->except(['show']);
+        Route::post('/interviews/{interview}/toggle-status', [AdminInterviewController::class, 'toggleStatus'])->name('interviews.toggle-status');
+        Route::get('/interviews/{interview}/responses', [AdminInterviewController::class, 'responses'])->name('interviews.responses');
+        Route::get('/interviews/{interview}/responses/{response}', [AdminInterviewController::class, 'showResponse'])->name('interviews.responses.show');
+        Route::post('/interviews/{interview}/responses/{response}/review', [AdminInterviewController::class, 'reviewResponse'])->name('interviews.responses.review');
 
         // Account Settings
         Route::get('/account', AccountController::class)->name('account');
