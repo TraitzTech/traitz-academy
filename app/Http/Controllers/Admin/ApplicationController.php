@@ -44,6 +44,22 @@ class ApplicationController extends Controller
             $query->where('program_id', $request->program_id);
         }
 
+        if ($request->filled('country')) {
+            $query->where('country', $request->string('country')->toString());
+        }
+
+        if ($request->filled('interview_status')) {
+            $query->where('interview_status', $request->string('interview_status')->toString());
+        }
+
+        if ($request->filled('submitted_from')) {
+            $query->whereDate('created_at', '>=', $request->date('submitted_from'));
+        }
+
+        if ($request->filled('submitted_to')) {
+            $query->whereDate('created_at', '<=', $request->date('submitted_to'));
+        }
+
         $applications = $query->latest()
             ->paginate(15)
             ->withQueryString()
@@ -67,10 +83,17 @@ class ApplicationController extends Controller
 
         return Inertia::render('Admin/Applications/Index', [
             'applications' => $applications,
-            'filters' => $request->only(['search', 'status', 'program_id']),
+            'filters' => $request->only(['search', 'status', 'program_id', 'country', 'interview_status', 'submitted_from', 'submitted_to']),
             'stats' => $stats,
             'programs' => \App\Models\Program::select('id', 'title')->get(),
             'interviews' => $interviews,
+            'countries' => Application::query()
+                ->whereNotNull('country')
+                ->where('country', '!=', '')
+                ->distinct()
+                ->orderBy('country')
+                ->pluck('country')
+                ->values(),
         ]);
     }
 

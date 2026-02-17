@@ -65,6 +65,9 @@
                         <a href="{{ $receiptUrl }}" style="display:inline-block;padding:12px 20px;background:#42b6c5;color:#ffffff;text-decoration:none;font-weight:700;border-radius:8px;">
                             View Printable Receipt
                         </a>
+                        <a href="{{ $receiptDownloadUrl }}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:700;border-radius:8px;margin-left:8px;">
+                            Download Receipt PDF
+                        </a>
                     </td>
                 </tr>
                 <tr>

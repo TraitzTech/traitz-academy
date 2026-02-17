@@ -53,6 +53,7 @@ interface AcceptedApplicationOption {
   applicant_name: string
   email: string
   phone: string | null
+  program_id: number
   program_title: string | null
   program_price: number
   paid_amount: number
@@ -78,6 +79,7 @@ interface Props {
     pending_count: number
     failed_count: number
     total_collected: number
+    total_outstanding: number
   }
 }
 
@@ -290,17 +292,25 @@ const updatePayment = () => {
           <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Payments</h2>
           <p class="text-gray-600 dark:text-gray-400 mt-2">Track all program fee transactions and installment progress</p>
         </div>
-        <button
-          type="button"
-          class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg font-medium hover:bg-[#35919e] transition-colors"
-          @click="openManualModal"
-        >
-          Record Onsite Payment
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/payments/verify"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Verify Receipt
+          </Link>
+          <button
+            type="button"
+            class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg font-medium hover:bg-[#35919e] transition-colors"
+            @click="openManualModal"
+          >
+            Record Onsite Payment
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-green-500">
         <p class="text-sm text-gray-500 dark:text-gray-400">Successful</p>
         <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{{ stats.successful_count }}</p>
@@ -316,6 +326,10 @@ const updatePayment = () => {
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-[#42b6c5]">
         <p class="text-sm text-gray-500 dark:text-gray-400">Total Collected</p>
         <p class="text-xl font-bold text-[#42b6c5] mt-1">{{ formatMoney(stats.total_collected) }}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-indigo-500 sm:col-span-2 xl:col-span-1">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Still Collectable</p>
+        <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{{ formatMoney(stats.total_outstanding) }}</p>
       </div>
     </div>
 

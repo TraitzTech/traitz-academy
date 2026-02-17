@@ -40,6 +40,7 @@ class PaymentReceiptNotification extends Notification implements ShouldQueue
                 'application' => $this->payment->application,
                 'program' => $this->payment->program,
                 'receiptUrl' => route('payments.receipt', $this->payment),
+                'receiptDownloadUrl' => route('payments.receipt.download', $this->payment),
                 'notifiableName' => $notifiable->name ?? $this->payment->application?->first_name,
             ]);
     }

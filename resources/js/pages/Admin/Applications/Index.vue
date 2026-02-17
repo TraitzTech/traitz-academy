@@ -69,6 +69,10 @@ interface Props {
     search?: string
     status?: string
     program_id?: string
+    country?: string
+    interview_status?: string
+    submitted_from?: string
+    submitted_to?: string
   }
   stats: {
     total: number
@@ -78,6 +82,7 @@ interface Props {
   }
   programs: Program[]
   interviews: InterviewOption[]
+  countries: string[]
 }
 
 const props = defineProps<Props>()
@@ -89,6 +94,10 @@ const toast = useToast()
 const search = ref(props.filters.search || '')
 const status = ref(props.filters.status || '')
 const programId = ref(props.filters.program_id || '')
+const country = ref(props.filters.country || '')
+const interviewStatus = ref(props.filters.interview_status || '')
+const submittedFrom = ref(props.filters.submitted_from || '')
+const submittedTo = ref(props.filters.submitted_to || '')
 const selectedIds = ref<number[]>([])
 const showRejectModal = ref(false)
 const rejectingApp = ref<Application | null>(null)
@@ -101,10 +110,14 @@ const applyFilters = debounce(() => {
     search: search.value || undefined,
     status: status.value || undefined,
     program_id: programId.value || undefined,
+    country: country.value || undefined,
+    interview_status: interviewStatus.value || undefined,
+    submitted_from: submittedFrom.value || undefined,
+    submitted_to: submittedTo.value || undefined,
   }, { preserveState: true, replace: true })
 }, 300)
 
-watch([search, status, programId], applyFilters)
+watch([search, status, programId, country, interviewStatus, submittedFrom, submittedTo], applyFilters)
 
 const allSelected = computed(() => {
   return props.applications.data.length > 0 && 
@@ -394,7 +407,7 @@ const formatMoney = (amount: number) => {
 
     <!-- Filters -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
           <input
@@ -426,7 +439,45 @@ const formatMoney = (amount: number) => {
             <option v-for="program in programs" :key="program.id" :value="program.id">{{ program.title }}</option>
           </select>
         </div>
-        <div class="flex items-end md:col-span-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+          <select
+            v-model="country"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option value="">All Countries</option>
+            <option v-for="item in countries" :key="item" :value="item">{{ item }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Interview</label>
+          <select
+            v-model="interviewStatus"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option value="">All Interview Statuses</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="expired">Expired</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Submitted From</label>
+          <input
+            v-model="submittedFrom"
+            type="date"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Submitted To</label>
+          <input
+            v-model="submittedTo"
+            type="date"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          />
+        </div>
+        <div class="flex items-end col-span-full">
           <div v-if="selectedIds.length > 0" class="flex w-full flex-wrap items-center gap-2">
             <button
               @click="bulkAction('accept')"

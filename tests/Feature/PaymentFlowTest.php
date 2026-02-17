@@ -140,6 +140,7 @@ it('shows payment tracking page for admins', function () {
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Admin/Payments/Index')
         ->has('payments.data', 1)
+        ->has('stats.total_outstanding')
     );
 });
 
@@ -198,6 +199,45 @@ it('allows admin to send payment reminder for accepted unpaid application', func
     $response->assertSessionHas('success');
 
     Notification::assertSentTo($user, PaymentReminderNotification::class);
+});
+
+it('includes latest receipt download link in payment reminder email when available', function () {
+    Notification::fake();
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create();
+    $program = Program::factory()->create([
+        'price' => 100000,
+        'max_installments' => 4,
+    ]);
+
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+    ]);
+
+    $payment = Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'amount' => 25000,
+        'receipt_number' => 'RCT-REMINDER-0001',
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->post(route('admin.applications.payment-reminder', $application));
+
+    $response->assertSessionHas('success');
+
+    Notification::assertSentTo($user, PaymentReminderNotification::class, function (PaymentReminderNotification $notification, array $channels) use ($user, $payment) {
+        $mail = $notification->toMail($user)->render();
+
+        return in_array('mail', $channels, true)
+            && str_contains($mail, route('payments.receipt.download', $payment));
+    });
 });
 
 it('sends bulk payment reminders only to eligible applications', function () {
@@ -282,7 +322,57 @@ it('allows admin to manually record onsite payment in same records', function ()
     expect($payment->status)->toBe('successful');
     expect($payment->receipt_number)->not->toBeNull();
 
-    Notification::assertSentTo($user, PaymentReceiptNotification::class);
+    Notification::assertSentTo($user, PaymentReceiptNotification::class, function (PaymentReceiptNotification $notification, array $channels) use ($user, $payment) {
+        $mail = $notification->toMail($user)->render();
+
+        return in_array('mail', $channels, true)
+            && str_contains($mail, route('payments.receipt.download', $payment));
+    });
+});
+
+it('allows admin to verify receipt by multiple identifiers', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create();
+    $program = Program::factory()->create(['price' => 100000]);
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+    ]);
+
+    $payment = Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'receipt_number' => 'RCT-VERIFY-0001',
+        'reference' => 'REF-VERIFY-0001',
+        'mesomb_transaction_id' => 'TRX-VERIFY-0001',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.payments.verify', ['receipt' => $payment->receipt_number]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Payments/Verify')
+            ->where('payment.id', $payment->id)
+        );
+
+    $this->actingAs($admin)
+        ->get(route('admin.payments.verify', ['receipt' => $payment->reference]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Payments/Verify')
+            ->where('payment.id', $payment->id)
+        );
+
+    $this->actingAs($admin)
+        ->get(route('admin.payments.verify', ['receipt' => $payment->mesomb_transaction_id]))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Admin/Payments/Verify')
+            ->where('payment.id', $payment->id)
+        );
 });
 
 it('automatically classifies partial manual payment as installment', function () {
@@ -376,4 +466,52 @@ it('allows admin to edit payment amount and status', function () {
     expect($payment->receipt_number)->not->toBeNull();
     expect($payment->paid_at)->not->toBeNull();
     expect($payment->admin_notes)->toBe('Validated manually.');
+});
+
+it('allows user to download receipt as pdf', function () {
+    $user = User::factory()->create();
+    $program = Program::factory()->create(['price' => 100000]);
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+    ]);
+
+    $payment = Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'receipt_number' => 'RCT-TEST-0001',
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get(route('payments.receipt.download', $payment));
+
+    $response->assertSuccessful();
+    $response->assertHeader('content-type', 'application/pdf');
+});
+
+it('allows user to print receipt as pdf using same template', function () {
+    $user = User::factory()->create();
+    $program = Program::factory()->create(['price' => 100000]);
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+    ]);
+
+    $payment = Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'receipt_number' => 'RCT-TEST-0002',
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get(route('payments.receipt.print', $payment));
+
+    $response->assertSuccessful();
+    $response->assertHeader('content-type', 'application/pdf');
 });

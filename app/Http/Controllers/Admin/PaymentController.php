@@ -69,6 +69,7 @@ class PaymentController extends Controller
                     'applicant_name' => trim($application->first_name.' '.$application->last_name),
                     'email' => $application->email,
                     'phone' => $application->phone,
+                    'program_id' => $application->program_id,
                     'program_title' => $application->program?->title,
                     'program_price' => $programPrice,
                     'paid_amount' => $paidAmount,
@@ -78,6 +79,8 @@ class PaymentController extends Controller
                 ];
             })
             ->values();
+
+        $totalOutstanding = (float) $acceptedApplications->sum('remaining_amount');
 
         return Inertia::render('Admin/Payments/Index', [
             'payments' => $payments,
@@ -89,6 +92,7 @@ class PaymentController extends Controller
                 'pending_count' => Payment::where('status', 'pending')->count(),
                 'failed_count' => Payment::where('status', 'failed')->count(),
                 'total_collected' => (float) Payment::where('status', 'successful')->sum('amount'),
+                'total_outstanding' => $totalOutstanding,
             ],
         ]);
     }
@@ -237,6 +241,29 @@ class PaymentController extends Controller
         $payment->update($payload);
 
         return back()->with('success', 'Payment updated successfully.');
+    }
+
+    public function verify(Request $request): Response
+    {
+        $search = trim($request->string('receipt')->toString());
+
+        $payment = null;
+
+        if ($search !== '') {
+            $payment = Payment::query()
+                ->with(['program:id,title', 'application:id,first_name,last_name,email', 'user:id,name,email'])
+                ->where(function ($query) use ($search) {
+                    $query->where('receipt_number', $search)
+                        ->orWhere('reference', $search)
+                        ->orWhere('mesomb_transaction_id', $search);
+                })
+                ->first();
+        }
+
+        return Inertia::render('Admin/Payments/Verify', [
+            'search' => $search,
+            'payment' => $payment,
+        ]);
     }
 
     private function buildReference(): string

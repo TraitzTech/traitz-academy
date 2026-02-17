@@ -44,7 +44,7 @@ interface PageProps {
   }
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 defineOptions({ layout: AppLayout })
 
 const page = usePage()
@@ -67,7 +67,7 @@ const formatDate = (value: string | null) => {
 }
 
 const printReceipt = () => {
-  globalThis.window?.print()
+  globalThis.window?.open(`/payments/receipts/${props.payment.id}/print`, '_blank')
 }
 </script>
 
@@ -84,6 +84,12 @@ const printReceipt = () => {
         <Link :href="backHref" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           {{ backLabel }}
         </Link>
+        <a
+          :href="`/payments/receipts/${payment.id}/download`"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Download PDF
+        </a>
         <button
           type="button"
           class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg font-medium hover:bg-[#35919e] transition-colors"

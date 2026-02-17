@@ -6,6 +6,12 @@ use App\Models\Application;
 use App\Models\Payment;
 use App\Notifications\PaymentReceiptNotification;
 use App\Support\Payments\Contracts\PaymentGateway;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\PDF as DomPdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class PaymentController extends Controller
 {
@@ -153,14 +160,60 @@ class PaymentController extends Controller
 
     public function receipt(Payment $payment): Response
     {
-        $isAuthorized = auth()->id() === $payment->user_id || auth()->user()?->role === 'admin';
-        abort_unless($isAuthorized, 403);
+        $this->ensureCanViewPaymentReceipt($payment);
 
         $payment->load(['application.program', 'user']);
 
         return Inertia::render('Payments/Receipt', [
             'payment' => $payment,
         ]);
+    }
+
+    public function downloadReceiptPdf(Payment $payment): SymfonyResponse
+    {
+        $this->ensureCanViewPaymentReceipt($payment);
+
+        $fileName = 'receipt-'.($payment->receipt_number ?: $payment->id).'.pdf';
+
+        return $this->buildReceiptPdfDocument($payment)->download($fileName);
+    }
+
+    public function printReceiptPdf(Payment $payment): SymfonyResponse
+    {
+        $this->ensureCanViewPaymentReceipt($payment);
+
+        $fileName = 'receipt-'.($payment->receipt_number ?: $payment->id).'.pdf';
+
+        return $this->buildReceiptPdfDocument($payment)->stream($fileName);
+    }
+
+    private function buildReceiptPdfDocument(Payment $payment): DomPdf
+    {
+        $payment->load(['application.program', 'user']);
+
+        $receiptUrl = route('payments.receipt', $payment);
+        $verificationPayload = json_encode([
+            'receipt_number' => $payment->receipt_number,
+            'reference' => $payment->reference,
+            'amount' => (float) $payment->amount,
+            'currency' => $payment->currency,
+            'paid_at' => optional($payment->paid_at)->toIso8601String(),
+            'url' => $receiptUrl,
+        ]);
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(180),
+            new SvgImageBackEnd
+        );
+
+        $qrCodeSvg = (new Writer($renderer))->writeString($verificationPayload ?: $receiptUrl);
+        $qrCodeDataUri = 'data:image/svg+xml;base64,'.base64_encode($qrCodeSvg);
+
+        return Pdf::loadView('payments.receipt-pdf', [
+            'payment' => $payment,
+            'receiptUrl' => $receiptUrl,
+            'qrCodeDataUri' => $qrCodeDataUri,
+        ])->setPaper('a4');
     }
 
     /**
@@ -190,6 +243,12 @@ class PaymentController extends Controller
     private function canManageApplicationPayment(Application $application): bool
     {
         return $application->user_id === auth()->id() && $application->status === 'accepted';
+    }
+
+    private function ensureCanViewPaymentReceipt(Payment $payment): void
+    {
+        $isAuthorized = auth()->id() === $payment->user_id || auth()->user()?->role === 'admin';
+        abort_unless($isAuthorized, 403);
     }
 
     private function buildReference(): string

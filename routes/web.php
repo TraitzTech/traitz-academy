@@ -65,6 +65,8 @@ Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->n
 Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('payments')->name('payments.')->group(function () {
     Route::get('/{application}/checkout', [PaymentController::class, 'checkout'])->name('checkout');
     Route::post('/{application}', [PaymentController::class, 'store'])->name('store');
+    Route::get('/receipts/{payment}/print', [PaymentController::class, 'printReceiptPdf'])->name('receipt.print');
+    Route::get('/receipts/{payment}/download', [PaymentController::class, 'downloadReceiptPdf'])->name('receipt.download');
     Route::get('/receipts/{payment}', [PaymentController::class, 'receipt'])->name('receipt');
 });
 
@@ -103,6 +105,7 @@ Route::prefix('admin')
 
         // Payments Management
         Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
         Route::post('/payments/manual', [AdminPaymentController::class, 'storeManual'])->name('payments.manual-store');
         Route::patch('/payments/{payment}', [AdminPaymentController::class, 'update'])->name('payments.update');
 
