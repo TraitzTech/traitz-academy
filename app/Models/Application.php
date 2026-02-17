@@ -63,4 +63,9 @@ class Application extends Model
     {
         return $this->hasMany(InterviewResponse::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

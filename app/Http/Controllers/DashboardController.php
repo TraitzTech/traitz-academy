@@ -61,12 +61,50 @@ class DashboardController extends Controller
             ->filter()
             ->values();
 
+        $paymentSummaries = $applications
+            ->where('status', 'accepted')
+            ->map(function ($application) {
+                $programPrice = (float) ($application->program?->price ?? 0);
+                $maxInstallments = max(1, (int) ($application->program?->max_installments ?? 1));
+
+                $successfulPayments = $application->payments()
+                    ->where('status', 'successful')
+                    ->orderBy('paid_at')
+                    ->get(['id', 'amount', 'status', 'paid_at', 'receipt_number']);
+
+                $paidAmount = (float) $successfulPayments->sum('amount');
+                $remainingAmount = max(0, round($programPrice - $paidAmount, 2));
+                $installmentAmount = $maxInstallments > 0 ? round($programPrice / $maxInstallments, 2) : $programPrice;
+
+                return [
+                    'application_id' => $application->id,
+                    'program_title' => $application->program?->title,
+                    'program_slug' => $application->program?->slug,
+                    'program_price' => $programPrice,
+                    'max_installments' => $maxInstallments,
+                    'installment_amount' => $installmentAmount,
+                    'paid_amount' => $paidAmount,
+                    'remaining_amount' => $remainingAmount,
+                    'completed_installments' => $successfulPayments->count(),
+                    'status' => $programPrice <= 0
+                        ? 'not-required'
+                        : ($remainingAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partially-paid' : 'unpaid')),
+                    'checkout_url' => route('payments.checkout', $application),
+                    'latest_receipt_url' => $successfulPayments->last()
+                        ? route('payments.receipt', $successfulPayments->last()->id)
+                        : null,
+                    'payments' => $successfulPayments,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Dashboard', [
             'user' => $user,
             'applications' => $applications,
             'registrations' => $registrations,
             'interviews' => $availableInterviews,
             'scheduledInterviews' => $scheduledInterviews,
+            'paymentSummaries' => $paymentSummaries,
         ]);
     }
 }

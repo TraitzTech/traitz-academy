@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ef523eb88a4b8d49b478ce7e2d7bba67",
+    "content-hash": "8e8622bdf57451de4c6b43654181f41c",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1156,6 +1156,60 @@
                 }
             ],
             "time": "2025-08-22T14:27:06+00:00"
+        },
+        {
+            "name": "hachther/mesomb-php",
+            "version": "3.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/hachther/mesomb-php.git",
+                "reference": "caf311df0656aba7780c65c9c9ec4ea4482dc557"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/hachther/mesomb-php/zipball/caf311df0656aba7780c65c9c9ec4ea4482dc557",
+                "reference": "caf311df0656aba7780c65c9c9ec4ea4482dc557",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "ext-openssl": "*"
+            },
+            "require-dev": {
+                "phpdocumentor/shim": "^3.6",
+                "phpunit/phpunit": "^9.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MeSomb\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Hachther LLC",
+                    "email": "contact@hachther.com"
+                }
+            ],
+            "description": "MeSomb PHP Library",
+            "keywords": [
+                "Orange Money",
+                "api",
+                "mesomb",
+                "mobile money",
+                "payment processing"
+            ],
+            "support": {
+                "issues": "https://github.com/hachther/mesomb-php/issues",
+                "source": "https://github.com/hachther/mesomb-php/tree/3.1.1"
+            },
+            "time": "2025-10-30T16:49:10+00:00"
         },
         {
             "name": "inertiajs/inertia-laravel",

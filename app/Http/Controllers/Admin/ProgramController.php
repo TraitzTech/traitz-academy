@@ -73,6 +73,7 @@ class ProgramController extends Controller
             'learning_outcomes' => 'nullable|string',
             'certification' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
+            'max_installments' => 'required|integer|min:1|max:12',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
@@ -96,6 +97,10 @@ class ProgramController extends Controller
         }
 
         $validated['slug'] = $slug;
+
+        if ((float) $validated['price'] <= 0) {
+            $validated['max_installments'] = 1;
+        }
 
         if ($request->hasFile('image')) {
             $validated['image_url'] = $request->file('image')->store('programs', 'public');
@@ -136,6 +141,7 @@ class ProgramController extends Controller
             'learning_outcomes' => 'nullable|string',
             'certification' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
+            'max_installments' => 'required|integer|min:1|max:12',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
@@ -161,6 +167,10 @@ class ProgramController extends Controller
             }
 
             $validated['slug'] = $slug;
+        }
+
+        if ((float) $validated['price'] <= 0) {
+            $validated['max_installments'] = 1;
         }
 
         if ($request->hasFile('image')) {

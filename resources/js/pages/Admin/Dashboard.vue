@@ -7,7 +7,7 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6 mb-6 lg:mb-8">
       <!-- Total Programs -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 lg:p-6 border-l-4 border-[#42b6c5]">
         <div class="flex items-center justify-between">
@@ -63,6 +63,21 @@
           <div class="p-2 lg:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
             <svg class="w-5 h-5 lg:w-8 lg:h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 8.646 4 4 0 010-8.646M9 9H3v10a6 6 0 006 6h6a6 6 0 006-6V9h-6a4 4 0 00-4 4v2" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Collected -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 lg:p-6 border-l-4 border-cyan-500 col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs lg:text-sm text-gray-600 dark:text-gray-400 font-semibold">Collected</p>
+            <p class="text-xl lg:text-3xl font-bold text-[#000928] dark:text-gray-100 mt-1 lg:mt-2">{{ formatMoney(stats.total_collected || 0) }}</p>
+          </div>
+          <div class="p-2 lg:p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+            <svg class="w-5 h-5 lg:w-8 lg:h-8 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.105 0-2 .895-2 2s.895 2 2 2 2 .895 2 2-.895 2-2 2m0-10V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
         </div>
@@ -163,5 +178,9 @@ const formatDate = (date) => {
     month: 'short',
     day: 'numeric'
   })
+}
+
+const formatMoney = (amount) => {
+  return new Intl.NumberFormat('en-CM', { maximumFractionDigits: 0 }).format(amount)
 }
 </script>

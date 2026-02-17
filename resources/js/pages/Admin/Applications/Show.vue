@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { Button } from '@/components/ui/button'
@@ -97,10 +97,31 @@ interface InterviewResponse {
   answers: InterviewAnswer[]
 }
 
+interface PaymentSummary {
+  program_price: number
+  paid_amount: number
+  remaining_amount: number
+  max_installments: number
+  completed_installments: number
+  status: 'paid' | 'partially-paid' | 'unpaid' | 'not-required'
+  can_send_reminder: boolean
+}
+
+interface SuccessfulPayment {
+  id: number
+  amount: number
+  installment_number: number | null
+  total_installments: number | null
+  receipt_number: string | null
+  paid_at: string | null
+}
+
 const props = defineProps<{
   application: Application
   availableInterviews: AvailableInterview[]
   interviewResponse: InterviewResponse | null
+  paymentSummary: PaymentSummary
+  successfulPayments: SuccessfulPayment[]
 }>()
 
 defineOptions({ layout: AppLayout })
@@ -115,6 +136,14 @@ const rejectNotes = ref('')
 const selectedInterviewId = ref<number | null>(null)
 const schedulingInterview = ref(false)
 
+const paymentStatusLabel = computed(() => {
+  if (props.paymentSummary.status === 'partially-paid') {
+    return 'Partially Paid'
+  }
+
+  return props.paymentSummary.status.replace('-', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+})
+
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -128,6 +157,15 @@ const formatDate = (date: string) => {
 const formatPrice = (price: number) => {
   if (price === 0) return 'Free'
   return new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(price)
+}
+
+const getPaymentStatusColor = (status: string) => {
+  switch (status) {
+    case 'paid': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+    case 'partially-paid': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+    case 'unpaid': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+    default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
+  }
 }
 
 const getStatusColor = (status: string) => {
@@ -215,6 +253,18 @@ const getInterviewStatusColor = (status: string | null) => {
     default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
   }
 }
+
+const sendPaymentReminder = () => {
+  router.post(`/admin/applications/${props.application.id}/payment-reminder`, {}, {
+    preserveState: true,
+    onSuccess: () => {
+      toast.success('Payment reminder sent successfully.')
+    },
+    onError: () => {
+      toast.error('Failed to send payment reminder.')
+    },
+  })
+}
 </script>
 
 <template>
@@ -231,6 +281,12 @@ const getInterviewStatusColor = (status: string | null) => {
         <p class="text-gray-600 dark:text-gray-400 mt-1">Submitted on {{ formatDate(application.created_at) }}</p>
       </div>
       <div class="flex items-center gap-3">
+        <Link
+          :href="`/admin/applications/${application.id}/edit`"
+          class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Edit
+        </Link>
         <span :class="['px-4 py-2 text-sm font-medium rounded-full border', getStatusColor(application.status)]">
           {{ application.status.charAt(0).toUpperCase() + application.status.slice(1) }}
         </span>
@@ -260,6 +316,13 @@ const getInterviewStatusColor = (status: string | null) => {
           class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Delete
+        </button>
+        <button
+          v-if="paymentSummary.can_send_reminder"
+          @click="sendPaymentReminder"
+          class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Send Payment Reminder
         </button>
       </div>
     </div>
@@ -343,6 +406,59 @@ const getInterviewStatusColor = (status: string | null) => {
         <div v-if="application.notes" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-red-500">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Review Notes</h3>
           <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ application.notes }}</p>
+        </div>
+
+        <!-- Payment Tracking -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Payment Tracking</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Program Fee</p>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ formatPrice(paymentSummary.program_price) }}</p>
+            </div>
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Paid</p>
+              <p class="font-semibold text-green-700 dark:text-green-400">{{ formatPrice(paymentSummary.paid_amount) }}</p>
+            </div>
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining</p>
+              <p class="font-semibold text-amber-700 dark:text-amber-400">{{ formatPrice(paymentSummary.remaining_amount) }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 mb-4">
+            <span :class="['px-3 py-1.5 text-xs font-semibold rounded-full border', getPaymentStatusColor(paymentSummary.status)]">
+              {{ paymentStatusLabel }}
+            </span>
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              Installments paid: {{ paymentSummary.completed_installments }}/{{ paymentSummary.max_installments }}
+            </span>
+          </div>
+
+          <div v-if="successfulPayments.length > 0" class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Installment</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Receipt</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tr v-for="payment in successfulPayments" :key="payment.id">
+                  <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{{ payment.paid_at ? formatDate(payment.paid_at) : 'N/A' }}</td>
+                  <td class="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ formatPrice(payment.amount) }}</td>
+                  <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                    {{ payment.installment_number || 1 }}/{{ payment.total_installments || paymentSummary.max_installments }}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{{ payment.receipt_number || 'N/A' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="text-sm text-gray-500 dark:text-gray-400">No successful payments recorded yet.</p>
         </div>
       </div>
 

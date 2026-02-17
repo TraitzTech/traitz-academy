@@ -8,8 +8,10 @@ use App\Models\Interview;
 use App\Notifications\ApplicationAcceptanceNotification;
 use App\Notifications\BatchEmailNotification;
 use App\Notifications\InterviewInvitationNotification;
+use App\Notifications\PaymentReminderNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +19,13 @@ class ApplicationController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Application::with(['program', 'user']);
+        $query = Application::with(['program', 'user'])
+            ->withSum(['payments as successful_payments_sum_amount' => function ($paymentQuery) {
+                $paymentQuery->where('status', 'successful');
+            }], 'amount')
+            ->withCount(['payments as successful_payments_count' => function ($paymentQuery) {
+                $paymentQuery->where('status', 'successful');
+            }]);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -38,7 +46,12 @@ class ApplicationController extends Controller
 
         $applications = $query->latest()
             ->paginate(15)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function (Application $application) {
+                $application->setAttribute('payment_summary', $this->buildPaymentSummary($application));
+
+                return $application;
+            });
 
         $stats = [
             'total' => Application::count(),
@@ -63,7 +76,14 @@ class ApplicationController extends Controller
 
     public function show(Application $application): Response
     {
-        $application->load(['program', 'user', 'interview']);
+        $application->load([
+            'program',
+            'user',
+            'interview',
+            'payments' => function ($query) {
+                $query->where('status', 'successful')->latest('paid_at');
+            },
+        ]);
 
         $availableInterviews = Interview::where('is_active', true)
             ->where('program_id', $application->program_id)
@@ -83,7 +103,119 @@ class ApplicationController extends Controller
             'application' => $application,
             'availableInterviews' => $availableInterviews,
             'interviewResponse' => $interviewResponse,
+            'paymentSummary' => $this->buildPaymentSummary($application),
+            'successfulPayments' => $application->payments,
         ]);
+    }
+
+    public function edit(Application $application): Response
+    {
+        $application->load(['program', 'user']);
+
+        return Inertia::render('Admin/Applications/Edit', [
+            'application' => $application,
+            'programs' => \App\Models\Program::query()
+                ->select('id', 'title')
+                ->orderBy('title')
+                ->get(),
+        ]);
+    }
+
+    public function update(Request $request, Application $application): RedirectResponse
+    {
+        $validated = $request->validate([
+            'program_id' => ['required', 'exists:programs,id'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'status' => ['required', 'in:pending,accepted,rejected'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $payload = [
+            'program_id' => (int) $validated['program_id'],
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'status' => $validated['status'],
+            'notes' => $validated['notes'] ?? null,
+        ];
+
+        if ($application->program_id !== (int) $validated['program_id']) {
+            $payload['interview_id'] = null;
+            $payload['interview_status'] = null;
+            $payload['interview_scheduled_at'] = null;
+        }
+
+        if ($validated['status'] === 'pending') {
+            $payload['reviewed_at'] = null;
+        } else {
+            $payload['reviewed_at'] = $application->reviewed_at ?? now();
+        }
+
+        $application->update($payload);
+
+        return redirect()
+            ->route('admin.applications.show', $application)
+            ->with('success', 'Application updated successfully.');
+    }
+
+    public function sendPaymentReminder(Application $application): RedirectResponse
+    {
+        $application->load(['program', 'user'])
+            ->loadSum(['payments as successful_payments_sum_amount' => function ($query) {
+                $query->where('status', 'successful');
+            }], 'amount')
+            ->loadCount(['payments as successful_payments_count' => function ($query) {
+                $query->where('status', 'successful');
+            }]);
+
+        $summary = $this->buildPaymentSummary($application);
+
+        if (! $summary['can_send_reminder']) {
+            return back()->with('error', 'This applicant does not currently need a payment reminder.');
+        }
+
+        $application->user?->notify(new PaymentReminderNotification($application, $summary));
+
+        return back()->with('success', 'Payment reminder email sent successfully.');
+    }
+
+    public function bulkPaymentReminder(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'exists:applications,id',
+        ]);
+
+        $applications = Application::query()
+            ->whereIn('id', $validated['ids'])
+            ->with(['program', 'user'])
+            ->withSum(['payments as successful_payments_sum_amount' => function ($query) {
+                $query->where('status', 'successful');
+            }], 'amount')
+            ->withCount(['payments as successful_payments_count' => function ($query) {
+                $query->where('status', 'successful');
+            }])
+            ->get();
+
+        [$sent, $skipped] = $this->sendBulkReminders($applications);
+
+        if ($sent === 0) {
+            return back()->with('error', 'No eligible applications were found for payment reminders.');
+        }
+
+        $message = "Payment reminder sent to {$sent} applicant(s).";
+
+        if ($skipped > 0) {
+            $message .= " {$skipped} applicant(s) skipped (already paid, free program, or not accepted).";
+        }
+
+        return back()->with('success', $message);
     }
 
     public function accept(Application $application): RedirectResponse
@@ -240,5 +372,59 @@ class ApplicationController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * @return array{program_price: float, paid_amount: float, remaining_amount: float, max_installments: int, completed_installments: int, status: string, can_send_reminder: bool}
+     */
+    private function buildPaymentSummary(Application $application): array
+    {
+        $programPrice = (float) ($application->program?->price ?? 0);
+        $maxInstallments = max(1, (int) ($application->program?->max_installments ?? 1));
+        $paidAmount = (float) ($application->successful_payments_sum_amount ?? 0);
+        $completedInstallments = (int) ($application->successful_payments_count ?? 0);
+        $remainingAmount = max(0, round($programPrice - $paidAmount, 2));
+
+        $status = $programPrice <= 0
+            ? 'not-required'
+            : ($remainingAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partially-paid' : 'unpaid'));
+
+        return [
+            'program_price' => $programPrice,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
+            'max_installments' => $maxInstallments,
+            'completed_installments' => $completedInstallments,
+            'status' => $status,
+            'can_send_reminder' => $application->status === 'accepted'
+                && $programPrice > 0
+                && $remainingAmount > 0
+                && $application->user !== null,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Application>  $applications
+     * @return array{int, int}
+     */
+    private function sendBulkReminders(Collection $applications): array
+    {
+        $sent = 0;
+        $skipped = 0;
+
+        foreach ($applications as $application) {
+            $summary = $this->buildPaymentSummary($application);
+
+            if (! $summary['can_send_reminder']) {
+                $skipped++;
+
+                continue;
+            }
+
+            $application->user?->notify(new PaymentReminderNotification($application, $summary));
+            $sent++;
+        }
+
+        return [$sent, $skipped];
     }
 }

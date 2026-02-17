@@ -10,20 +10,21 @@ interface Program {
   slug: string;
   category: string;
   description: string;
-  overview: string;
-  who_is_for: string;
-  skills_and_tools: string;
+  overview: string | null;
+  who_is_for: string | null;
+  skills_and_tools: string | null;
   duration: string;
-  learning_outcomes: string;
-  certification: string;
+  learning_outcomes: string | null;
+  certification: string | null;
   price: number;
+  max_installments: number;
   image_url: string;
   is_featured: boolean;
-  capacity: number;
+  capacity: number | null;
   enrolled_count: number;
-  start_date: string;
-  end_date: string;
-  curriculum: string;
+  start_date: string | null;
+  end_date: string | null;
+  curriculum: string | null;
 }
 
 interface Application {
@@ -44,14 +45,43 @@ interface PageProps {
 }
 
 const props = defineProps<Props>();
-const page = usePage<PageProps>();
+const page = usePage();
 
 const formatCategory = (cat: string) => cat.replace('-', ' ').toUpperCase();
-const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const formatDate = (date: string | null) => {
+  if (!date) {
+    return 'TBD';
+  }
+
+  return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
 const isAcademic = (cat: string) => cat === 'academic-internship';
 const isProfessional = (cat: string) => cat === 'professional-internship';
 
-const contactWhatsApp = computed(() => page.props.siteSettings?.contact_whatsapp ?? null);
+const skills = computed(() => {
+  return (props.program.skills_and_tools ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+});
+
+const learningOutcomes = computed(() => {
+  return (props.program.learning_outcomes ?? '')
+    .split('.')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+});
+
+const enrollmentPercentage = computed(() => {
+  const capacity = props.program.capacity ?? 0;
+  if (capacity <= 0) {
+    return 0;
+  }
+
+  return Math.round((props.program.enrolled_count / capacity) * 100);
+});
+
+const contactWhatsApp = computed(() => (page.props as unknown as PageProps).siteSettings?.contact_whatsapp ?? null);
 const whatsAppLink = computed(() => {
   if (!contactWhatsApp.value) {
     return null;
@@ -109,13 +139,13 @@ const formatPrice = (price: number) => {
             <!-- Overview -->
             <div class="mb-12">
               <h2 class="text-3xl font-bold text-[#000928] mb-4">Program Overview</h2>
-              <p class="text-gray-700 text-lg leading-relaxed">{{ program.overview }}</p>
+              <p class="text-gray-700 text-lg leading-relaxed">{{ program.overview || 'Program overview will be shared soon.' }}</p>
             </div>
 
             <!-- Who is For -->
             <div class="mb-12">
               <h2 class="text-3xl font-bold text-[#000928] mb-4">Who Is This For?</h2>
-              <p class="text-gray-700 text-lg leading-relaxed">{{ program.who_is_for }}</p>
+              <p class="text-gray-700 text-lg leading-relaxed">{{ program.who_is_for || 'Open to motivated learners ready to grow.' }}</p>
             </div>
 
             <!-- Skills & Tools -->
@@ -123,12 +153,13 @@ const formatPrice = (price: number) => {
               <h2 class="text-3xl font-bold text-[#000928] mb-4">Skills & Tools You'll Learn</h2>
               <div class="flex flex-wrap gap-2">
                 <span
-                  v-for="skill in program.skills_and_tools.split(', ')"
+                  v-for="skill in skills"
                   :key="skill"
                   class="bg-[#42b6c5]/10 text-[#42b6c5] px-4 py-2 rounded-lg font-semibold"
                 >
                   {{ skill }}
                 </span>
+                <span v-if="skills.length === 0" class="text-gray-500">Skills will be updated soon.</span>
               </div>
             </div>
 
@@ -136,25 +167,26 @@ const formatPrice = (price: number) => {
             <div class="mb-12">
               <h2 class="text-3xl font-bold text-[#000928] mb-4">Learning Outcomes</h2>
               <ul class="space-y-3">
-                <li v-for="(outcome, index) in program.learning_outcomes.split('.')" :key="index" class="flex items-start">
+                <li v-for="(outcome, index) in learningOutcomes" :key="index" class="flex items-start">
                   <svg class="w-6 h-6 text-[#42b6c5] mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                   </svg>
                   <span class="text-gray-700">{{ outcome.trim() }}</span>
                 </li>
+                <li v-if="learningOutcomes.length === 0" class="text-gray-500">Learning outcomes will be available soon.</li>
               </ul>
             </div>
 
             <!-- Curriculum -->
             <div class="mb-12">
               <h2 class="text-3xl font-bold text-[#000928] mb-4">Curriculum</h2>
-              <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-line">{{ program.curriculum }}</p>
+              <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-line">{{ program.curriculum || 'Curriculum details will be published soon.' }}</p>
             </div>
 
             <!-- Certification -->
             <div class="bg-[#42b6c5]/10 border border-[#42b6c5] rounded-lg p-6 mb-12">
               <h3 class="text-2xl font-bold text-[#000928] mb-2">Certification</h3>
-              <p class="text-gray-700">{{ program.certification }}</p>
+              <p class="text-gray-700">{{ program.certification || 'Certificate details will be shared before cohort start.' }}</p>
             </div>
           </div>
 
@@ -168,6 +200,9 @@ const formatPrice = (price: number) => {
                   <span v-else class="text-[#000928]">Free</span>
                 </div>
                 <p class="text-gray-600">Program fee (if applicable)</p>
+                <p v-if="program.price > 0" class="text-sm text-gray-500 mt-2">
+                  Flexible payment: up to {{ program.max_installments || 1 }} installment(s)
+                </p>
               </div>
 
               <div class="space-y-6 mb-8 pb-8 border-b border-gray-200">
@@ -190,11 +225,11 @@ const formatPrice = (price: number) => {
                   <p class="text-sm text-gray-600 font-semibold">Enrollment</p>
                   <div class="mt-2">
                     <div class="flex justify-between mb-2">
-                      <span class="font-bold text-[#000928]">{{ program.enrolled_count }}/{{ program.capacity }}</span>
-                      <span class="text-gray-600">{{ Math.round((program.enrolled_count / program.capacity) * 100) }}% full</span>
+                      <span class="font-bold text-[#000928]">{{ program.enrolled_count }}/{{ program.capacity || 'N/A' }}</span>
+                      <span class="text-gray-600">{{ enrollmentPercentage }}% full</span>
                     </div>
                     <div class="w-full bg-gray-300 rounded-full h-2">
-                      <div class="bg-[#42b6c5] h-2 rounded-full" :style="{ width: `${(program.enrolled_count / program.capacity) * 100}%` }"></div>
+                      <div class="bg-[#42b6c5] h-2 rounded-full" :style="{ width: `${enrollmentPercentage}%` }"></div>
                     </div>
                   </div>
                 </div>

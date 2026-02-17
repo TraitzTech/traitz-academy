@@ -14,6 +14,7 @@ import {
     FileText,
     Home,
     Star,
+    Wallet,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -60,6 +61,11 @@ const adminNavItems: NavItem[] = [
         icon: ClipboardList,
     },
     {
+        title: 'Payments',
+        href: '/admin/payments',
+        icon: Wallet,
+    },
+    {
         title: 'Users',
         href: '/admin/users',
         icon: Users,
@@ -102,6 +108,11 @@ const userNavItems: NavItem[] = [
         title: 'My Registrations',
         href: '/dashboard#registrations',
         icon: Calendar,
+    },
+    {
+        title: 'Payments',
+        href: '/dashboard#payments',
+        icon: Wallet,
     },
 ];
 

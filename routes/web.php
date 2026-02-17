@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -60,6 +62,12 @@ Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->n
     Route::get('/{interview}/result', [InterviewController::class, 'result'])->name('result');
 });
 
+Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('payments')->name('payments.')->group(function () {
+    Route::get('/{application}/checkout', [PaymentController::class, 'checkout'])->name('checkout');
+    Route::post('/{application}', [PaymentController::class, 'store'])->name('store');
+    Route::get('/receipts/{payment}', [PaymentController::class, 'receipt'])->name('receipt');
+});
+
 // Admin Routes (Protected)
 Route::prefix('admin')
     ->middleware(['auth', 'verified', 'admin'])
@@ -82,12 +90,21 @@ Route::prefix('admin')
         // Applications Management
         Route::get('/applications', [AdminApplicationController::class, 'index'])->name('applications.index');
         Route::get('/applications/{application}', [AdminApplicationController::class, 'show'])->name('applications.show');
+        Route::get('/applications/{application}/edit', [AdminApplicationController::class, 'edit'])->name('applications.edit');
+        Route::put('/applications/{application}', [AdminApplicationController::class, 'update'])->name('applications.update');
         Route::post('/applications/{application}/accept', [AdminApplicationController::class, 'accept'])->name('applications.accept');
         Route::post('/applications/{application}/reject', [AdminApplicationController::class, 'reject'])->name('applications.reject');
         Route::post('/applications/{application}/schedule-interview', [AdminApplicationController::class, 'scheduleInterview'])->name('applications.schedule-interview');
+        Route::post('/applications/{application}/payment-reminder', [AdminApplicationController::class, 'sendPaymentReminder'])->name('applications.payment-reminder');
         Route::post('/applications/bulk', [AdminApplicationController::class, 'bulkAction'])->name('applications.bulk');
         Route::post('/applications/bulk-schedule-interview', [AdminApplicationController::class, 'bulkScheduleInterview'])->name('applications.bulk-schedule-interview');
+        Route::post('/applications/bulk-payment-reminder', [AdminApplicationController::class, 'bulkPaymentReminder'])->name('applications.bulk-payment-reminder');
         Route::delete('/applications/{application}', [AdminApplicationController::class, 'destroy'])->name('applications.destroy');
+
+        // Payments Management
+        Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+        Route::post('/payments/manual', [AdminPaymentController::class, 'storeManual'])->name('payments.manual-store');
+        Route::patch('/payments/{payment}', [AdminPaymentController::class, 'update'])->name('payments.update');
 
         // Users Management
         Route::get('/users/export', [UserController::class, 'export'])->name('users.export');

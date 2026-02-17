@@ -15,6 +15,7 @@ interface Program {
   description: string
   duration: string
   price: number
+  max_installments: number
   image_url: string | null
   is_featured: boolean
   is_active: boolean
@@ -245,6 +246,7 @@ const formatCategory = (cat: string) => props.categories[cat] || cat
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Program</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Installments</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applications</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Featured</th>
@@ -291,6 +293,9 @@ const formatCategory = (cat: string) => props.categories[cat] || cat
                 {{ formatPrice(program.price) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                {{ program.price > 0 ? program.max_installments : 1 }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                 {{ program.applications_count }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -333,7 +338,7 @@ const formatCategory = (cat: string) => props.categories[cat] || cat
               </td>
             </tr>
             <tr v-if="programs.data.length === 0">
-              <td colspan="8" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+              <td colspan="9" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
                 No programs found. Create your first program to get started.
               </td>
             </tr>

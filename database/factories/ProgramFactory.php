@@ -19,6 +19,7 @@ class ProgramFactory extends Factory
         $categories = ['professional-training', 'bootcamp', 'workshop', 'academic-internship', 'professional-internship'];
         $category = fake()->randomElement($categories);
         $title = fake()->words(3, true);
+        $price = fake()->randomElement([0, 50000, 100000, 150000, 200000]);
 
         return [
             'title' => ucfirst($title),
@@ -29,9 +30,10 @@ class ProgramFactory extends Factory
             'who_is_for' => fake()->paragraph(2),
             'skills_and_tools' => implode(', ', fake()->words(8)),
             'duration' => fake()->randomElement(['4 weeks', '8 weeks', '12 weeks', '6 months', '3 months']),
-            'learning_outcomes' => implode('. ', fake()->sentences(5)) . '.',
+            'learning_outcomes' => implode('. ', fake()->sentences(5)).'.',
             'certification' => 'Industry-recognized certificate of completion',
-            'price' => fake()->randomElement([0, 50000, 100000, 150000, 200000]),
+            'price' => $price,
+            'max_installments' => $price > 0 ? fake()->numberBetween(1, 4) : 1,
             'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
             'is_featured' => fake()->boolean(30),
             'is_active' => true,

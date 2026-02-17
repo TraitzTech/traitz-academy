@@ -17,6 +17,7 @@ interface Program {
   learning_outcomes: string | null
   certification: string | null
   price: number
+  max_installments: number
   image_url: string | null
   is_featured: boolean
   is_active: boolean
@@ -48,6 +49,7 @@ const form = useForm({
   learning_outcomes: props.program.learning_outcomes || '',
   certification: props.program.certification || '',
   price: props.program.price,
+  max_installments: props.program.max_installments || 1,
   image: null as File | null,
   is_featured: props.program.is_featured,
   is_active: props.program.is_active,
@@ -88,7 +90,7 @@ const submit = () => {
       console.log('Update successful!')
       toast.success('Program updated successfully!')
     },
-    onError: (errors) => {
+    onError: (errors: Record<string, string>) => {
       console.error('Update failed with errors:', errors)
       toast.error('Failed to update program. Please check the form for errors.')
     },
@@ -186,6 +188,20 @@ const submit = () => {
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
             />
             <p v-if="form.errors.capacity" class="mt-1 text-sm text-red-600">{{ form.errors.capacity }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Installments *</label>
+            <input
+              v-model="form.max_installments"
+              type="number"
+              min="1"
+              max="12"
+              :disabled="Number(form.price) <= 0"
+              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent disabled:opacity-60"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Set to 1 for one-time payment. Free programs always use 1.</p>
+            <p v-if="form.errors.max_installments" class="mt-1 text-sm text-red-600">{{ form.errors.max_installments }}</p>
           </div>
 
           <div>

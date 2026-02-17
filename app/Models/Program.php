@@ -23,6 +23,7 @@ class Program extends Model
         'learning_outcomes',
         'certification',
         'price',
+        'max_installments',
         'image_url',
         'is_featured',
         'is_active',
@@ -56,6 +57,7 @@ class Program extends Model
         return [
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'max_installments' => 'integer',
             'start_date' => 'datetime',
             'end_date' => 'datetime',
         ];
@@ -69,5 +71,10 @@ class Program extends Model
     public function interviews(): HasMany
     {
         return $this->hasMany(Interview::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }

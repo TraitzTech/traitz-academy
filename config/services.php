@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'mesomb' => [
+        'application_key' => env('MESOMB_APPLICATION_KEY'),
+        'access_key' => env('MESOMB_ACCESS_KEY'),
+        'secret_key' => env('MESOMB_SECRET_KEY'),
+        'country' => env('MESOMB_COUNTRY', 'CM'),
+        'currency' => env('MESOMB_CURRENCY', 'XAF'),
+    ],
+
 ];

@@ -37,6 +37,15 @@ interface Application {
     name: string
     email: string
   } | null
+  payment_summary: {
+    program_price: number
+    paid_amount: number
+    remaining_amount: number
+    max_installments: number
+    completed_installments: number
+    status: 'paid' | 'partially-paid' | 'unpaid' | 'not-required'
+    can_send_reminder: boolean
+  }
 }
 
 interface Program {
@@ -180,6 +189,7 @@ const confirmDelete = () => {
 const showBulkDeleteModal = ref(false)
 const showBulkAcceptModal = ref(false)
 const showBulkRejectModal = ref(false)
+const showBulkPaymentReminderModal = ref(false)
 
 const bulkAction = (action: string) => {
   if (selectedIds.value.length === 0) {
@@ -196,6 +206,10 @@ const bulkAction = (action: string) => {
   }
   if (action === 'reject') {
     showBulkRejectModal.value = true
+    return
+  }
+  if (action === 'payment-reminder') {
+    showBulkPaymentReminderModal.value = true
     return
   }
 }
@@ -254,6 +268,34 @@ const confirmBulkDelete = () => {
   })
 }
 
+const sendPaymentReminder = (app: Application) => {
+  router.post(`/admin/applications/${app.id}/payment-reminder`, {}, {
+    preserveState: true,
+    onSuccess: () => {
+      toast.success(`Payment reminder sent to ${app.first_name} ${app.last_name}.`)
+    },
+    onError: () => {
+      toast.error('Failed to send payment reminder.')
+    },
+  })
+}
+
+const confirmBulkPaymentReminder = () => {
+  router.post('/admin/applications/bulk-payment-reminder', {
+    ids: selectedIds.value,
+  }, {
+    preserveState: true,
+    onSuccess: () => {
+      showBulkPaymentReminderModal.value = false
+      selectedIds.value = []
+      toast.success('Bulk payment reminders processed successfully.')
+    },
+    onError: () => {
+      toast.error('Failed to send bulk payment reminders.')
+    },
+  })
+}
+
 // Bulk Schedule Interview
 const showBulkScheduleModal = ref(false)
 const selectedInterviewId = ref<number | null>(null)
@@ -304,6 +346,19 @@ const getStatusColor = (status: string) => {
     case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
     default: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
   }
+}
+
+const getPaymentStatusColor = (status: string) => {
+  switch (status) {
+    case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+    case 'partially-paid': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+    case 'unpaid': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  }
+}
+
+const formatMoney = (amount: number) => {
+  return new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(amount || 0)
 }
 </script>
 
@@ -371,29 +426,35 @@ const getStatusColor = (status: string) => {
             <option v-for="program in programs" :key="program.id" :value="program.id">{{ program.title }}</option>
           </select>
         </div>
-        <div class="flex items-end">
-          <div v-if="selectedIds.length > 0" class="flex gap-2">
+        <div class="flex items-end md:col-span-4">
+          <div v-if="selectedIds.length > 0" class="flex w-full flex-wrap items-center gap-2">
             <button
               @click="bulkAction('accept')"
-              class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors text-sm"
+              class="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
             >
               Accept ({{ selectedIds.length }})
             </button>
             <button
               @click="bulkAction('reject')"
-              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm"
+              class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
             >
               Reject
             </button>
             <button
               @click="openBulkScheduleModal"
-              class="px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors text-sm"
+              class="px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors text-sm whitespace-nowrap"
             >
               Schedule Interview
             </button>
             <button
+              @click="bulkAction('payment-reminder')"
+              class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm whitespace-nowrap"
+            >
+              Payment Reminder
+            </button>
+            <button
               @click="bulkAction('delete')"
-              class="px-4 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-black transition-colors text-sm"
+              class="px-4 py-2 bg-gray-800 text-white font-medium rounded-lg hover:bg-black transition-colors text-sm whitespace-nowrap"
             >
               Delete
             </button>
@@ -418,6 +479,7 @@ const getStatusColor = (status: string) => {
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applicant</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Program</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
               <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -440,6 +502,19 @@ const getStatusColor = (status: string) => {
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-900 dark:text-gray-100">{{ app.program?.title || 'N/A' }}</div>
               </td>
+              <td class="px-6 py-4">
+                <div class="space-y-1">
+                  <span :class="['inline-flex px-2 py-1 text-xs font-semibold rounded-full', getPaymentStatusColor(app.payment_summary.status)]">
+                    {{ app.payment_summary.status === 'partially-paid' ? 'Partially Paid' : app.payment_summary.status.replace('-', ' ') }}
+                  </span>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ formatMoney(app.payment_summary.paid_amount) }} / {{ formatMoney(app.payment_summary.program_price) }}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Installments: {{ app.payment_summary.completed_installments }}/{{ app.payment_summary.max_installments }}
+                  </div>
+                </div>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ formatDate(app.created_at) }}
               </td>
@@ -456,6 +531,12 @@ const getStatusColor = (status: string) => {
                   >
                     View
                   </Link>
+                  <Link
+                    :href="`/admin/applications/${app.id}/edit`"
+                    class="text-indigo-600 hover:text-indigo-900"
+                  >
+                    Edit
+                  </Link>
                   <template v-if="app.status === 'pending'">
                     <button
                       @click="openAcceptModal(app)"
@@ -471,6 +552,13 @@ const getStatusColor = (status: string) => {
                     </button>
                   </template>
                   <button
+                    v-if="app.payment_summary.can_send_reminder"
+                    @click="sendPaymentReminder(app)"
+                    class="text-indigo-600 hover:text-indigo-900"
+                  >
+                    Remind
+                  </button>
+                  <button
                     @click="openDeleteModal(app)"
                     class="text-gray-400 hover:text-red-600"
                   >
@@ -480,7 +568,7 @@ const getStatusColor = (status: string) => {
               </td>
             </tr>
             <tr v-if="applications.data.length === 0">
-              <td colspan="6" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+              <td colspan="7" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
                 No applications found.
               </td>
             </tr>
@@ -593,6 +681,17 @@ const getStatusColor = (status: string) => {
       variant="destructive"
       @update:open="showBulkDeleteModal = $event"
       @confirm="confirmBulkDelete"
+    />
+
+    <!-- Bulk Payment Reminder Modal -->
+    <ConfirmationModal
+      :open="showBulkPaymentReminderModal"
+      title="Send Bulk Payment Reminders"
+      :description="`Send payment reminder emails to ${selectedIds.length} selected application(s). Only accepted applicants with pending balances will be notified.`"
+      confirm-text="Send Reminders"
+      variant="default"
+      @update:open="showBulkPaymentReminderModal = $event"
+      @confirm="confirmBulkPaymentReminder"
     />
 
     <!-- Bulk Schedule Interview Modal -->
