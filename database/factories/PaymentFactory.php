@@ -22,6 +22,7 @@ class PaymentFactory extends Factory
         return [
             'application_id' => Application::factory(),
             'user_id' => User::factory(),
+            'recorded_by' => null,
             'program_id' => Program::factory(),
             'reference' => 'PAY-'.strtoupper(fake()->bothify('###??##??')),
             'receipt_number' => 'RCT-'.fake()->numerify('######'),

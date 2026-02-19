@@ -55,6 +55,18 @@
                     <table class="row"><tr><td>Phone</td><td>{{ $payment->payer_phone }}</td></tr></table>
                     <table class="row"><tr><td>Amount</td><td class="amount">{{ number_format((float) $payment->amount, 0, '.', ',') }} {{ $payment->currency }}</td></tr></table>
                     <table class="row"><tr><td>Paid On</td><td>{{ optional($payment->paid_at ?? $payment->created_at)->format('d M Y, H:i') }}</td></tr></table>
+                    @if ($payment->manual_entry)
+                        @php
+                            $collector = $payment->recordedBy ?? $payment->updatedBy;
+                            $collectorRole = $collector?->role === 'admin'
+                                ? 'CTO (Legacy)'
+                                : ($collector?->role
+                                    ? str((string) $collector->role)->replace('_', ' ')->title()->toString()
+                                    : 'Unknown');
+                        @endphp
+                        <table class="row"><tr><td>Collected By</td><td>{{ $collector?->name ?? 'Unknown' }}</td></tr></table>
+                        <table class="row"><tr><td>Collector Role</td><td>{{ $collectorRole }}</td></tr></table>
+                    @endif
                 </div>
             </td>
             <td class="panel" style="padding-left: 2%;">
@@ -94,13 +106,15 @@
         <tr>
             <td class="signature-cell" style="padding-right: 2%;">
                 <div class="line"></div>
-                <div class="label">C.T.O Signature</div>
+                <div class="label">Manager/Administrator Signature</div>
                 <div class="subtle">Name, signature, and stamp</div>
             </td>
             <td class="signature-cell" style="padding-left: 2%;">
                 <div class="line"></div>
-                <div class="label">Manager/CEO Signature</div>
-                <div class="subtle">Name, signature, and stamp</div>
+                <div class="label">Student Signature</div>
+                <div class="subtle">
+                    {{ trim(($payment->application?->first_name ?? '').' '.($payment->application?->last_name ?? '')) ?: 'Applicant Name' }}
+                </div>
             </td>
         </tr>
     </table>

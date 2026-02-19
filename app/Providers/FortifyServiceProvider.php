@@ -25,12 +25,13 @@ class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(LoginResponse::class, function (): LoginResponse {
-            return new class implements LoginResponse {
+            return new class implements LoginResponse
+            {
                 public function toResponse($request)
                 {
                     $user = $request->user();
 
-                    if ($user?->role === 'admin') {
+                    if ($user?->canAccessAdminPanel()) {
                         return redirect()->route('admin.dashboard');
                     }
 

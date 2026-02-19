@@ -12,6 +12,7 @@ interface Payment {
   amount: number
   currency: string
   provider: string
+  manual_entry?: boolean
   payer_phone: string
   payment_type: string
   installment_number: number
@@ -19,6 +20,14 @@ interface Payment {
   paid_at: string | null
   created_at: string
   mesomb_transaction_id: string | null
+  recorded_by?: {
+    name: string
+    role: string
+  } | null
+  updated_by?: {
+    name: string
+    role: string
+  } | null
   application: {
     id: number
     first_name: string
@@ -48,8 +57,9 @@ const props = defineProps<Props>()
 defineOptions({ layout: AppLayout })
 
 const page = usePage()
-const backHref = computed(() => (page.props as unknown as PageProps).auth?.user?.role === 'admin' ? '/admin/dashboard' : '/dashboard#payments')
-const backLabel = computed(() => (page.props as unknown as PageProps).auth?.user?.role === 'admin' ? 'Back to Admin Dashboard' : 'Back to Dashboard')
+const adminRoles = ['cto', 'ceo', 'program_coordinator', 'admin']
+const backHref = computed(() => adminRoles.includes(String((page.props as unknown as PageProps).auth?.user?.role ?? '')) ? '/admin/dashboard' : '/dashboard#payments')
+const backLabel = computed(() => adminRoles.includes(String((page.props as unknown as PageProps).auth?.user?.role ?? '')) ? 'Back to Admin Dashboard' : 'Back to Dashboard')
 
 const formatMoney = (amount: number, currency = 'XAF') => {
   return new Intl.NumberFormat('en-CM', { style: 'currency', currency }).format(amount || 0)
@@ -64,6 +74,11 @@ const formatDate = (value: string | null) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const formatRole = (role: string) => {
+  if (role === 'admin') return 'CTO (Legacy)'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
 const printReceipt = () => {
@@ -130,6 +145,15 @@ const printReceipt = () => {
             <p class="flex justify-between gap-4"><span class="text-gray-500 dark:text-gray-400">Phone</span><span class="font-medium text-gray-900 dark:text-gray-100">{{ payment.payer_phone }}</span></p>
             <p class="flex justify-between gap-4"><span class="text-gray-500 dark:text-gray-400">Paid At</span><span class="font-medium text-gray-900 dark:text-gray-100">{{ formatDate(payment.paid_at || payment.created_at) }}</span></p>
             <p class="flex justify-between gap-4"><span class="text-gray-500 dark:text-gray-400">Amount</span><span class="font-semibold text-[#42b6c5]">{{ formatMoney(payment.amount, payment.currency) }}</span></p>
+            <p v-if="payment.manual_entry" class="flex justify-between gap-4">
+              <span class="text-gray-500 dark:text-gray-400">Collected By</span>
+              <span class="font-medium text-gray-900 dark:text-gray-100">
+                {{ payment.recorded_by?.name || payment.updated_by?.name || 'Unknown' }}
+                <span v-if="payment.recorded_by?.role || payment.updated_by?.role" class="text-gray-500 dark:text-gray-400">
+                  ({{ formatRole(payment.recorded_by?.role || payment.updated_by?.role || '') }})
+                </span>
+              </span>
+            </p>
           </div>
         </div>
 

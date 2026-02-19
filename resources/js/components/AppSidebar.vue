@@ -36,7 +36,10 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
-const isAdmin = computed(() => user.value?.role === 'admin');
+const adminRoles = ['cto', 'ceo', 'program_coordinator', 'admin']
+const executiveRoles = ['cto', 'ceo', 'admin']
+const isAdmin = computed(() => adminRoles.includes(String(user.value?.role ?? '')))
+const isExecutive = computed(() => executiveRoles.includes(String(user.value?.role ?? '')))
 
 // Admin navigation items
 const adminNavItems: NavItem[] = [
@@ -66,11 +69,6 @@ const adminNavItems: NavItem[] = [
         icon: Wallet,
     },
     {
-        title: 'Users',
-        href: '/admin/users',
-        icon: Users,
-    },
-    {
         title: 'Success Stories',
         href: '/admin/success-stories',
         icon: Star,
@@ -79,6 +77,14 @@ const adminNavItems: NavItem[] = [
         title: 'Interviews',
         href: '/admin/interviews',
         icon: MessageSquare,
+    },
+];
+
+const executiveNavItems: NavItem[] = [
+    {
+        title: 'Users',
+        href: '/admin/users',
+        icon: Users,
     },
     {
         title: 'Emails',
@@ -90,7 +96,7 @@ const adminNavItems: NavItem[] = [
         href: '/admin/settings',
         icon: Settings,
     },
-];
+]
 
 // User navigation items
 const userNavItems: NavItem[] = [
@@ -117,7 +123,17 @@ const userNavItems: NavItem[] = [
 ];
 
 // Main navigation based on role
-const mainNavItems = computed(() => isAdmin.value ? adminNavItems : userNavItems);
+const mainNavItems = computed(() => {
+    if (!isAdmin.value) {
+        return userNavItems
+    }
+
+    if (isExecutive.value) {
+        return [...adminNavItems, ...executiveNavItems]
+    }
+
+    return adminNavItems
+});
 
 // Home link based on role
 const homeLink = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard');

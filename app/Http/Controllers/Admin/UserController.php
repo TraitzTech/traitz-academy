@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AdminAccountCredentialsNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -37,14 +39,16 @@ class UserController extends Controller
 
         $stats = [
             'total' => User::count(),
-            'admins' => User::where('role', 'admin')->count(),
-            'users' => User::where('role', 'user')->count(),
+            'executives' => User::whereIn('role', [User::ROLE_CTO, User::ROLE_CEO, User::ROLE_ADMIN_LEGACY])->count(),
+            'program_coordinators' => User::where('role', User::ROLE_PROGRAM_COORDINATOR)->count(),
+            'users' => User::where('role', User::ROLE_USER)->count(),
         ];
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['search', 'role']),
             'stats' => $stats,
+            'roleOptions' => User::managedRoleOptions(),
         ]);
     }
 
@@ -55,20 +59,28 @@ class UserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $allowedRoles = implode(',', User::managedRoleOptions());
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'nullable|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:user,admin',
+            'role' => 'required|in:'.$allowedRoles,
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $plainPassword = $validated['password'] ?? (string) Str::password(12);
+        $validated['password'] = Hash::make($plainPassword);
 
-        User::create($validated);
+        $user = User::create($validated);
+
+        $user->notify(new AdminAccountCredentialsNotification(
+            temporaryPassword: $plainPassword,
+            createdBy: $request->user(),
+        ));
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User created successfully.');
+            ->with('success', 'User created successfully. Login credentials have been sent to the user email.');
     }
 
     public function edit(User $user): Response
@@ -96,12 +108,14 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $allowedRoles = implode(',', User::managedRoleOptions());
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => "required|email|unique:users,email,{$user->id}",
             'password' => 'nullable|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
-            'role' => 'required|in:user,admin',
+            'role' => 'required|in:'.$allowedRoles,
         ]);
 
         if ($validated['password']) {
@@ -136,8 +150,12 @@ class UserController extends Controller
             return back()->with('error', 'You cannot change your own role.');
         }
 
+        if ($user->isExecutive()) {
+            return back()->with('error', 'Executive roles can only be changed from the edit user form.');
+        }
+
         $user->update([
-            'role' => $user->role === 'admin' ? 'user' : 'admin',
+            'role' => $user->role === User::ROLE_PROGRAM_COORDINATOR ? User::ROLE_USER : User::ROLE_PROGRAM_COORDINATOR,
         ]);
 
         return back()->with('success', 'User role updated.');

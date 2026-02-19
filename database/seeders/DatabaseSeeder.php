@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@traitzacademy.com',
             'phone' => '+1234567890',
-            'role' => 'admin',
+            'role' => User::ROLE_CTO,
             'password' => bcrypt('password'),
         ]);
 

@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class IsAdmin
+class IsExecutive
 {
     /**
      * Handle an incoming request.
@@ -15,7 +15,7 @@ class IsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! auth()->check() || ! auth()->user()->canAccessAdminPanel()) {
+        if (! auth()->check() || ! auth()->user()->canManageUsers()) {
             abort(403, 'Unauthorized access');
         }
 

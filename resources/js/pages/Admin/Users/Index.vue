@@ -12,7 +12,7 @@ interface User {
   name: string
   email: string
   phone: string | null
-  role: 'user' | 'admin'
+  role: 'user' | 'cto' | 'ceo' | 'program_coordinator' | 'admin'
   email_verified_at: string | null
   created_at: string
   applications_count: number
@@ -27,6 +27,7 @@ interface Props {
     search?: string
     role?: string
   }
+  roleOptions: string[]
 }
 
 const props = defineProps<Props>()
@@ -140,19 +141,6 @@ const updateUser = () => {
   })
 }
 
-const toggleRole = (user: User) => {
-  router.post(`/admin/users/${user.id}/toggle-role`, {}, {
-    preserveState: true,
-    onSuccess: () => {
-      const newRole = user.role === 'admin' ? 'user' : 'admin'
-      toast.success(`${user.name}'s role changed to ${newRole}!`)
-    },
-    onError: () => {
-      toast.error('Failed to toggle user role.')
-    },
-  })
-}
-
 const deleteUser = (user: User) => {
   userToDelete.value = user
   showDeleteModal.value = true
@@ -203,7 +191,20 @@ const formatDate = (date: string) => {
 }
 
 const getRoleBadgeColor = (role: string) => {
-  return role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  if (role === 'cto' || role === 'ceo' || role === 'admin') {
+    return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+  }
+
+  if (role === 'program_coordinator') {
+    return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'
+  }
+
+  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+}
+
+const formatRole = (role: string) => {
+  if (role === 'admin') return 'CTO (Legacy)'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 // Export
@@ -333,8 +334,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
             class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
+            <option v-for="option in roleOptions" :key="option" :value="option">{{ formatRole(option) }}</option>
           </select>
         </div>
       </div>
@@ -389,13 +389,9 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                 <span v-else class="text-gray-300 dark:text-gray-600">—</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <button
-                  @click="toggleRole(user)"
-                  :class="['px-2 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity', getRoleBadgeColor(user.role)]"
-                  :title="`Click to make ${user.role === 'admin' ? 'user' : 'admin'}`"
-                >
-                  {{ user.role.charAt(0).toUpperCase() + user.role.slice(1) }}
-                </button>
+                <span :class="['px-2 py-1 text-xs font-medium rounded-full', getRoleBadgeColor(user.role)]">
+                  {{ formatRole(user.role) }}
+                </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ user.applications_count || 0 }}
@@ -502,13 +498,13 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                 <p v-if="createForm.errors.phone" class="mt-1 text-sm text-red-600">{{ createForm.errors.phone }}</p>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password (optional)</label>
                 <input
                   v-model="createForm.password"
                   type="password"
-                  required
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave blank to auto-generate a secure password and send it by email.</p>
                 <p v-if="createForm.errors.password" class="mt-1 text-sm text-red-600">{{ createForm.errors.password }}</p>
               </div>
               <div>
@@ -516,7 +512,6 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                 <input
                   v-model="createForm.password_confirmation"
                   type="password"
-                  required
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
@@ -526,8 +521,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                   v-model="createForm.role"
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
+                  <option v-for="option in roleOptions" :key="option" :value="option">{{ formatRole(option) }}</option>
                 </select>
               </div>
               <div class="flex justify-end gap-3 pt-4">
@@ -613,8 +607,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
                   v-model="editForm.role"
                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                 >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
+                  <option v-for="option in roleOptions" :key="option" :value="option">{{ formatRole(option) }}</option>
                 </select>
               </div>
               <div class="flex justify-end gap-3 pt-4">

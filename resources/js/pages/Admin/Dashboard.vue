@@ -72,7 +72,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 lg:p-6 border-l-4 border-cyan-500 col-span-2 lg:col-span-1">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-xs lg:text-sm text-gray-600 dark:text-gray-400 font-semibold">Collected</p>
+            <p class="text-xs lg:text-sm text-gray-600 dark:text-gray-400 font-semibold">{{ stats.collected_label || 'Collected' }}</p>
             <p class="text-xl lg:text-3xl font-bold text-[#000928] dark:text-gray-100 mt-1 lg:mt-2">{{ formatMoney(stats.total_collected || 0) }}</p>
           </div>
           <div class="p-2 lg:p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">

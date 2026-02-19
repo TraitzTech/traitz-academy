@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { debounce } from 'lodash-es'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 import {
   Dialog,
@@ -33,6 +33,10 @@ interface PaymentRow {
   admin_notes: string | null
   failure_reason: string | null
   updated_by: {
+    id: number
+    name: string
+  } | null
+  recorded_by: {
     id: number
     name: string
   } | null
@@ -71,8 +75,13 @@ interface Props {
     search?: string
     status?: string
     program_id?: string
+    payment_source?: string
+    collected_by?: string
+    collector_role?: string
   }
   programs: Array<{ id: number; title: string }>
+  collectors: Array<{ id: number; name: string; role: 'cto' | 'ceo' | 'program_coordinator' | 'admin' }>
+  collectorRoles: Array<'cto' | 'ceo' | 'program_coordinator'>
   acceptedApplications: AcceptedApplicationOption[]
   stats: {
     successful_count: number
@@ -90,19 +99,25 @@ const toast = useToast()
 const search = ref(props.filters.search || '')
 const status = ref(props.filters.status || '')
 const programId = ref(props.filters.program_id || '')
+const paymentSource = ref(props.filters.payment_source || '')
+const collectedBy = ref(props.filters.collected_by || '')
+const collectorRole = ref(props.filters.collector_role || '')
 
 const applyFilters = debounce(() => {
   router.get('/admin/payments', {
     search: search.value || undefined,
     status: status.value || undefined,
     program_id: programId.value || undefined,
+    payment_source: paymentSource.value || undefined,
+    collected_by: collectedBy.value || undefined,
+    collector_role: collectorRole.value || undefined,
   }, {
     preserveState: true,
     replace: true,
   })
 }, 300)
 
-watch([search, status, programId], applyFilters)
+watch([search, status, programId, paymentSource, collectedBy, collectorRole], applyFilters)
 
 const formatMoney = (amount: number, currency = 'XAF') => {
   return new Intl.NumberFormat('en-CM', { style: 'currency', currency }).format(amount || 0)
@@ -119,10 +134,140 @@ const formatDate = (date: string | null) => {
 
 const hasRows = computed(() => props.payments.data.length > 0)
 const acceptedApplications = computed(() => props.acceptedApplications)
+const hasCollectorFilters = computed(() => props.collectors.length > 0)
+
+const exportUrl = computed(() => {
+  const params = new URLSearchParams()
+
+  if (search.value) {
+    params.set('search', search.value)
+  }
+
+  if (status.value) {
+    params.set('status', status.value)
+  }
+
+  if (programId.value) {
+    params.set('program_id', String(programId.value))
+  }
+
+  if (paymentSource.value) {
+    params.set('payment_source', paymentSource.value)
+  }
+
+  if (collectedBy.value) {
+    params.set('collected_by', String(collectedBy.value))
+  }
+
+  if (collectorRole.value) {
+    params.set('collector_role', collectorRole.value)
+  }
+
+  const query = params.toString()
+
+  return query ? `/admin/payments/export?${query}` : '/admin/payments/export'
+})
+
+const formatRole = (role: string) => {
+  if (role === 'admin') return 'CTO (Legacy)'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
 
 const showManualModal = ref(false)
 const showEditModal = ref(false)
 const editingPayment = ref<PaymentRow | null>(null)
+
+// --- Application search combobox state ---
+const appSearchQuery = ref('')
+const appSearchOpen = ref(false)
+const appSearchRef = ref<HTMLElement | null>(null)
+const appInputRef = ref<HTMLInputElement | null>(null)
+const highlightedIndex = ref(-1)
+
+const filteredApplications = computed(() => {
+  const q = appSearchQuery.value.trim().toLowerCase()
+  if (!q) return props.acceptedApplications
+  return props.acceptedApplications.filter((a) => {
+    return (
+      a.applicant_name.toLowerCase().includes(q) ||
+      a.email.toLowerCase().includes(q) ||
+      String(a.id).includes(q) ||
+      (a.program_title || '').toLowerCase().includes(q) ||
+      (a.phone || '').includes(q)
+    )
+  })
+})
+
+const selectApplication = (app: AcceptedApplicationOption) => {
+  manualForm.application_id = String(app.id)
+  appSearchQuery.value = `#${app.id} — ${app.applicant_name} (${app.program_title})`
+  appSearchOpen.value = false
+  highlightedIndex.value = -1
+}
+
+const clearApplication = () => {
+  manualForm.application_id = ''
+  appSearchQuery.value = ''
+  appSearchOpen.value = false
+  highlightedIndex.value = -1
+  nextTick(() => appInputRef.value?.focus())
+}
+
+const onAppInputFocus = () => {
+  appSearchOpen.value = true
+  if (manualForm.application_id) {
+    appSearchQuery.value = ''
+  }
+  highlightedIndex.value = -1
+}
+
+const onAppInputBlur = () => {
+  // Delay to allow click on dropdown item
+  setTimeout(() => {
+    appSearchOpen.value = false
+    // Restore label if selection exists
+    const current = props.acceptedApplications.find(
+      (a) => String(a.id) === String(manualForm.application_id)
+    )
+    if (current) {
+      appSearchQuery.value = `#${current.id} — ${current.applicant_name} (${current.program_title})`
+    }
+  }, 150)
+}
+
+const onAppKeydown = (e: KeyboardEvent) => {
+  if (!appSearchOpen.value) {
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      appSearchOpen.value = true
+    }
+    return
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    highlightedIndex.value = Math.min(highlightedIndex.value + 1, filteredApplications.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    highlightedIndex.value = Math.max(highlightedIndex.value - 1, 0)
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (highlightedIndex.value >= 0 && filteredApplications.value[highlightedIndex.value]) {
+      selectApplication(filteredApplications.value[highlightedIndex.value])
+    }
+  } else if (e.key === 'Escape') {
+    appSearchOpen.value = false
+  }
+}
+
+// Reset combobox when modal closes
+watch(showManualModal, (val) => {
+  if (!val) {
+    appSearchQuery.value = ''
+    appSearchOpen.value = false
+    highlightedIndex.value = -1
+  }
+})
+
+// --- End combobox state ---
 
 const manualForm = useForm({
   application_id: '',
@@ -207,6 +352,8 @@ const openManualModal = () => {
   manualForm.payment_channel = 'ONSITE'
   manualForm.status = 'successful'
   manualForm.payment_type = 'full'
+  appSearchQuery.value = ''
+  appSearchOpen.value = false
   showManualModal.value = true
 }
 
@@ -236,8 +383,9 @@ const recordManualPayment = () => {
       showManualModal.value = false
       toast.success('Manual payment recorded successfully.')
     },
-    onError: () => {
-      toast.error('Failed to record manual payment.')
+    onError: (errors) => {
+      const errorMessage = errors.amount || errors.application_id || errors.status || errors.payer_phone || 'Failed to record manual payment.'
+      toast.error(errorMessage)
     },
   })
 }
@@ -293,6 +441,13 @@ const updatePayment = () => {
           <p class="text-gray-600 dark:text-gray-400 mt-2">Track all program fee transactions and installment progress</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+          <a
+            v-if="hasCollectorFilters"
+            :href="exportUrl"
+            class="px-4 py-2 border border-emerald-300 dark:border-emerald-700 rounded-lg text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+          >
+            Export CSV
+          </a>
           <Link
             href="/admin/payments/verify"
             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -334,7 +489,7 @@ const updatePayment = () => {
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
           <input
@@ -366,6 +521,42 @@ const updatePayment = () => {
           >
             <option value="">All Programs</option>
             <option v-for="program in programs" :key="program.id" :value="program.id">{{ program.title }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
+          <select
+            v-model="paymentSource"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option value="">Manual + Online</option>
+            <option value="manual">Manual</option>
+            <option value="online">Online</option>
+          </select>
+        </div>
+
+        <div v-if="hasCollectorFilters">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Collected By</label>
+          <select
+            v-model="collectedBy"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option value="">All Collectors</option>
+            <option v-for="collector in collectors" :key="collector.id" :value="collector.id">
+              {{ collector.name }} ({{ formatRole(collector.role) }})
+            </option>
+          </select>
+        </div>
+
+        <div v-if="hasCollectorFilters">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Collector Role</label>
+          <select
+            v-model="collectorRole"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+          >
+            <option value="">All Roles</option>
+            <option v-for="role in collectorRoles" :key="role" :value="role">{{ formatRole(role) }}</option>
           </select>
         </div>
       </div>
@@ -424,6 +615,9 @@ const updatePayment = () => {
                     {{ payment.manual_entry ? 'Manual' : 'Online' }}
                   </span>
                   <p class="text-xs text-gray-500 dark:text-gray-400">{{ payment.payment_channel || '—' }}</p>
+                  <p v-if="payment.manual_entry" class="text-xs text-gray-500 dark:text-gray-400">
+                    Collected by: {{ payment.recorded_by?.name || payment.updated_by?.name || 'Unknown' }}
+                  </p>
                 </div>
               </td>
               <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ formatDate(payment.paid_at) }}</td>
@@ -465,6 +659,7 @@ const updatePayment = () => {
       </div>
     </div>
 
+    <!-- Manual Payment Modal -->
     <Dialog :open="showManualModal" @update:open="showManualModal = $event">
       <DialogContent class="sm:max-w-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader class="space-y-2">
@@ -475,17 +670,105 @@ const updatePayment = () => {
         </DialogHeader>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto pr-1">
-          <div class="md:col-span-2">
+
+          <!-- Application Search Combobox -->
+          <div class="md:col-span-2" ref="appSearchRef">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Accepted Application</label>
-            <select v-model="manualForm.application_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent">
-              <option value="">Select application</option>
-              <option v-for="application in acceptedApplications" :key="application.id" :value="String(application.id)">
-                #{{ application.id }} - {{ application.applicant_name }} ({{ application.program_title }})
-              </option>
-            </select>
+            <div class="relative">
+              <!-- Input row with search icon and optional clear button -->
+              <div class="relative flex items-center">
+                <!-- Search icon -->
+                <svg
+                  class="absolute left-3 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none"
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0Z" />
+                </svg>
+
+                <input
+                  ref="appInputRef"
+                  v-model="appSearchQuery"
+                  type="text"
+                  autocomplete="off"
+                  :placeholder="manualForm.application_id ? 'Type to search another...' : 'Search by name, email, ID or program…'"
+                  class="w-full pl-9 pr-8 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent transition"
+                  :class="[
+                    manualForm.errors.application_id
+                      ? 'border-red-400 dark:border-red-500'
+                      : manualForm.application_id
+                        ? 'border-[#42b6c5] dark:border-[#42b6c5]'
+                        : 'border-gray-300 dark:border-gray-600'
+                  ]"
+                  @focus="onAppInputFocus"
+                  @blur="onAppInputBlur"
+                  @keydown="onAppKeydown"
+                />
+
+                <!-- Clear button when something is selected -->
+                <button
+                  v-if="manualForm.application_id"
+                  type="button"
+                  tabindex="-1"
+                  class="absolute right-2 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  @mousedown.prevent="clearApplication"
+                  title="Clear selection"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Selected badge -->
+              <div v-if="manualForm.application_id && !appSearchOpen" class="mt-1.5 flex items-center gap-1.5">
+                <span class="inline-flex items-center gap-1 text-xs bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700 rounded-full px-2 py-0.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                  Application #{{ manualForm.application_id }} selected
+                </span>
+              </div>
+
+              <!-- Dropdown -->
+              <div
+                v-if="appSearchOpen"
+                class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-56 overflow-y-auto"
+              >
+                <div v-if="filteredApplications.length === 0" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                  No applications match your search.
+                </div>
+                <button
+                  v-for="(app, index) in filteredApplications"
+                  :key="app.id"
+                  type="button"
+                  class="w-full text-left px-4 py-2.5 text-sm transition-colors flex flex-col gap-0.5"
+                  :class="[
+                    index === highlightedIndex
+                      ? 'bg-[#42b6c5]/10 dark:bg-[#42b6c5]/20 text-gray-900 dark:text-gray-100'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200',
+                    String(app.id) === String(manualForm.application_id)
+                      ? 'bg-cyan-50 dark:bg-cyan-900/20'
+                      : ''
+                  ]"
+                  @mousedown.prevent="selectApplication(app)"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-medium truncate">{{ app.applicant_name }}</span>
+                    <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500 font-mono">#{{ app.id }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="truncate">{{ app.program_title }}</span>
+                    <span class="shrink-0">·</span>
+                    <span class="shrink-0 font-medium text-[#42b6c5]">{{ formatMoney(app.remaining_amount) }} remaining</span>
+                  </div>
+                  <span v-if="app.email" class="text-xs text-gray-400 dark:text-gray-500 truncate">{{ app.email }}</span>
+                </button>
+              </div>
+            </div>
             <p v-if="manualForm.errors.application_id" class="text-xs text-red-600 mt-1">{{ manualForm.errors.application_id }}</p>
           </div>
 
+          <!-- Payment summary info box -->
           <div class="md:col-span-2 rounded-lg border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/20 px-3 py-3" v-if="selectedApplication">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <p class="text-cyan-800 dark:text-cyan-200">
@@ -588,6 +871,7 @@ const updatePayment = () => {
       </DialogContent>
     </Dialog>
 
+    <!-- Edit Payment Modal -->
     <Dialog :open="showEditModal" @update:open="showEditModal = $event">
       <DialogContent class="sm:max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader class="space-y-2">

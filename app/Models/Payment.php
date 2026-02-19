@@ -14,6 +14,7 @@ class Payment extends Model
     protected $fillable = [
         'application_id',
         'user_id',
+        'recorded_by',
         'updated_by',
         'program_id',
         'reference',
@@ -58,6 +59,11 @@ class Payment extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 
     public function program(): BelongsTo

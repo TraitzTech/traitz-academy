@@ -98,7 +98,7 @@
           <div class="hidden lg:flex items-center space-x-4">
             <template v-if="$page.props.auth.user">
               <Link
-                :href="$page.props.auth.user.role === 'admin' ? '/admin/dashboard' : '/dashboard'"
+                :href="['cto', 'ceo', 'program_coordinator', 'admin'].includes($page.props.auth.user.role) ? '/admin/dashboard' : '/dashboard'"
                 class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#42b6c5] transition-colors"
               >
                 Dashboard
@@ -259,7 +259,7 @@
               <div class="border-t border-gray-100 mt-3 pt-3">
                 <template v-if="$page.props.auth.user">
                   <Link
-                    :href="$page.props.auth.user.role === 'admin' ? '/admin/dashboard' : '/dashboard'"
+                    :href="['cto', 'ceo', 'program_coordinator', 'admin'].includes($page.props.auth.user.role) ? '/admin/dashboard' : '/dashboard'"
                     @click="mobileMenuOpen = false"
                     class="block px-4 py-3 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >

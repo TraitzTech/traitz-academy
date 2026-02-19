@@ -108,24 +108,29 @@ Route::prefix('admin')
         Route::get('/payments/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
         Route::post('/payments/manual', [AdminPaymentController::class, 'storeManual'])->name('payments.manual-store');
         Route::patch('/payments/{payment}', [AdminPaymentController::class, 'update'])->name('payments.update');
+        Route::get('/payments/export', [AdminPaymentController::class, 'export'])
+            ->middleware('executive')
+            ->name('payments.export');
 
-        // Users Management
-        Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
-        Route::resource('users', UserController::class);
-        Route::post('/users/{user}/toggle-role', [UserController::class, 'toggleRole'])->name('users.toggle-role');
-        Route::post('/users/bulk-destroy', [UserController::class, 'bulkDestroy'])->name('users.bulk-destroy');
+        Route::middleware('executive')->group(function () {
+            // Users Management
+            Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
+            Route::resource('users', UserController::class);
+            Route::post('/users/{user}/toggle-role', [UserController::class, 'toggleRole'])->name('users.toggle-role');
+            Route::post('/users/bulk-destroy', [UserController::class, 'bulkDestroy'])->name('users.bulk-destroy');
 
-        // Settings
-        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
-        Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
-        Route::post('/settings/upload', [SettingsController::class, 'uploadImage'])->name('settings.upload');
-        Route::delete('/settings/image/{key}', [SettingsController::class, 'deleteImage'])->name('settings.delete-image');
+            // Settings
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/upload', [SettingsController::class, 'uploadImage'])->name('settings.upload');
+            Route::delete('/settings/image/{key}', [SettingsController::class, 'deleteImage'])->name('settings.delete-image');
 
-        // Email Notifications
-        Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
-        Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
-        Route::post('/emails/media', [EmailController::class, 'uploadMedia'])->name('emails.upload-media');
-        Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
+            // Email Notifications
+            Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+            Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
+            Route::post('/emails/media', [EmailController::class, 'uploadMedia'])->name('emails.upload-media');
+            Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
+        });
 
         // Success Stories CRUD
         Route::resource('success-stories', SuccessStoryController::class)->except(['show']);

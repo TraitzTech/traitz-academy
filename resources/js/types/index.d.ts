@@ -30,6 +30,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    role?: 'user' | 'cto' | 'ceo' | 'program_coordinator' | 'admin';
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;

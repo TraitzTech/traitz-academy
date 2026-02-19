@@ -19,7 +19,7 @@ interface User {
   name: string
   email: string
   phone: string | null
-  role: 'user' | 'admin'
+  role: 'user' | 'cto' | 'ceo' | 'program_coordinator' | 'admin'
   email_verified_at: string | null
   created_at: string
   applications: Application[]
@@ -55,6 +55,23 @@ const getStatusColor = (status: string) => {
 }
 
 const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+
+const getRoleBadgeColor = (role: string) => {
+  if (role === 'cto' || role === 'ceo' || role === 'admin') {
+    return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+  }
+
+  if (role === 'program_coordinator') {
+    return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400'
+  }
+
+  return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+}
+
+const formatRole = (role: string) => {
+  if (role === 'admin') return 'CTO (Legacy)'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
 </script>
 
 <template>
@@ -73,9 +90,9 @@ const formatCategory = (cat: string) => cat.replace(/-/g, ' ').replace(/\b\w/g, 
       <div class="flex items-center gap-3">
         <span :class="[
           'px-3 py-1 text-sm font-medium rounded-full',
-          user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+          getRoleBadgeColor(user.role)
         ]">
-          {{ user.role.charAt(0).toUpperCase() + user.role.slice(1) }}
+          {{ formatRole(user.role) }}
         </span>
         <Link
           :href="`/admin/users/${user.id}/edit`"

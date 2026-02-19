@@ -14,6 +14,16 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
+    public const ROLE_USER = 'user';
+
+    public const ROLE_CTO = 'cto';
+
+    public const ROLE_CEO = 'ceo';
+
+    public const ROLE_PROGRAM_COORDINATOR = 'program_coordinator';
+
+    public const ROLE_ADMIN_LEGACY = 'admin';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -82,5 +92,59 @@ class User extends Authenticatable
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function recordedPayments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'recorded_by');
+    }
+
+    public static function managedRoleOptions(): array
+    {
+        return [
+            self::ROLE_USER,
+            self::ROLE_CTO,
+            self::ROLE_CEO,
+            self::ROLE_PROGRAM_COORDINATOR,
+        ];
+    }
+
+    public function isExecutive(): bool
+    {
+        return in_array($this->role, [self::ROLE_CTO, self::ROLE_CEO, self::ROLE_ADMIN_LEGACY], true);
+    }
+
+    public function isProgramCoordinator(): bool
+    {
+        return $this->role === self::ROLE_PROGRAM_COORDINATOR;
+    }
+
+    public function canAccessAdminPanel(): bool
+    {
+        return $this->isExecutive() || $this->isProgramCoordinator();
+    }
+
+    public function canManageUsers(): bool
+    {
+        return $this->isExecutive();
+    }
+
+    public function canManagePaymentRecord(Payment $payment): bool
+    {
+        if ($this->isExecutive()) {
+            return true;
+        }
+
+        if (! $this->isProgramCoordinator()) {
+            return false;
+        }
+
+        if (! $payment->manual_entry) {
+            return false;
+        }
+
+        $collectorId = $payment->recorded_by ?? $payment->updated_by;
+
+        return (int) $collectorId === (int) $this->id;
     }
 }

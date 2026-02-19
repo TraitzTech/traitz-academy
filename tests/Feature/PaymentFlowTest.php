@@ -343,8 +343,11 @@ it('allows admin to verify receipt by multiple identifiers', function () {
     $payment = Payment::factory()->create([
         'application_id' => $application->id,
         'user_id' => $user->id,
+        'recorded_by' => $admin->id,
+        'updated_by' => $admin->id,
         'program_id' => $program->id,
         'status' => 'successful',
+        'manual_entry' => true,
         'receipt_number' => 'RCT-VERIFY-0001',
         'reference' => 'REF-VERIFY-0001',
         'mesomb_transaction_id' => 'TRX-VERIFY-0001',
@@ -356,6 +359,8 @@ it('allows admin to verify receipt by multiple identifiers', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Payments/Verify')
             ->where('payment.id', $payment->id)
+            ->where('payment.recorded_by.id', $admin->id)
+            ->where('payment.recorded_by.role', 'admin')
         );
 
     $this->actingAs($admin)
@@ -373,6 +378,40 @@ it('allows admin to verify receipt by multiple identifiers', function () {
             ->component('Admin/Payments/Verify')
             ->where('payment.id', $payment->id)
         );
+});
+
+it('includes collector information on receipt page for manual payments', function () {
+    $collector = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create();
+    $program = Program::factory()->create(['price' => 100000]);
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+    ]);
+
+    $payment = Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'recorded_by' => $collector->id,
+        'updated_by' => $collector->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'manual_entry' => true,
+        'receipt_number' => 'RCT-TEST-MANUAL-0001',
+        'paid_at' => now(),
+    ]);
+
+    $response = $this->actingAs($user)->get(route('payments.receipt', $payment));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('Payments/Receipt')
+        ->where('payment.id', $payment->id)
+        ->where('payment.manual_entry', true)
+        ->where('payment.recorded_by.id', $collector->id)
+        ->where('payment.recorded_by.role', 'admin')
+    );
 });
 
 it('automatically classifies partial manual payment as installment', function () {
@@ -418,6 +457,47 @@ it('automatically classifies partial manual payment as installment', function ()
 
     expect($paidAmount)->toBe(10000.0);
     expect(20000.0 - $paidAmount)->toBe(10000.0);
+});
+
+it('shows validation error when manual payment amount exceeds remaining balance', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create();
+    $program = Program::factory()->create([
+        'price' => 25000,
+        'max_installments' => 2,
+    ]);
+
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+        'phone' => '670000222',
+    ]);
+
+    Payment::factory()->create([
+        'application_id' => $application->id,
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'successful',
+        'amount' => 20000,
+    ]);
+
+    $response = $this->actingAs($admin)->post(route('admin.payments.manual-store'), [
+        'application_id' => $application->id,
+        'amount' => 6000,
+        'provider' => 'CASH',
+        'payment_channel' => 'ONSITE',
+        'payer_phone' => '670000222',
+        'status' => 'successful',
+        'payment_type' => 'full',
+        'admin_notes' => 'Attempt overpayment.',
+    ]);
+
+    $response->assertSessionHasErrors('amount');
+
+    expect(Payment::query()
+        ->where('application_id', $application->id)
+        ->count())->toBe(1);
 });
 
 it('allows admin to edit payment amount and status', function () {

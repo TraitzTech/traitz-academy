@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -18,9 +18,17 @@ import { computed } from 'vue';
 interface Props {
     mustVerifyEmail: boolean;
     status?: string;
+    sessions: Array<{
+        id: string;
+        ip_address: string | null;
+        user_agent: string | null;
+        device: string;
+        last_active: string;
+        is_current: boolean;
+    }>;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -32,6 +40,18 @@ const breadcrumbItems: BreadcrumbItem[] = [
 const page = usePage();
 const user = page.props.auth.user;
 const phoneRequired = computed(() => page.props.flash?.status === 'phone-required' || !user.phone);
+
+const terminateSession = (sessionId: string) => {
+    router.delete(`/settings/sessions/${sessionId}`, {
+        preserveScroll: true,
+    });
+};
+
+const terminateOtherSessions = () => {
+    router.delete('/settings/sessions', {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -161,6 +181,53 @@ const phoneRequired = computed(() => page.props.flash?.status === 'phone-require
             </div>
 
             <DeleteUser />
+
+            <div class="mt-10 border-t pt-8 border-gray-200 dark:border-gray-700">
+                <div class="space-y-6">
+                    <HeadingSmall
+                        title="Active Sessions"
+                        description="Manage devices where your account is currently logged in"
+                    />
+
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+                        <div v-for="session in props.sessions" :key="session.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <p class="font-medium text-gray-900 dark:text-gray-100">
+                                    {{ session.device }}
+                                    <span v-if="session.is_current" class="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Current Device</span>
+                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    IP: {{ session.ip_address || 'Unknown' }} • Last active {{ session.last_active }}
+                                </p>
+                            </div>
+
+                            <Button
+                                v-if="!session.is_current"
+                                type="button"
+                                variant="destructive"
+                                @click="terminateSession(session.id)"
+                            >
+                                Log out this device
+                            </Button>
+                        </div>
+
+                        <div v-if="props.sessions.length === 0" class="p-4 text-sm text-gray-500 dark:text-gray-400">
+                            No active sessions found.
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
+                            @click="terminateOtherSessions"
+                        >
+                            Log out other devices
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </SettingsLayout>
     </AppLayout>
 </template>

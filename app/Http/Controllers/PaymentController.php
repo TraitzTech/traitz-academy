@@ -162,7 +162,7 @@ class PaymentController extends Controller
     {
         $this->ensureCanViewPaymentReceipt($payment);
 
-        $payment->load(['application.program', 'user']);
+        $payment->load(['application.program', 'user', 'recordedBy', 'updatedBy']);
 
         return Inertia::render('Payments/Receipt', [
             'payment' => $payment,
@@ -189,7 +189,7 @@ class PaymentController extends Controller
 
     private function buildReceiptPdfDocument(Payment $payment): DomPdf
     {
-        $payment->load(['application.program', 'user']);
+        $payment->load(['application.program', 'user', 'recordedBy', 'updatedBy']);
 
         $receiptUrl = route('payments.receipt', $payment);
         $verificationPayload = json_encode([
@@ -247,7 +247,7 @@ class PaymentController extends Controller
 
     private function ensureCanViewPaymentReceipt(Payment $payment): void
     {
-        $isAuthorized = auth()->id() === $payment->user_id || auth()->user()?->role === 'admin';
+        $isAuthorized = auth()->id() === $payment->user_id || auth()->user()?->canAccessAdminPanel();
         abort_unless($isAuthorized, 403);
     }
 

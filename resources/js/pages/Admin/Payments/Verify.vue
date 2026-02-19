@@ -10,6 +10,7 @@ interface Payment {
   id: number
   receipt_number: string | null
   reference: string
+  manual_entry: boolean
   status: 'pending' | 'successful' | 'failed'
   amount: number
   currency: string
@@ -25,6 +26,14 @@ interface Payment {
   } | null
   program: {
     title: string
+  } | null
+  recorded_by: {
+    name: string
+    role: string
+  } | null
+  updated_by: {
+    name: string
+    role: string
   } | null
 }
 
@@ -59,6 +68,11 @@ const formatDate = (value: string | null) => {
     minute: '2-digit',
   })
 }
+
+const formatRole = (role: string) => {
+  if (role === 'admin') return 'CTO (Legacy)'
+  return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+}
 </script>
 
 <template>
@@ -89,8 +103,8 @@ const formatDate = (value: string | null) => {
       </form>
     </div>
 
-    <div v-if="search && !payment" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-red-600 dark:text-red-400">
-      No receipt found for "{{ search }}".
+    <div v-if="props.search && !payment" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-red-600 dark:text-red-400">
+      No receipt found for "{{ props.search }}".
     </div>
 
     <div v-if="payment" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
@@ -116,6 +130,13 @@ const formatDate = (value: string | null) => {
         <p class="text-gray-700 dark:text-gray-300"><span class="text-gray-500 dark:text-gray-400">Payment Type:</span> {{ payment.payment_type }} ({{ payment.installment_number }}/{{ payment.total_installments }})</p>
         <p class="text-gray-700 dark:text-gray-300"><span class="text-gray-500 dark:text-gray-400">Paid At:</span> {{ formatDate(payment.paid_at) }}</p>
         <p class="text-gray-700 dark:text-gray-300 md:col-span-2"><span class="text-gray-500 dark:text-gray-400">Transaction ID:</span> {{ payment.mesomb_transaction_id || 'N/A' }}</p>
+        <p v-if="payment.manual_entry" class="text-gray-700 dark:text-gray-300 md:col-span-2">
+          <span class="text-gray-500 dark:text-gray-400">Collected By:</span>
+          {{ payment.recorded_by?.name || payment.updated_by?.name || 'Unknown' }}
+          <span v-if="payment.recorded_by?.role || payment.updated_by?.role" class="text-gray-500 dark:text-gray-400">
+            ({{ formatRole(payment.recorded_by?.role || payment.updated_by?.role || '') }})
+          </span>
+        </p>
       </div>
 
       <div>
