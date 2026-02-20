@@ -47,17 +47,19 @@ class ExpenseController extends Controller
         $chartData = $this->buildChartData($request, $authUser);
 
         $collectors = collect();
+        $adminUsers = collect();
         if ($authUser->isExecutive()) {
-            $collectors = User::query()
+            $adminUsers = User::query()
                 ->whereIn('role', [
                     User::ROLE_CTO,
                     User::ROLE_CEO,
                     User::ROLE_PROGRAM_COORDINATOR,
                     User::ROLE_ADMIN_LEGACY,
                 ])
-                ->whereHas('recordedExpenses')
                 ->orderBy('name')
                 ->get(['id', 'name', 'role']);
+
+            $collectors = $adminUsers->filter(fn (User $u) => $u->recordedExpenses()->exists())->values();
         }
 
         return Inertia::render('Admin/Expenses/Index', [
@@ -69,6 +71,7 @@ class ExpenseController extends Controller
             'categories' => $categories,
             'programs' => $programs,
             'collectors' => $collectors,
+            'adminUsers' => $adminUsers,
             'stats' => $stats,
             'chartData' => $chartData,
             'isExecutive' => $authUser->isExecutive(),
@@ -77,7 +80,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
             'program_id' => 'nullable|exists:programs,id',
             'title' => 'required|string|max:255',
@@ -88,9 +91,15 @@ class ExpenseController extends Controller
             'vendor' => 'nullable|string|max:255',
             'expense_date' => 'required|date|before_or_equal:today',
             'notes' => 'nullable|string|max:500',
-        ]);
+        ];
 
-        $validated['recorded_by'] = $request->user()->id;
+        if ($request->user()->isExecutive()) {
+            $rules['recorded_by'] = 'nullable|exists:users,id';
+        }
+
+        $validated = $request->validate($rules);
+
+        $validated['recorded_by'] = $validated['recorded_by'] ?? $request->user()->id;
         $validated['currency'] = 'XAF';
         $validated['status'] = 'approved';
 
@@ -111,7 +120,7 @@ class ExpenseController extends Controller
             abort(403, 'You do not have permission to update this expense.');
         }
 
-        $validated = $request->validate([
+        $rules = [
             'expense_category_id' => 'required|exists:expense_categories,id',
             'program_id' => 'nullable|exists:programs,id',
             'title' => 'required|string|max:255',
@@ -122,7 +131,13 @@ class ExpenseController extends Controller
             'vendor' => 'nullable|string|max:255',
             'expense_date' => 'required|date|before_or_equal:today',
             'notes' => 'nullable|string|max:500',
-        ]);
+        ];
+
+        if ($authUser->isExecutive()) {
+            $rules['recorded_by'] = 'nullable|exists:users,id';
+        }
+
+        $validated = $request->validate($rules);
 
         $expense->update($validated);
 

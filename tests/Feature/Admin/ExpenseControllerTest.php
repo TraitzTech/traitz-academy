@@ -182,6 +182,77 @@ it('rejects future dates for expenses', function () {
     $response->assertSessionHasErrors('expense_date');
 });
 
+it('allows executives to specify recorded_by when creating an expense', function () {
+    $cto = User::factory()->create(['role' => User::ROLE_CTO]);
+    $ceo = User::factory()->create(['role' => User::ROLE_CEO]);
+    $category = ExpenseCategory::factory()->create();
+
+    $response = $this->actingAs($cto)->post(route('admin.expenses.store'), [
+        'expense_category_id' => $category->id,
+        'title' => 'CEO recorded expense',
+        'amount' => 25000,
+        'expense_date' => '2026-02-15',
+        'recorded_by' => $ceo->id,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $this->assertDatabaseHas('expenses', [
+        'title' => 'CEO recorded expense',
+        'recorded_by' => $ceo->id,
+    ]);
+});
+
+it('ignores recorded_by from coordinators and defaults to themselves', function () {
+    $coordinator = User::factory()->create(['role' => User::ROLE_PROGRAM_COORDINATOR]);
+    $ceo = User::factory()->create(['role' => User::ROLE_CEO]);
+    $category = ExpenseCategory::factory()->create();
+
+    $response = $this->actingAs($coordinator)->post(route('admin.expenses.store'), [
+        'expense_category_id' => $category->id,
+        'title' => 'Coordinator expense',
+        'amount' => 5000,
+        'expense_date' => '2026-02-15',
+        'recorded_by' => $ceo->id,
+    ]);
+
+    $response->assertRedirect();
+
+    $this->assertDatabaseHas('expenses', [
+        'title' => 'Coordinator expense',
+        'recorded_by' => $coordinator->id,
+    ]);
+});
+
+it('allows executives to change recorded_by when updating an expense', function () {
+    $cto = User::factory()->create(['role' => User::ROLE_CTO]);
+    $ceo = User::factory()->create(['role' => User::ROLE_CEO]);
+    $category = ExpenseCategory::factory()->create();
+
+    $expense = Expense::factory()->create([
+        'expense_category_id' => $category->id,
+        'recorded_by' => $cto->id,
+        'title' => 'Wrongly attributed',
+    ]);
+
+    $response = $this->actingAs($cto)->patch(route('admin.expenses.update', $expense), [
+        'expense_category_id' => $category->id,
+        'title' => 'Correctly attributed',
+        'amount' => 20000,
+        'expense_date' => '2026-02-15',
+        'recorded_by' => $ceo->id,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    $this->assertDatabaseHas('expenses', [
+        'id' => $expense->id,
+        'recorded_by' => $ceo->id,
+    ]);
+});
+
 // ── Update ──────────────────────────────────────────────────────
 
 it('allows executives to update any expense', function () {

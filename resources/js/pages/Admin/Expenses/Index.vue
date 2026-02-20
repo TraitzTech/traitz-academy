@@ -72,6 +72,7 @@ interface Props {
   categories: ExpenseCategory[]
   programs: Array<{ id: number; title: string }>
   collectors: Array<{ id: number; name: string; role: string }>
+  adminUsers: Array<{ id: number; name: string; role: string }>
   stats: {
     total_expenses: number
     expense_count: number
@@ -186,6 +187,7 @@ const showCreateModal = ref(false)
 const createForm = useForm({
   expense_category_id: '',
   program_id: '',
+  recorded_by: '',
   title: '',
   description: '',
   amount: '',
@@ -212,6 +214,7 @@ const editingExpense = ref<ExpenseRow | null>(null)
 const editForm = useForm({
   expense_category_id: '',
   program_id: '',
+  recorded_by: '',
   title: '',
   description: '',
   amount: '',
@@ -226,6 +229,7 @@ const openEdit = (expense: ExpenseRow) => {
   editingExpense.value = expense
   editForm.expense_category_id = String(expense.category?.id || '')
   editForm.program_id = expense.program ? String(expense.program.id) : ''
+  editForm.recorded_by = expense.recorder ? String(expense.recorder.id) : ''
   editForm.title = expense.title
   editForm.description = expense.description || ''
   editForm.amount = String(expense.amount)
@@ -471,7 +475,7 @@ const showCharts = ref(true)
             </div>
 
             <!-- Bar chart -->
-            <div class="flex items-end gap-1 sm:gap-2" style="height: 200px">
+            <div class="flex gap-1 sm:gap-2" style="height: 200px">
               <div
                 v-for="(m, idx) in chartData.monthly"
                 :key="idx"
@@ -967,6 +971,18 @@ const showCharts = ref(true)
               </select>
             </div>
 
+            <div v-if="isExecutive && adminUsers.length > 0">
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Recorded By</label>
+              <select
+                v-model="createForm.recorded_by"
+                class="w-full rounded-lg border border-gray-300 py-2 pr-8 pl-3 text-sm focus:border-[#42b6c5] focus:ring-1 focus:ring-[#42b6c5] focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Myself (default)</option>
+                <option v-for="u in adminUsers" :key="u.id" :value="u.id">{{ u.name }} ({{ formatRole(u.role) }})</option>
+              </select>
+              <p v-if="createForm.errors.recorded_by" class="mt-1 text-xs text-red-500">{{ createForm.errors.recorded_by }}</p>
+            </div>
+
             <div class="sm:col-span-2">
               <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
               <textarea
@@ -1102,6 +1118,18 @@ const showCharts = ref(true)
                 <option value="">No program</option>
                 <option v-for="prog in programs" :key="prog.id" :value="prog.id">{{ prog.title }}</option>
               </select>
+            </div>
+
+            <div v-if="isExecutive && adminUsers.length > 0">
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Recorded By</label>
+              <select
+                v-model="editForm.recorded_by"
+                class="w-full rounded-lg border border-gray-300 py-2 pr-8 pl-3 text-sm focus:border-[#42b6c5] focus:ring-1 focus:ring-[#42b6c5] focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Keep current</option>
+                <option v-for="u in adminUsers" :key="u.id" :value="u.id">{{ u.name }} ({{ formatRole(u.role) }})</option>
+              </select>
+              <p v-if="editForm.errors.recorded_by" class="mt-1 text-xs text-red-500">{{ editForm.errors.recorded_by }}</p>
             </div>
 
             <div class="sm:col-span-2">
