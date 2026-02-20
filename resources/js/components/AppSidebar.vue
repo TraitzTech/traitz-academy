@@ -8,6 +8,7 @@ import {
     LayoutGrid,
     Mail,
     MessageSquare,
+    Receipt,
     Settings,
     Users,
     GraduationCap,
@@ -67,6 +68,11 @@ const adminNavItems: NavItem[] = [
         title: 'Payments',
         href: '/admin/payments',
         icon: Wallet,
+    },
+    {
+        title: 'Expenses',
+        href: '/admin/expenses',
+        icon: Receipt,
     },
     {
         title: 'Success Stories',

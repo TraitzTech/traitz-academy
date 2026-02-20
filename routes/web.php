@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ApplicationController as AdminApplicationControll
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
@@ -111,6 +112,22 @@ Route::prefix('admin')
         Route::get('/payments/export', [AdminPaymentController::class, 'export'])
             ->middleware('executive')
             ->name('payments.export');
+
+        // Expenses Management
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::patch('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('/expenses/bulk-destroy', [ExpenseController::class, 'bulkDestroy'])->name('expenses.bulk-destroy');
+        Route::get('/expenses/export', [ExpenseController::class, 'export'])->name('expenses.export');
+
+        Route::middleware('executive')->group(function () {
+            // Expense Categories (executive only)
+            Route::get('/expense-categories', [ExpenseController::class, 'categories'])->name('expense-categories.index');
+            Route::post('/expense-categories', [ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+            Route::patch('/expense-categories/{category}', [ExpenseController::class, 'updateCategory'])->name('expense-categories.update');
+            Route::delete('/expense-categories/{category}', [ExpenseController::class, 'destroyCategory'])->name('expense-categories.destroy');
+        });
 
         Route::middleware('executive')->group(function () {
             // Users Management

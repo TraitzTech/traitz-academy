@@ -99,6 +99,11 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class, 'recorded_by');
     }
 
+    public function recordedExpenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'recorded_by');
+    }
+
     public static function managedRoleOptions(): array
     {
         return [
@@ -146,5 +151,18 @@ class User extends Authenticatable
         $collectorId = $payment->recorded_by ?? $payment->updated_by;
 
         return (int) $collectorId === (int) $this->id;
+    }
+
+    public function canManageExpense(Expense $expense): bool
+    {
+        if ($this->isExecutive()) {
+            return true;
+        }
+
+        if (! $this->isProgramCoordinator()) {
+            return false;
+        }
+
+        return (int) $expense->recorded_by === (int) $this->id;
     }
 }
