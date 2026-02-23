@@ -30,7 +30,10 @@ class ApplicationFactory extends Factory
             'academic_duration' => fake()->randomElement(['1 semester', '2 semesters', '1 year', '2 years']),
             'motivation' => fake()->paragraph(3),
             'experience' => fake()->paragraph(2),
+            'internship_letter_path' => null,
+            'cv_path' => null,
             'status' => fake()->randomElement(['pending', 'accepted', 'rejected']),
+            'application_type' => fake()->randomElement(['academic', 'professional', 'job']),
             'notes' => null,
             'reviewed_at' => null,
         ];

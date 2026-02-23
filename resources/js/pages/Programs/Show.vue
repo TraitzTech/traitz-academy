@@ -57,6 +57,7 @@ const formatDate = (date: string | null) => {
 };
 const isAcademic = (cat: string) => cat === 'academic-internship';
 const isProfessional = (cat: string) => cat === 'professional-internship';
+const isJobOpportunity = (cat: string) => cat === 'job-opportunity';
 
 const skills = computed(() => {
   return (props.program.skills_and_tools ?? '')
@@ -279,6 +280,12 @@ const formatPrice = (price: number) => {
               <div v-if="isProfessional(program.category)" class="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
                 <p class="font-semibold text-green-900 mb-2">💼 For Professionals</p>
                 <p class="text-green-800">Career-focused internship with skill assessment, portfolio building, and industry placement opportunities.</p>
+              </div>
+
+              <!-- Job Opportunity Info -->
+              <div v-if="isJobOpportunity(program.category)" class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm mt-3">
+                <p class="font-semibold text-indigo-900 mb-2">🧑‍💻 Job Opportunity</p>
+                <p class="text-indigo-800">Submit a complete application with your CV and track progress directly from your dashboard.</p>
               </div>
             </div>
           </div>

@@ -1,15 +1,13 @@
 <?php
 
 use App\Models\Application;
-use App\Models\EventRegistration;
-use App\Models\Program;
 use App\Models\Event;
+use App\Models\Program;
 use App\Models\User;
-use App\Models\SiteSetting;
 use App\Notifications\ApplicationConfirmation;
+use App\Notifications\EventRegistrationConfirmation;
 use App\Notifications\NewApplicationSubmitted;
 use App\Notifications\NewEventRegistration;
-use App\Notifications\EventRegistrationConfirmation;
 use Illuminate\Support\Facades\Notification;
 
 describe('Application Submission Notifications', function () {
@@ -17,7 +15,7 @@ describe('Application Submission Notifications', function () {
         Notification::fake();
 
         $user = User::factory()->create();
-        $program = Program::factory()->create();
+        $program = Program::factory()->create(['category' => 'professional-training']);
 
         $this->actingAs($user)->post(route('applications.store'), [
             'program_id' => $program->id,
@@ -41,7 +39,7 @@ describe('Application Submission Notifications', function () {
         Notification::fake();
 
         $user = User::factory()->create();
-        $program = Program::factory()->create();
+        $program = Program::factory()->create(['category' => 'professional-training']);
 
         $this->actingAs($user)->post(route('applications.store'), [
             'program_id' => $program->id,
@@ -65,7 +63,10 @@ describe('Application Submission Notifications', function () {
         Notification::fake();
 
         $user = User::factory()->create();
-        $program = Program::factory()->create(['title' => 'Advanced Python Course']);
+        $program = Program::factory()->create([
+            'title' => 'Advanced Python Course',
+            'category' => 'professional-training',
+        ]);
 
         $this->actingAs($user)->post(route('applications.store'), [
             'program_id' => $program->id,
@@ -89,8 +90,14 @@ describe('Application Submission Notifications', function () {
         Notification::fake();
 
         $user = User::factory()->create();
-        $program1 = Program::factory()->create(['title' => 'Program 1']);
-        $program2 = Program::factory()->create(['title' => 'Program 2']);
+        $program1 = Program::factory()->create([
+            'title' => 'Program 1',
+            'category' => 'professional-training',
+        ]);
+        $program2 = Program::factory()->create([
+            'title' => 'Program 2',
+            'category' => 'professional-training',
+        ]);
 
         // First application
         $response1 = $this->actingAs($user)->post(route('applications.store'), [

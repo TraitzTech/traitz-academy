@@ -39,11 +39,18 @@ class PageController extends Controller
             ->limit(3)
             ->get();
 
+        $careerOpenings = Program::where('is_active', true)
+            ->whereIn('category', ['professional-internship', 'job-opportunity'])
+            ->latest()
+            ->limit(6)
+            ->get();
+
         return Inertia::render('Home', [
             'stats' => $stats,
             'featuredPrograms' => $featuredPrograms,
             'upcomingEvents' => $upcomingEvents,
             'successStories' => $successStories,
+            'careerOpenings' => $careerOpenings,
         ]);
     }
 

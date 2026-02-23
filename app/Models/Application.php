@@ -27,6 +27,7 @@ class Application extends Model
         'motivation',
         'experience',
         'internship_letter_path',
+        'cv_path',
         'status',
         'application_type',
         'notes',

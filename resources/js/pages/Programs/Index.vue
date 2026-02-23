@@ -70,6 +70,7 @@ const categoryLabels: Record<string, string> = {
   'workshop': 'Workshop',
   'academic-internship': 'Academic Internship',
   'professional-internship': 'Professional Internship',
+  'job-opportunity': 'Job Opportunity',
 };
 
 const formatCategory = (cat: string) => categoryLabels[cat] || cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -163,7 +164,7 @@ const clearFilters = () => {
 };
 
 // Categories for filter
-const categories = ['all', 'professional-training', 'bootcamp', 'workshop', 'academic-internship', 'professional-internship'];
+const categories = ['all', 'professional-training', 'bootcamp', 'workshop', 'academic-internship', 'professional-internship', 'job-opportunity'];
 </script>
 
 <template>

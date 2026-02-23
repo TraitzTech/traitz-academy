@@ -43,6 +43,7 @@ class ProgramController extends Controller
                 'workshop' => 'Workshop',
                 'academic-internship' => 'Academic Internship',
                 'professional-internship' => 'Professional Internship',
+                'job-opportunity' => 'Job Opportunity',
             ],
         ]);
     }
@@ -56,6 +57,7 @@ class ProgramController extends Controller
                 'workshop' => 'Workshop',
                 'academic-internship' => 'Academic Internship',
                 'professional-internship' => 'Professional Internship',
+                'job-opportunity' => 'Job Opportunity',
             ],
         ]);
     }
@@ -64,7 +66,7 @@ class ProgramController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|string|in:professional-training,bootcamp,workshop,academic-internship,professional-internship',
+            'category' => 'required|string|in:professional-training,bootcamp,workshop,academic-internship,professional-internship,job-opportunity',
             'description' => 'required|string',
             'overview' => 'nullable|string',
             'who_is_for' => 'nullable|string',
@@ -124,6 +126,7 @@ class ProgramController extends Controller
                 'workshop' => 'Workshop',
                 'academic-internship' => 'Academic Internship',
                 'professional-internship' => 'Professional Internship',
+                'job-opportunity' => 'Job Opportunity',
             ],
         ]);
     }
@@ -132,7 +135,7 @@ class ProgramController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|string|in:professional-training,bootcamp,workshop,academic-internship,professional-internship',
+            'category' => 'required|string|in:professional-training,bootcamp,workshop,academic-internship,professional-internship,job-opportunity',
             'description' => 'required|string',
             'overview' => 'nullable|string',
             'who_is_for' => 'nullable|string',

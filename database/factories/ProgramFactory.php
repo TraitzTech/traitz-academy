@@ -16,7 +16,7 @@ class ProgramFactory extends Factory
      */
     public function definition(): array
     {
-        $categories = ['professional-training', 'bootcamp', 'workshop', 'academic-internship', 'professional-internship'];
+        $categories = ['professional-training', 'bootcamp', 'workshop', 'academic-internship', 'professional-internship', 'job-opportunity'];
         $category = fake()->randomElement($categories);
         $title = fake()->words(3, true);
         $price = fake()->randomElement([0, 50000, 100000, 150000, 200000]);

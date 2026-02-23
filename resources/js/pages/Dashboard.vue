@@ -115,6 +115,17 @@
               </svg>
               View Internship Letter
             </a>
+            <a
+              v-if="application.cv_path"
+              :href="`/storage/${application.cv_path}`"
+              target="_blank"
+              class="w-full inline-flex items-center justify-center px-4 py-2 mb-2 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View CV
+            </a>
             <Link
               :href="`/programs/${application.program?.slug}`"
               class="w-full inline-flex items-center justify-center px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
@@ -153,6 +164,17 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </a>
+                <a
+                  v-if="application.cv_path"
+                  :href="`/storage/${application.cv_path}`"
+                  target="_blank"
+                  class="px-3 py-2 border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                  title="View CV"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </a>
                 <Link
                   :href="`/programs/${application.program?.slug}`"
                   class="px-4 py-2 bg-[#42b6c5] text-white rounded-lg text-sm font-medium hover:bg-[#35919e] transition-colors"
@@ -177,8 +199,10 @@
               <div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Attachments</p>
                 <p class="font-medium text-gray-900 dark:text-gray-100">
+                  <span v-if="application.cv_path" class="text-indigo-600 dark:text-indigo-400">📎 CV</span>
+                  <span v-if="application.cv_path && application.internship_letter_path" class="mx-1">•</span>
                   <span v-if="application.internship_letter_path" class="text-blue-600 dark:text-blue-400">📎 Letter</span>
-                  <span v-else class="text-gray-400 dark:text-gray-600">None</span>
+                  <span v-if="!application.cv_path && !application.internship_letter_path" class="text-gray-400 dark:text-gray-600">None</span>
                 </p>
               </div>
             </div>

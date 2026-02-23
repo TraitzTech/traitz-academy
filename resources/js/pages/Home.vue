@@ -21,6 +21,7 @@ interface Props {
     events_count: number;
   };
   featuredPrograms: any[];
+  careerOpenings: any[];
   upcomingEvents: any[];
   successStories: SuccessStory[];
   siteSettings: {
@@ -32,6 +33,11 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const openingCategoryLabels: Record<string, string> = {
+  'professional-internship': 'Professional Internship',
+  'job-opportunity': 'Job Opportunity',
+};
 
 // Hero title
 const heroTitle = computed(() => props.siteSettings.hero_title || 'World-Class Tech Education');
@@ -59,10 +65,12 @@ const youtubeEmbedUrl = computed(() => {
 
 // Get image URL helper
 const getImageUrl = (imageUrl: string | null) => {
-  if (!imageUrl) return null;
+  if (!imageUrl) return undefined;
   if (imageUrl.startsWith('http')) return imageUrl;
   return `/storage/${imageUrl}`;
 };
+
+const openingBadge = (category: string) => openingCategoryLabels[category] || 'Career Opening';
 </script>
 
 <template>
@@ -120,6 +128,42 @@ const getImageUrl = (imageUrl: string | null) => {
             <div class="text-5xl font-bold text-[#000928] mb-2">{{ stats.events_count }}+</div>
             <p class="text-gray-600 text-lg">Upcoming Events</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Internship Opportunity -->
+    <section class="py-16 bg-white border-y border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto text-center mb-10">
+          <h2 class="text-3xl md:text-4xl font-bold text-[#000928] mb-3">Internship Opportunity – Traitz Tech</h2>
+          <p class="text-gray-600 text-lg">We are recruiting interns for a 6-month professional internship with mentorship, real-world projects, and stipends.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-center font-semibold text-[#000928]">Laravel Development</div>
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-center font-semibold text-[#000928]">Flutter Development</div>
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-center font-semibold text-[#000928]">UI/UX Design</div>
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-center font-semibold text-[#000928]">Frontend Web Development</div>
+        </div>
+
+        <div v-if="careerOpenings.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="opening in careerOpenings" :key="opening.id" class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <span class="inline-block rounded-full bg-[#42b6c5]/10 px-3 py-1 text-xs font-semibold text-[#42b6c5] mb-3">{{ openingBadge(opening.category) }}</span>
+            <h3 class="text-xl font-bold text-[#000928] mb-2">{{ opening.title }}</h3>
+            <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ opening.description }}</p>
+            <Link :href="`/programs/${opening.slug}`" class="inline-flex items-center text-[#42b6c5] font-semibold hover:text-[#35919e]">
+              View & Apply
+              <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+        <div v-else class="text-center">
+          <Link href="/programs?category=professional-internship" class="inline-flex items-center px-6 py-3 bg-[#42b6c5] text-white rounded-lg font-semibold hover:bg-[#35919e] transition-colors">
+            Explore Internship Openings
+          </Link>
         </div>
       </div>
     </section>

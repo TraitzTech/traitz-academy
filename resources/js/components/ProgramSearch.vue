@@ -39,6 +39,7 @@ const categoryLabels: Record<string, string> = {
   'workshop': 'Workshop',
   'academic-internship': 'Academic Internship',
   'professional-internship': 'Professional Internship',
+  'job-opportunity': 'Job Opportunity',
   'webinar': 'Webinar',
   'networking': 'Networking',
   'conference': 'Conference',

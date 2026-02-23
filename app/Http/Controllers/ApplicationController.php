@@ -24,15 +24,27 @@ class ApplicationController extends Controller
     public function store(StoreApplicationRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $program = Program::query()->findOrFail($validated['program_id']);
+
         $validated['user_id'] = auth()->id();
-        $validated['application_type'] = $request->input('application_type', 'professional');
+        $validated['application_type'] = match ($program->category) {
+            'academic-internship' => 'academic',
+            'job-opportunity' => 'job',
+            default => 'professional',
+        };
 
         // Handle internship letter upload
         if ($request->hasFile('internship_letter')) {
             $validated['internship_letter_path'] = $request->file('internship_letter')
                 ->store('internship-letters', 'public');
         }
+
+        if ($request->hasFile('cv')) {
+            $validated['cv_path'] = $request->file('cv')->store('application-cvs', 'public');
+        }
+
         unset($validated['internship_letter']);
+        unset($validated['cv']);
 
         $application = Application::create($validated);
 

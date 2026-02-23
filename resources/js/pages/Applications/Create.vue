@@ -22,6 +22,8 @@ const page = usePage();
 const toast = useToast();
 
 const isAcademic = computed(() => props.program.category === 'academic-internship');
+const isJobOpportunity = computed(() => props.program.category === 'job-opportunity');
+const requiresCv = computed(() => ['professional-internship', 'job-opportunity'].includes(props.program.category));
 
 const form = useForm({
   program_id: props.program.id,
@@ -36,6 +38,7 @@ const form = useForm({
   academic_duration: isAcademic.value ? '' : undefined,
   motivation: '',
   experience: '',
+  cv: null as File | null,
   internship_letter: null as File | null,
 });
 
@@ -252,13 +255,39 @@ const submit = () => {
               </div>
             </div>
 
-            <!-- Internship Letter Upload (Optional) -->
+            <!-- Application Documents -->
             <div>
-              <h2 class="text-2xl font-bold text-[#000928] mb-6">Internship Letter (Optional)</h2>
+              <h2 class="text-2xl font-bold text-[#000928] mb-6">Application Documents</h2>
               <div class="space-y-4">
                 <div>
-                  <label for="internship_letter" class="block text-sm font-semibold text-gray-700 mb-2">Upload Internship Letter</label>
-                  <p class="text-sm text-gray-500 mb-3">If your school has issued an internship letter, you can upload it here to keep a digital copy on file.</p>
+                  <label for="cv" class="block text-sm font-semibold text-gray-700 mb-2">
+                    CV / Resume <span v-if="requiresCv">*</span><span v-else>(Optional)</span>
+                  </label>
+                  <p class="text-sm text-gray-500 mb-3">
+                    Upload your most recent CV in PDF, DOC, or DOCX format.
+                  </p>
+                  <input
+                    id="cv"
+                    type="file"
+                    :required="requiresCv"
+                    accept=".pdf,.doc,.docx"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent outline-none transition file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-[#42b6c5] file:text-white hover:file:bg-[#35919e]"
+                    :class="{ 'border-red-500': form.errors.cv }"
+                    @input="form.cv = ($event.target as HTMLInputElement).files?.[0] ?? null"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX. Max 5MB.</p>
+                  <p v-if="form.errors.cv" class="text-red-500 text-sm mt-1">{{ form.errors.cv }}</p>
+                </div>
+
+                <div>
+                  <label for="internship_letter" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ isAcademic ? 'Upload Internship Letter (Optional)' : 'Additional Supporting Document (Optional)' }}
+                  </label>
+                  <p class="text-sm text-gray-500 mb-3">
+                    {{ isAcademic
+                      ? 'If your school has issued an internship letter, upload it here so we can keep it on file.'
+                      : 'You may upload any supporting document relevant to your application.' }}
+                  </p>
                   <input
                     id="internship_letter"
                     type="file"
@@ -269,6 +298,10 @@ const submit = () => {
                   />
                   <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, JPG, PNG, DOC, DOCX. Max 5MB.</p>
                   <p v-if="form.errors.internship_letter" class="text-red-500 text-sm mt-1">{{ form.errors.internship_letter }}</p>
+                </div>
+
+                <div v-if="isJobOpportunity" class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                  Job applications are reviewed based on profile fit, interview performance, and role requirements.
                 </div>
               </div>
             </div>

@@ -28,6 +28,7 @@ interface Application {
   experience: string
   motivation: string
   internship_letter_path: string | null
+  cv_path: string | null
   status: 'pending' | 'accepted' | 'rejected'
   notes: string | null
   created_at: string
@@ -376,10 +377,33 @@ const sendPaymentReminder = () => {
           <p class="text-gray-900 dark:text-gray-100 whitespace-pre-line">{{ application.motivation || 'Not provided' }}</p>
         </div>
 
-        <!-- Internship Letter -->
-        <div v-if="application.internship_letter_path" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Internship Letter</h3>
-          <div class="flex items-center gap-4">
+        <!-- Attachments -->
+        <div v-if="application.cv_path || application.internship_letter_path" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 pb-2 border-b dark:border-gray-700">Attachments</h3>
+
+          <div v-if="application.cv_path" class="flex items-center gap-4 mb-4">
+            <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+              <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="font-medium text-gray-900 dark:text-gray-100">CV / Resume Uploaded</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ application.cv_path.split('/').pop() }}</p>
+            </div>
+            <a
+              :href="`/storage/${application.cv_path}`"
+              target="_blank"
+              class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View / Download
+            </a>
+          </div>
+
+          <div v-if="application.internship_letter_path" class="flex items-center gap-4">
             <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
