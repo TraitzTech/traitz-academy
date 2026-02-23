@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Event;
 use App\Models\Program;
 use Illuminate\Database\Seeder;
 
@@ -10,217 +9,115 @@ class SampleDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create sample programs
-        Program::create([
-            'title' => 'Web Development Bootcamp',
-            'slug' => 'web-development-bootcamp',
-            'category' => 'bootcamp',
-            'description' => 'Master full-stack web development with modern frameworks',
-            'overview' => 'A comprehensive 12-week intensive bootcamp covering frontend, backend, and full-stack development. Learn React, Node.js, and build real-world applications.',
-            'who_is_for' => 'Anyone passionate about building web applications. No prior experience necessary, but basic programming knowledge is helpful.',
-            'skills_and_tools' => 'React, Vue.js, Node.js, Express, MongoDB, PostgreSQL, Docker, Git, AWS',
-            'duration' => '12 weeks',
-            'learning_outcomes' => 'Build full-stack web applications. Understand responsive design principles. Deploy applications to production. Work with modern development tools and workflows.',
-            'certification' => 'Traitz Academy Web Development Certification - Industry recognized, valid globally',
-            'price' => 150000,
-            'image_url' => 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=400',
-            'is_featured' => true,
-            'is_active' => true,
-            'capacity' => 30,
-            'enrolled_count' => 18,
-            'start_date' => now()->addDays(30),
-            'end_date' => now()->addDays(115),
-            'curriculum' => 'Week 1-2: HTML, CSS, JavaScript Fundamentals
-Week 3-4: React Basics & Components
-Week 5-6: Advanced React & State Management
-Week 7-8: Node.js & Express Backend
-Week 9-10: Database Design & Queries
-Week 11-12: Full-stack Project & Deployment',
-        ]);
+        // Internship Opportunity – Traitz Tech
+        // 6-month professional internships with stipend, mentorship, and real-world projects
 
         Program::create([
-            'title' => 'Data Science & Analytics',
-            'slug' => 'data-science-analytics',
-            'category' => 'professional-training',
-            'description' => 'Learn data analysis, visualization, and machine learning',
-            'overview' => 'Comprehensive 8-week training in data science fundamentals using Python, statistics, and real datasets.',
-            'who_is_for' => 'Professionals looking to transition into data roles or enhance their analytics skills.',
-            'skills_and_tools' => 'Python, Pandas, NumPy, Matplotlib, Scikit-learn, SQL, Tableau, Power BI',
-            'duration' => '8 weeks',
-            'learning_outcomes' => 'Analyze complex datasets. Build predictive models. Create compelling data visualizations. Communicate insights effectively.',
-            'certification' => 'Traitz Academy Data Science Certificate',
-            'price' => 100000,
-            'image_url' => 'https://images.unsplash.com/photo-1551462147-ff29053bbb20?w=600&h=400',
-            'is_featured' => true,
-            'is_active' => true,
-            'capacity' => 25,
-            'enrolled_count' => 12,
-            'start_date' => now()->addDays(45),
-            'end_date' => now()->addDays(100),
-            'curriculum' => 'Week 1: Python fundamentals & data structures
-Week 2: Data manipulation with Pandas
-Week 3: Data visualization & exploration
-Week 4: Statistics & probability
-Week 5-6: Machine learning algorithms
-Week 7: Real-world projects
-Week 8: Portfolio building & best practices',
-        ]);
-
-        Program::create([
-            'title' => 'UI/UX Design Intensive',
-            'slug' => 'ui-ux-design-intensive',
-            'category' => 'bootcamp',
-            'description' => 'Design beautiful and functional user interfaces',
-            'overview' => '10-week intensive program covering design principles, tools, and user research methodologies.',
-            'who_is_for' => 'Creative individuals interested in design. No design background needed.',
-            'skills_and_tools' => 'Figma, Adobe XD, Sketch, Prototyping, User Research, Wireframing, Design Systems',
-            'duration' => '10 weeks',
-            'learning_outcomes' => 'Design professional interfaces. Understand user psychology. Build design systems. Create compelling prototypes.',
-            'certification' => 'Traitz Academy UI/UX Design Certificate',
-            'price' => 120000,
-            'image_url' => 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=600&h=400',
-            'is_featured' => true,
-            'is_active' => true,
-            'capacity' => 20,
-            'enrolled_count' => 15,
-            'start_date' => now()->addDays(15),
-            'end_date' => now()->addDays(85),
-            'curriculum' => 'Week 1-2: Design fundamentals & color theory
-Week 3-4: Typography & layout principles
-Week 5: Figma mastery
-Week 6: User research methods
-Week 7-8: Wireframing & prototyping
-Week 9: Design systems
-Week 10: Portfolio projects',
-        ]);
-
-        Program::create([
-            'title' => 'Academic Internship Program',
-            'slug' => 'academic-internship',
-            'category' => 'academic-internship',
-            'description' => 'Structured internship for university students',
-            'overview' => 'A comprehensive academic internship program designed for university and school students. Gain real-world experience while fulfilling your academic requirements.',
-            'who_is_for' => 'University and school students seeking industrial training or internship credits.',
-            'skills_and_tools' => 'Professional software development practices, teamwork, project management',
-            'duration' => 'Flexible (1-2 semesters)',
-            'learning_outcomes' => 'Experience real development workflows. Apply academic knowledge practically. Build professional portfolio.',
-            'certification' => 'Academic Internship Certificate with supervisor evaluation',
-            'price' => 0,
-            'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
-            'is_featured' => true,
-            'is_active' => true,
-            'capacity' => 50,
-            'enrolled_count' => 25,
-            'start_date' => now()->addDays(7),
-            'end_date' => now()->addDays(180),
-            'curriculum' => 'Custom curriculum based on student background and institution requirements. Includes mentorship, real project work, and supervision.',
-        ]);
-
-        Program::create([
-            'title' => 'Professional Internship',
-            'slug' => 'professional-internship',
+            'title' => 'Laravel Development Intern',
+            'slug' => 'laravel-development-intern',
             'category' => 'professional-internship',
-            'description' => 'Career-focused internship for early-career professionals',
-            'overview' => 'Intensive 3-month professional internship program designed to bridge the gap between learning and employment.',
-            'who_is_for' => 'Recent graduates and early-career professionals seeking hands-on experience.',
-            'skills_and_tools' => 'Professional development, industry practices, portfolio building',
-            'duration' => '3 months',
-            'learning_outcomes' => 'Develop industry-relevant skills. Build professional network. Create impressive portfolio. Get placed in jobs.',
-            'certification' => 'Professional Internship Certificate with performance evaluation',
-            'price' => 80000,
-            'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
+            'description' => '6-month professional internship in Laravel backend development at Traitz Tech. Work on production applications, receive dedicated mentorship, and earn a monthly stipend while building your career.',
+            'overview' => 'We are recruiting a Laravel Development Intern to join our engineering team for a 6-month professional internship. You will work alongside senior engineers on our production platform — writing clean PHP code, designing database schemas, building RESTful APIs, and shipping features used by real users. This is a structured, hands-on internship with weekly mentorship sessions, code reviews, and a clear growth path. A small monthly stipend is provided to support you throughout the program.',
+            'who_is_for' => 'Students, recent graduates, or career switchers with foundational PHP knowledge and an interest in backend development. You should understand basic programming concepts (variables, loops, functions, OOP) and have built at least one small project. Familiarity with Laravel, MySQL, or any MVC framework is a plus but not required — we will train you.',
+            'skills_and_tools' => 'PHP 8, Laravel, MySQL, Redis, REST APIs, Git, Docker, Pest, PHPUnit, Postman, VS Code',
+            'duration' => '6 months',
+            'learning_outcomes' => 'Build and maintain Laravel applications following industry best practices. Design and optimize database schemas using Eloquent ORM and migrations. Develop secure RESTful APIs with proper authentication and validation. Write automated tests using Pest and PHPUnit for reliable, production-ready code. Understand deployment workflows using CI/CD pipelines and version control.',
+            'certification' => 'Small monthly stipend provided for the duration of the internship. Professional Internship Certificate with detailed performance evaluation. Letter of recommendation from your supervising engineer. Priority consideration for full-time roles at Traitz Tech upon completion. Free access to all Traitz Academy learning programs.',
+            'price' => 0,
+            'image_url' => 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=400',
             'is_featured' => true,
             'is_active' => true,
-            'capacity' => 40,
-            'enrolled_count' => 20,
-            'start_date' => now()->addDays(20),
-            'end_date' => now()->addDays(112),
-            'curriculum' => 'Week 1-2: Onboarding & skill assessment
-Week 3-8: Real project assignments with mentorship
-Week 9-10: Advanced training & specialization
-Week 11-12: Placement preparation & interviews',
+            'capacity' => 5,
+            'enrolled_count' => 0,
+            'start_date' => now()->addDays(14),
+            'end_date' => now()->addDays(195),
+            'curriculum' => 'Month 1: PHP fundamentals deep-dive, Laravel architecture & environment setup
+Month 2: Database design, Eloquent relationships & query optimization
+Month 3: RESTful API development, authentication & middleware
+Month 4: Testing with Pest/PHPUnit, debugging & performance profiling
+Month 5: Real project ownership — feature development on the Traitz platform
+Month 6: Advanced patterns (queues, events, caching), code review lead & portfolio finalization',
         ]);
 
-        // Create sample events
-        Event::create([
-            'title' => 'Web Development Workshop',
-            'slug' => 'web-development-workshop',
-            'description' => 'Free workshop introducing modern web development. Learn HTML, CSS, and JavaScript basics in 3 hours.',
-            'event_date' => now()->addDays(5)->setHour(14)->setMinute(0),
-            'location' => 'Traitz Tech Office, Lagos',
-            'is_online' => false,
-            'event_url' => null,
-            'capacity' => 50,
-            'registered_count' => 32,
-            'category' => 'workshop',
-            'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
+        Program::create([
+            'title' => 'Flutter Development Intern',
+            'slug' => 'flutter-development-intern',
+            'category' => 'professional-internship',
+            'description' => '6-month professional internship in Flutter mobile development at Traitz Tech. Build cross-platform mobile apps for iOS and Android, receive hands-on mentorship, and earn a monthly stipend.',
+            'overview' => 'We are recruiting a Flutter Development Intern to join our mobile team for a 6-month professional internship. You will build and ship cross-platform mobile applications — implementing UI screens, integrating backend APIs, managing state, and optimizing performance for both iOS and Android. You will be mentored by an experienced mobile developer through daily standups, code reviews, and pair programming sessions. A small monthly stipend is provided to support you throughout the program.',
+            'who_is_for' => 'Students or early-career developers with an interest in mobile app development. You should have basic programming knowledge in any language (Dart, Java, JavaScript, Python, etc.) and a genuine passion for building mobile experiences. Prior Flutter or mobile development experience is not required — we will train you from the ground up.',
+            'skills_and_tools' => 'Dart, Flutter, Firebase, REST API Integration, State Management (Riverpod/Bloc), Git, Android Studio, Xcode, Figma (reading designs), VS Code',
+            'duration' => '6 months',
+            'learning_outcomes' => 'Build cross-platform mobile applications using Flutter and Dart. Implement responsive UI layouts that work beautifully across phones and tablets. Integrate RESTful APIs and manage application state effectively. Work with Firebase for authentication, push notifications, and analytics. Prepare and publish apps to Google Play Store and Apple App Store.',
+            'certification' => 'Small monthly stipend provided for the duration of the internship. Professional Internship Certificate with detailed performance evaluation. Published mobile app in your professional portfolio. Letter of recommendation from your supervising engineer. Priority consideration for full-time mobile developer roles at Traitz Tech.',
+            'price' => 0,
+            'image_url' => 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&h=400',
+            'is_featured' => true,
             'is_active' => true,
-            'agenda' => '2:00 PM - Welcome & Introduction
-2:15 PM - HTML & CSS Fundamentals
-3:00 PM - Introduction to JavaScript
-3:30 PM - Live coding demo
-4:00 PM - Q&A Session',
+            'capacity' => 4,
+            'enrolled_count' => 0,
+            'start_date' => now()->addDays(14),
+            'end_date' => now()->addDays(195),
+            'curriculum' => 'Month 1: Dart language fundamentals & Flutter framework basics
+Month 2: UI development — widgets, layouts, navigation & animations
+Month 3: State management, API integration & local storage
+Month 4: Firebase services — auth, Firestore, push notifications & analytics
+Month 5: Real project ownership — feature development on the Traitz mobile app
+Month 6: Testing, performance optimization, app store deployment & portfolio finalization',
         ]);
 
-        Event::create([
-            'title' => 'Tech Career Panel Discussion',
-            'slug' => 'tech-career-panel',
-            'description' => 'Hear from successful tech professionals about their career journeys. Q&A with industry leaders.',
-            'event_date' => now()->addDays(12)->setHour(18)->setMinute(0),
-            'location' => null,
-            'is_online' => true,
-            'event_url' => 'https://zoom.us/meeting/example',
-            'capacity' => 200,
-            'registered_count' => 87,
-            'category' => 'webinar',
-            'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
+        Program::create([
+            'title' => 'UI/UX Design Intern',
+            'slug' => 'ui-ux-design-intern',
+            'category' => 'professional-internship',
+            'description' => '6-month professional internship in UI/UX design at Traitz Tech. Create user-centered designs for web and mobile products, receive expert mentorship, and earn a monthly stipend.',
+            'overview' => 'We are recruiting a UI/UX Design Intern to join our product design team for a 6-month professional internship. You will work on real design challenges — conducting user research, creating wireframes, designing high-fidelity mockups, and building a scalable design system used across our platform. You will collaborate closely with product managers and engineers to bring your designs to life. A senior designer will mentor you through design thinking workshops, critique sessions, and portfolio development. A small monthly stipend is provided to support you throughout the program.',
+            'who_is_for' => 'Aspiring designers, visual arts students, or creative professionals with a keen eye for detail and a passion for user experience. You should have basic familiarity with at least one design tool (Figma, Adobe XD, Sketch, or Canva). A portfolio showing any design work — personal projects, school assignments, or freelance work — is welcome. No professional design experience required.',
+            'skills_and_tools' => 'Figma, Adobe Photoshop, Adobe Illustrator, Prototyping, Wireframing, User Research, Usability Testing, Design Systems, Color Theory, Typography, Accessibility (WCAG)',
+            'duration' => '6 months',
+            'learning_outcomes' => 'Conduct user research through interviews, surveys, and usability testing. Create wireframes, user flows, and information architecture diagrams. Design high-fidelity mockups and interactive prototypes in Figma. Build and maintain reusable design system components. Collaborate with developers using proper handoff practices and design specifications.',
+            'certification' => 'Small monthly stipend provided for the duration of the internship. Professional Internship Certificate with portfolio review. Professional design portfolio with shipped product case studies. Letter of recommendation from your supervising designer. Free Figma Pro license during the internship and priority hiring for design roles.',
+            'price' => 0,
+            'image_url' => 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=600&h=400',
+            'is_featured' => true,
             'is_active' => true,
-            'agenda' => '6:00 PM - Opening remarks
-6:15 PM - Speaker 1: Career transitions in tech
-6:35 PM - Speaker 2: Building a tech startup
-6:55 PM - Speaker 3: Remote work strategies
-7:15 PM - Open Q&A with panelists
-8:00 PM - Networking & closing',
+            'capacity' => 3,
+            'enrolled_count' => 0,
+            'start_date' => now()->addDays(14),
+            'end_date' => now()->addDays(195),
+            'curriculum' => 'Month 1: Design fundamentals — principles, color theory, typography & Figma mastery
+Month 2: User research methods — personas, journey maps & competitive analysis
+Month 3: Wireframing, prototyping & information architecture
+Month 4: Design system creation — component libraries, tokens & documentation
+Month 5: Real project ownership — redesign key flows on the Traitz platform
+Month 6: Usability testing, design critique leadership & portfolio case study finalization',
         ]);
 
-        Event::create([
-            'title' => 'Mobile App Development Webinar',
-            'slug' => 'mobile-app-webinar',
-            'description' => 'Deep dive into mobile app development with Flutter. Perfect for beginners and intermediate developers.',
-            'event_date' => now()->addDays(20)->setHour(15)->setMinute(0),
-            'location' => null,
-            'is_online' => true,
-            'event_url' => 'https://zoom.us/meeting/example',
-            'capacity' => 300,
-            'registered_count' => 156,
-            'category' => 'webinar',
-            'image_url' => 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=400',
+        Program::create([
+            'title' => 'Frontend Web Development Intern',
+            'slug' => 'frontend-web-development-intern',
+            'category' => 'professional-internship',
+            'description' => '6-month professional internship in frontend web development at Traitz Tech. Build modern, responsive interfaces using React (Next.js) or Vue.js, receive dedicated mentorship, and earn a monthly stipend.',
+            'overview' => 'We are recruiting a Frontend Web Development Intern to join our engineering team for a 6-month professional internship. You will build responsive, accessible, and performant user interfaces for our web platform using modern JavaScript frameworks — React with Next.js or Vue.js depending on the project. From pixel-perfect UI implementation to complex interactive features, you will gain production experience in the frontend stack that powers modern web applications. Your mentor will guide you through component architecture, state management, and professional development workflows. A small monthly stipend is provided to support you throughout the program.',
+            'who_is_for' => 'Students or self-taught developers with a solid foundation in HTML, CSS, and JavaScript. You should understand basic DOM manipulation, responsive design concepts, and have built at least one web page or small project. Experience with any JavaScript framework (React, Vue, Next.js, Angular) or CSS framework (Tailwind CSS, Bootstrap) is a bonus but not required. A strong visual sense and attention to detail will help you thrive.',
+            'skills_and_tools' => 'React, Next.js, Vue.js 3, TypeScript, Tailwind CSS, HTML5, CSS3, JavaScript (ES6+), Git, Vite, ESLint, Prettier, Chrome DevTools, VS Code',
+            'duration' => '6 months',
+            'learning_outcomes' => 'Build responsive and accessible web interfaces using React (Next.js) or Vue.js. Write type-safe frontend code with TypeScript and modern JavaScript patterns. Implement complex UI components — forms, modals, data tables, and animations. Optimize frontend performance with lazy loading, code splitting, and caching strategies. Collaborate with designers and backend developers for seamless full-stack delivery.',
+            'certification' => 'Small monthly stipend provided for the duration of the internship. Professional Internship Certificate with detailed performance evaluation. Letter of recommendation from your supervising engineer. Priority consideration for full-time frontend roles at Traitz Tech. Free access to all Traitz Academy programs and a professional GitHub portfolio.',
+            'price' => 0,
+            'image_url' => 'https://images.unsplash.com/photo-1547658719-da2b51169166?w=600&h=400',
+            'is_featured' => true,
             'is_active' => true,
-            'agenda' => '3:00 PM - Introduction to Flutter
-3:30 PM - Setting up development environment
-4:00 PM - Building your first app
-4:45 PM - Debugging & optimization tips
-5:15 PM - Q&A',
-        ]);
-
-        Event::create([
-            'title' => 'Data Science Bootcamp Info Session',
-            'slug' => 'data-science-info',
-            'description' => 'Learn about our Data Science program. Meet instructors, ask questions, and understand the curriculum.',
-            'event_date' => now()->addDays(8)->setHour(19)->setMinute(0),
-            'location' => 'Traitz Tech Office, Lagos',
-            'is_online' => false,
-            'event_url' => null,
-            'capacity' => 40,
-            'registered_count' => 28,
-            'category' => 'meetup',
-            'image_url' => 'https://images.unsplash.com/photo-1551462147-ff29053bbb20?w=600&h=400',
-            'is_active' => true,
-            'agenda' => '7:00 PM - Welcome & refreshments
-7:15 PM - Program overview
-7:35 PM - Instructor Q&A
-8:00 PM - Alumni panel discussion
-8:30 PM - Registration & closing',
+            'capacity' => 4,
+            'enrolled_count' => 0,
+            'start_date' => now()->addDays(14),
+            'end_date' => now()->addDays(195),
+            'curriculum' => 'Month 1: HTML5, CSS3 & JavaScript fundamentals deep-dive
+Month 2: React fundamentals — components, hooks, routing & Next.js basics (or Vue.js 3 equivalent)
+Month 3: TypeScript essentials & Tailwind CSS utility-first styling
+Month 4: Advanced patterns — state management, data fetching & form handling
+Month 5: Real project ownership — build production features on the Traitz platform
+Month 6: Performance optimization, accessibility auditing, testing & portfolio finalization',
         ]);
     }
 }
