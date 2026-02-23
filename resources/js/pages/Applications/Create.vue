@@ -24,6 +24,7 @@ const toast = useToast();
 const isAcademic = computed(() => props.program.category === 'academic-internship');
 const isJobOpportunity = computed(() => props.program.category === 'job-opportunity');
 const requiresCv = computed(() => ['professional-internship', 'job-opportunity'].includes(props.program.category));
+const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(props.program.category));
 
 const form = useForm({
   program_id: props.program.id,
@@ -80,7 +81,9 @@ const submit = () => {
           Back to Programs
         </Link>
         <h1 class="text-4xl font-bold mb-2">Apply for {{ program.title }}</h1>
-        <p class="text-xl text-gray-300">Complete the form below to submit your application</p>
+        <p class="text-xl text-gray-300">
+          {{ isCareerRole ? 'Submit your application for this role' : 'Complete the form below to submit your application' }}
+        </p>
       </div>
     </section>
 
@@ -172,7 +175,9 @@ const submit = () => {
 
             <!-- Education Information -->
             <div v-if="!isAcademic">
-              <h2 class="text-2xl font-bold text-[#000928] mb-6">Education Background</h2>
+              <h2 class="text-2xl font-bold text-[#000928] mb-6">
+                {{ isCareerRole ? 'Professional Background' : 'Education Background' }}
+              </h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label for="education_level" class="block text-sm font-semibold text-gray-700 mb-2">Education Level</label>
@@ -226,10 +231,14 @@ const submit = () => {
 
             <!-- Motivation & Experience -->
             <div>
-              <h2 class="text-2xl font-bold text-[#000928] mb-6">Why Do You Want to Join?</h2>
+              <h2 class="text-2xl font-bold text-[#000928] mb-6">
+                {{ isCareerRole ? 'Why Are You the Right Fit?' : 'Why Do You Want to Join?' }}
+              </h2>
               <div class="space-y-6">
                 <div>
-                  <label for="motivation" class="block text-sm font-semibold text-gray-700 mb-2">Tell us your motivation * (minimum 20 characters)</label>
+                  <label for="motivation" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ isCareerRole ? 'Tell us why you\'re the right fit * (minimum 20 characters)' : 'Tell us your motivation * (minimum 20 characters)' }}
+                  </label>
                   <textarea
                     id="motivation"
                     v-model="form.motivation"
@@ -237,19 +246,25 @@ const submit = () => {
                     rows="6"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent outline-none transition"
                     :class="{ 'border-red-500': form.errors.motivation }"
-                    placeholder="Share your goals, aspirations, and what you hope to achieve..."
+                    :placeholder="isCareerRole
+                      ? 'Describe your relevant experience, what interests you about this role, and why you would be a great fit...'
+                      : 'Share your goals, aspirations, and what you hope to achieve...'"
                   ></textarea>
                   <p v-if="form.errors.motivation" class="text-red-500 text-sm mt-1">{{ form.errors.motivation }}</p>
                 </div>
 
                 <div>
-                  <label for="experience" class="block text-sm font-semibold text-gray-700 mb-2">Relevant Experience (Optional)</label>
+                  <label for="experience" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ isCareerRole ? 'Professional Experience' : 'Relevant Experience (Optional)' }}
+                  </label>
                   <textarea
                     id="experience"
                     v-model="form.experience"
                     rows="6"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent outline-none transition"
-                    placeholder="Tell us about any relevant work experience, projects, or skills..."
+                    :placeholder="isCareerRole
+                      ? 'Summarize your professional experience, key projects, and achievements relevant to this role...'
+                      : 'Tell us about any relevant work experience, projects, or skills...'"
                   ></textarea>
                 </div>
               </div>
@@ -332,7 +347,9 @@ const submit = () => {
 
             <!-- Privacy Notice -->
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-              By submitting this application, you agree to our privacy policy and terms of service. We'll use your information to process your application and contact you about your enrollment.
+              {{ isCareerRole
+                ? 'By submitting this application, you agree to our privacy policy and terms of service. We\'ll use your information to process your application and contact you regarding this role.'
+                : 'By submitting this application, you agree to our privacy policy and terms of service. We\'ll use your information to process your application and contact you about your enrollment.' }}
             </div>
           </form>
         </div>

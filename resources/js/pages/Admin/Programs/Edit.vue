@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -66,6 +66,39 @@ const imagePreview = ref<string | null>(
       : `/storage/${props.program.image_url}`
     : null
 )
+
+const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(form.category))
+
+const contentLabels = computed(() => {
+  if (isCareerRole.value) {
+    return {
+      overview: 'Role Overview',
+      overviewPlaceholder: 'Detailed role overview...',
+      whoIsFor: 'Who Should Apply?',
+      whoIsForPlaceholder: 'Describe the ideal candidate for this role...',
+      skills: 'Required Skills & Tools',
+      skillsPlaceholder: 'Laravel, Vue.js, Git, Docker, etc.',
+      outcomes: 'Key Responsibilities',
+      outcomesPlaceholder: 'What the role involves and what the hire will deliver...',
+      curriculum: 'Role Scope & Work Plan',
+      curriculumPlaceholder: 'Month 1: Onboarding & orientation...\nMonth 2: Project assignments...',
+      certification: 'What We Offer',
+    };
+  }
+  return {
+    overview: 'Overview',
+    overviewPlaceholder: 'Detailed program overview...',
+    whoIsFor: 'Who Is This For?',
+    whoIsForPlaceholder: 'Describe the ideal candidate...',
+    skills: 'Skills & Tools',
+    skillsPlaceholder: 'React, Node.js, MongoDB, Git, etc.',
+    outcomes: 'Learning Outcomes',
+    outcomesPlaceholder: 'What students will learn...',
+    curriculum: 'Curriculum',
+    curriculumPlaceholder: 'Week 1: Introduction...\nWeek 2: Fundamentals...',
+    certification: 'Certification',
+  };
+})
 
 const handleImageChange = (e: Event) => {
   const target = e.target as HTMLInputElement
@@ -266,52 +299,57 @@ const submit = () => {
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Detailed Content</h3>
         <div class="space-y-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Overview</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.overview }}</label>
             <textarea
               v-model="form.overview"
               rows="4"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              :placeholder="contentLabels.overviewPlaceholder"
             ></textarea>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Who Is This For?</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.whoIsFor }}</label>
             <textarea
               v-model="form.who_is_for"
               rows="3"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              :placeholder="contentLabels.whoIsForPlaceholder"
             ></textarea>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills & Tools</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.skills }}</label>
             <input
               v-model="form.skills_and_tools"
               type="text"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              :placeholder="contentLabels.skillsPlaceholder"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Learning Outcomes</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.outcomes }}</label>
             <textarea
               v-model="form.learning_outcomes"
               rows="4"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              :placeholder="contentLabels.outcomesPlaceholder"
             ></textarea>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Curriculum</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.curriculum }}</label>
             <textarea
               v-model="form.curriculum"
               rows="6"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              :placeholder="contentLabels.curriculumPlaceholder"
             ></textarea>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Certification</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ contentLabels.certification }}</label>
             <input
               v-model="form.certification"
               type="text"

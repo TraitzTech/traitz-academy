@@ -28,6 +28,7 @@ interface SearchOptions {
 
 interface Props {
   events: Event[];
+  userRegisteredEventIds: number[];
 }
 
 const props = defineProps<Props>();
@@ -319,6 +320,12 @@ const isUpcoming = (date: string) => new Date(date) > new Date();
               <div v-if="!isUpcoming(event.event_date)" class="absolute top-4 right-4 bg-gray-800 text-white px-3 py-1 rounded-full text-xs font-bold">
                 Past Event
               </div>
+              <div v-else-if="props.userRegisteredEventIds.includes(event.id)" class="absolute top-4 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Registered
+              </div>
               <div v-else-if="event.is_online" class="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">
                 🌐 Online
               </div>
@@ -373,8 +380,16 @@ const isUpcoming = (date: string) => new Date(date) > new Date();
                 >
                   View Details
                 </Link>
+                <div v-if="props.userRegisteredEventIds.includes(event.id) && isUpcoming(event.event_date)" class="block w-full text-center px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-semibold">
+                  <span class="flex items-center justify-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Already Registered
+                  </span>
+                </div>
                 <Link
-                  v-if="isUpcoming(event.event_date)"
+                  v-else-if="isUpcoming(event.event_date)"
                   :href="`/events/${event.slug}`"
                   class="block w-full text-center px-4 py-2 bg-[#42b6c5] text-white rounded-lg font-semibold hover:bg-[#35919e] transition-colors"
                 >

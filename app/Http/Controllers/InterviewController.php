@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\Interview;
 use App\Models\InterviewAnswer;
 use App\Models\InterviewResponse;
+use App\Notifications\BatchEmailNotification;
 use App\Notifications\InterviewCompletedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -160,6 +161,32 @@ class InterviewController extends Controller
             ->where('interview_id', $interview->id)
             ->where('interview_status', 'scheduled')
             ->update(['interview_status' => 'completed']);
+
+        // Auto-reject application if interview was fully auto-graded and candidate failed
+        if (! $requiresManualReview && ! $passed) {
+            $failedApplication = Application::where('user_id', $user->id)
+                ->where('interview_id', $interview->id)
+                ->whereNotIn('status', ['rejected'])
+                ->with('program')
+                ->first();
+
+            if ($failedApplication) {
+                $failedApplication->update([
+                    'status' => 'rejected',
+                    'notes' => "Auto-rejected: interview score {$percentage}% is below the passing score of {$interview->passing_score}%.",
+                    'reviewed_at' => now(),
+                ]);
+
+                if ($failedApplication->user) {
+                    $failedApplication->user->notify(new BatchEmailNotification(
+                        subject: 'Update on Your Application',
+                        messageHtml: "<p>Thank you for your interest in {$failedApplication->program->title} and for completing the interview.</p><p>Unfortunately, your interview score did not meet the minimum requirement. We are unable to proceed with your application at this time.</p><p>We encourage you to keep developing your skills and apply again in the future. Feel free to explore other programs and opportunities on our platform.</p>",
+                        actionText: 'Explore Programs',
+                        actionUrl: url('/programs')
+                    ));
+                }
+            }
+        }
 
         return redirect()->route('interviews.result', $interview->id)
             ->with('success', $requiresManualReview

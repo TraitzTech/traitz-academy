@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\EventRegistration;
+use App\Notifications\EventReminderNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -156,7 +159,7 @@ class EventController extends Controller
 
     public function toggleStatus(Event $event): RedirectResponse
     {
-        $event->update(['is_active' => !$event->is_active]);
+        $event->update(['is_active' => ! $event->is_active]);
 
         return back()->with('success', 'Event status updated.');
     }
@@ -180,5 +183,103 @@ class EventController extends Controller
         $count = count($validated['ids']);
 
         return back()->with('success', "{$count} event(s) deleted successfully.");
+    }
+
+    public function registrations(Request $request, Event $event): Response
+    {
+        $query = $event->registrations()->with('user');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $registrations = $query->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Events/Registrations', [
+            'event' => $event->loadCount('registrations'),
+            'registrations' => $registrations,
+            'filters' => $request->only(['search', 'status']),
+        ]);
+    }
+
+    public function updateRegistrationStatus(Request $request, Event $event, EventRegistration $registration): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:registered,confirmed,cancelled,attended',
+        ]);
+
+        $registration->update([
+            'status' => $validated['status'],
+            'attended_at' => $validated['status'] === 'attended' ? now() : $registration->attended_at,
+        ]);
+
+        return back()->with('success', 'Registration status updated.');
+    }
+
+    public function bulkUpdateRegistrationStatus(Request $request, Event $event): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:event_registrations,id',
+            'status' => 'required|string|in:registered,confirmed,cancelled,attended',
+        ]);
+
+        $registrations = EventRegistration::whereIn('id', $validated['ids'])
+            ->where('event_id', $event->id)
+            ->get();
+
+        foreach ($registrations as $registration) {
+            $registration->update([
+                'status' => $validated['status'],
+                'attended_at' => $validated['status'] === 'attended' ? now() : $registration->attended_at,
+            ]);
+        }
+
+        $count = $registrations->count();
+
+        return back()->with('success', "{$count} registration(s) updated to {$validated['status']}.");
+    }
+
+    public function bulkDeleteRegistrations(Request $request, Event $event): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:event_registrations,id',
+        ]);
+
+        $count = EventRegistration::whereIn('id', $validated['ids'])
+            ->where('event_id', $event->id)
+            ->delete();
+
+        return back()->with('success', "{$count} registration(s) deleted successfully.");
+    }
+
+    public function sendReminder(Event $event): RedirectResponse
+    {
+        $registrations = $event->registrations()->get();
+
+        if ($registrations->isEmpty()) {
+            return back()->with('error', 'No registrations found for this event.');
+        }
+
+        foreach ($registrations as $registration) {
+            $notifiable = new AnonymousNotifiable;
+            $notifiable->route('mail', $registration->email)
+                ->notify(new EventReminderNotification($registration));
+        }
+
+        return back()->with('success', "Reminder sent to {$registrations->count()} registrant(s).");
     }
 }

@@ -23,6 +23,7 @@ interface Event {
 
 interface Props {
   event: Event;
+  isRegistered: boolean;
 }
 
 const props = defineProps<Props>();
@@ -155,7 +156,24 @@ const submit = () => {
 
           <!-- Right Column - Registration -->
           <div>
-            <div v-if="isUpcoming(event.event_date)" class="bg-gray-50 rounded-lg p-8 sticky top-20">
+            <!-- Already Registered -->
+            <div v-if="isRegistered && isUpcoming(event.event_date)" class="bg-emerald-50 border border-emerald-200 rounded-lg p-8 sticky top-20">
+              <div class="text-center">
+                <div class="w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-emerald-800 mb-2">You're Registered!</h2>
+                <p class="text-emerald-700 mb-4">You've already registered for this event. We'll send you a reminder before it starts.</p>
+                <div class="bg-white/60 rounded-lg p-4 text-sm text-emerald-800">
+                  <p class="font-semibold mb-1">Event Date</p>
+                  <p>{{ formatDate(event.event_date) }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="isUpcoming(event.event_date)" class="bg-gray-50 rounded-lg p-8 sticky top-20">
               <h2 class="text-2xl font-bold text-[#000928] mb-6">Register for Event</h2>
 
               <form @submit.prevent="submit" class="space-y-4">

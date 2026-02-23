@@ -305,6 +305,12 @@ const isUpcoming = (date: string) => new Date(date) > new Date()
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end gap-2">
                   <Link
+                    :href="`/admin/events/${event.id}/registrations`"
+                    class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
+                  >
+                    Registrations
+                  </Link>
+                  <Link
                     :href="`/admin/events/${event.id}/edit`"
                     class="text-[#42b6c5] hover:text-[#35919e]"
                   >

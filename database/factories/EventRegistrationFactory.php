@@ -24,7 +24,7 @@ class EventRegistrationFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->phoneNumber(),
             'country' => fake()->country(),
-            'status' => fake()->randomElement(['registered', 'attended', 'cancelled']),
+            'status' => fake()->randomElement(['registered', 'confirmed', 'attended', 'cancelled']),
             'attended_at' => fake()->boolean(60) ? now() : null,
         ];
     }

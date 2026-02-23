@@ -7,6 +7,7 @@ use App\Models\Interview;
 use App\Models\InterviewQuestion;
 use App\Models\InterviewResponse;
 use App\Models\Program;
+use App\Notifications\BatchEmailNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -246,6 +247,28 @@ class InterviewController extends Controller
             'reviewed_at' => now(),
             'reviewed_by' => auth()->id(),
         ]);
+
+        // Auto-reject the linked application if the candidate failed
+        if (! $passed && $response->application_id) {
+            $failedApplication = $response->application()->with('program')->first();
+
+            if ($failedApplication && $failedApplication->status !== 'rejected') {
+                $failedApplication->update([
+                    'status' => 'rejected',
+                    'notes' => "Auto-rejected: interview score {$percentage}% is below the passing score of {$interview->passing_score}%.",
+                    'reviewed_at' => now(),
+                ]);
+
+                if ($failedApplication->user) {
+                    $failedApplication->user->notify(new BatchEmailNotification(
+                        subject: 'Update on Your Application',
+                        messageHtml: "<p>Thank you for your interest in {$failedApplication->program->title} and for completing the interview.</p><p>After reviewing your responses, we regret to inform you that your score did not meet the minimum requirement. We are unable to proceed with your application at this time.</p><p>We encourage you to keep developing your skills and apply again in the future. Feel free to explore other programs and opportunities on our platform.</p>",
+                        actionText: 'Explore Programs',
+                        actionUrl: url('/programs')
+                    ));
+                }
+            }
+        }
 
         return back()->with('success', "Response reviewed successfully. Score: {$totalEarned}/{$response->total_points} ({$percentage}%) — ".($passed ? 'Passed' : 'Not Passed'));
     }

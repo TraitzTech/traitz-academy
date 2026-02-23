@@ -59,6 +59,41 @@ const isAcademic = (cat: string) => cat === 'academic-internship';
 const isProfessional = (cat: string) => cat === 'professional-internship';
 const isJobOpportunity = (cat: string) => cat === 'job-opportunity';
 
+const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(props.program.category));
+
+const labels = computed(() => {
+  if (isCareerRole.value) {
+    return {
+      overview: 'Role Overview',
+      overviewEmpty: 'Role overview will be shared soon.',
+      whoIsFor: 'Who Should Apply?',
+      whoIsForEmpty: 'Open to qualified professionals ready to contribute.',
+      skills: 'Skills & Tools You\'ll Use',
+      skillsEmpty: 'Required skills will be updated soon.',
+      outcomes: 'Key Responsibilities',
+      outcomesEmpty: 'Responsibilities will be detailed soon.',
+      curriculum: 'Role Scope & Work Plan',
+      curriculumEmpty: 'Work plan details will be published soon.',
+      certification: 'What We Offer',
+      certificationEmpty: 'Benefits and perks will be shared before applications close.',
+    };
+  }
+  return {
+    overview: 'Program Overview',
+    overviewEmpty: 'Program overview will be shared soon.',
+    whoIsFor: 'Who Is This For?',
+    whoIsForEmpty: 'Open to motivated learners ready to grow.',
+    skills: 'Skills & Tools You\'ll Learn',
+    skillsEmpty: 'Skills will be updated soon.',
+    outcomes: 'Learning Outcomes',
+    outcomesEmpty: 'Learning outcomes will be available soon.',
+    curriculum: 'Curriculum',
+    curriculumEmpty: 'Curriculum details will be published soon.',
+    certification: 'Certification',
+    certificationEmpty: 'Certificate details will be shared before cohort start.',
+  };
+});
+
 const skills = computed(() => {
   return (props.program.skills_and_tools ?? '')
     .split(',')
@@ -139,19 +174,19 @@ const formatPrice = (price: number) => {
           <div class="lg:col-span-2">
             <!-- Overview -->
             <div class="mb-12">
-              <h2 class="text-3xl font-bold text-[#000928] mb-4">Program Overview</h2>
-              <p class="text-gray-700 text-lg leading-relaxed">{{ program.overview || 'Program overview will be shared soon.' }}</p>
+              <h2 class="text-3xl font-bold text-[#000928] mb-4">{{ labels.overview }}</h2>
+              <p class="text-gray-700 text-lg leading-relaxed">{{ program.overview || labels.overviewEmpty }}</p>
             </div>
 
             <!-- Who is For -->
             <div class="mb-12">
-              <h2 class="text-3xl font-bold text-[#000928] mb-4">Who Is This For?</h2>
-              <p class="text-gray-700 text-lg leading-relaxed">{{ program.who_is_for || 'Open to motivated learners ready to grow.' }}</p>
+              <h2 class="text-3xl font-bold text-[#000928] mb-4">{{ labels.whoIsFor }}</h2>
+              <p class="text-gray-700 text-lg leading-relaxed">{{ program.who_is_for || labels.whoIsForEmpty }}</p>
             </div>
 
             <!-- Skills & Tools -->
             <div class="mb-12">
-              <h2 class="text-3xl font-bold text-[#000928] mb-4">Skills & Tools You'll Learn</h2>
+              <h2 class="text-3xl font-bold text-[#000928] mb-4">{{ labels.skills }}</h2>
               <div class="flex flex-wrap gap-2">
                 <span
                   v-for="skill in skills"
@@ -160,13 +195,13 @@ const formatPrice = (price: number) => {
                 >
                   {{ skill }}
                 </span>
-                <span v-if="skills.length === 0" class="text-gray-500">Skills will be updated soon.</span>
+                <span v-if="skills.length === 0" class="text-gray-500">{{ labels.skillsEmpty }}</span>
               </div>
             </div>
 
-            <!-- Learning Outcomes -->
+            <!-- Outcomes / Responsibilities -->
             <div class="mb-12">
-              <h2 class="text-3xl font-bold text-[#000928] mb-4">Learning Outcomes</h2>
+              <h2 class="text-3xl font-bold text-[#000928] mb-4">{{ labels.outcomes }}</h2>
               <ul class="space-y-3">
                 <li v-for="(outcome, index) in learningOutcomes" :key="index" class="flex items-start">
                   <svg class="w-6 h-6 text-[#42b6c5] mr-3 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
@@ -174,20 +209,20 @@ const formatPrice = (price: number) => {
                   </svg>
                   <span class="text-gray-700">{{ outcome.trim() }}</span>
                 </li>
-                <li v-if="learningOutcomes.length === 0" class="text-gray-500">Learning outcomes will be available soon.</li>
+                <li v-if="learningOutcomes.length === 0" class="text-gray-500">{{ labels.outcomesEmpty }}</li>
               </ul>
             </div>
 
-            <!-- Curriculum -->
+            <!-- Curriculum / Work Plan -->
             <div class="mb-12">
-              <h2 class="text-3xl font-bold text-[#000928] mb-4">Curriculum</h2>
-              <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-line">{{ program.curriculum || 'Curriculum details will be published soon.' }}</p>
+              <h2 class="text-3xl font-bold text-[#000928] mb-4">{{ labels.curriculum }}</h2>
+              <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-line">{{ program.curriculum || labels.curriculumEmpty }}</p>
             </div>
 
             <!-- Certification -->
             <div class="bg-[#42b6c5]/10 border border-[#42b6c5] rounded-lg p-6 mb-12">
-              <h3 class="text-2xl font-bold text-[#000928] mb-2">Certification</h3>
-              <p class="text-gray-700">{{ program.certification || 'Certificate details will be shared before cohort start.' }}</p>
+              <h3 class="text-2xl font-bold text-[#000928] mb-2">{{ labels.certification }}</h3>
+              <p class="text-gray-700">{{ program.certification || labels.certificationEmpty }}</p>
             </div>
           </div>
 

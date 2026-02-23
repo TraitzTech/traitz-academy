@@ -89,6 +89,11 @@ Route::prefix('admin')
         Route::resource('events', AdminEventController::class)->except(['show']);
         Route::post('/events/{event}/toggle-status', [AdminEventController::class, 'toggleStatus'])->name('events.toggle-status');
         Route::post('/events/bulk-destroy', [AdminEventController::class, 'bulkDestroy'])->name('events.bulk-destroy');
+        Route::get('/events/{event}/registrations', [AdminEventController::class, 'registrations'])->name('events.registrations');
+        Route::patch('/events/{event}/registrations/{registration}', [AdminEventController::class, 'updateRegistrationStatus'])->name('events.registrations.update');
+        Route::post('/events/{event}/registrations/bulk-update', [AdminEventController::class, 'bulkUpdateRegistrationStatus'])->name('events.registrations.bulk-update');
+        Route::post('/events/{event}/registrations/bulk-destroy', [AdminEventController::class, 'bulkDeleteRegistrations'])->name('events.registrations.bulk-destroy');
+        Route::post('/events/{event}/send-reminder', [AdminEventController::class, 'sendReminder'])->name('events.send-reminder');
 
         // Applications Management
         Route::get('/applications', [AdminApplicationController::class, 'index'])->name('applications.index');

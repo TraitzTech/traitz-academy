@@ -6,8 +6,8 @@ use App\Helpers\SettingHelper;
 use App\Http\Requests\RegisterEventRequest;
 use App\Models\Event;
 use App\Models\EventRegistration;
-use App\Notifications\NewEventRegistration;
 use App\Notifications\EventRegistrationConfirmation;
+use App\Notifications\NewEventRegistration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Inertia\Inertia;
@@ -20,15 +20,31 @@ class EventController extends Controller
             ->orderBy('event_date')
             ->get();
 
+        $userRegisteredEventIds = [];
+        if (auth()->check()) {
+            $userRegisteredEventIds = EventRegistration::where('user_id', auth()->id())
+                ->pluck('event_id')
+                ->toArray();
+        }
+
         return Inertia::render('Events/Index', [
             'events' => $events,
+            'userRegisteredEventIds' => $userRegisteredEventIds,
         ]);
     }
 
     public function show(Event $event): \Inertia\Response
     {
+        $isRegistered = false;
+        if (auth()->check()) {
+            $isRegistered = EventRegistration::where('user_id', auth()->id())
+                ->where('event_id', $event->id)
+                ->exists();
+        }
+
         return Inertia::render('Events/Show', [
             'event' => $event,
+            'isRegistered' => $isRegistered,
         ]);
     }
 
