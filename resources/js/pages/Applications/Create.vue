@@ -11,6 +11,7 @@ interface Program {
   slug: string;
   category: string;
   description: string;
+  is_cv_required?: boolean;
 }
 
 interface Props {
@@ -23,7 +24,7 @@ const toast = useToast();
 
 const isAcademic = computed(() => props.program.category === 'academic-internship');
 const isJobOpportunity = computed(() => props.program.category === 'job-opportunity');
-const requiresCv = computed(() => ['professional-internship', 'job-opportunity'].includes(props.program.category));
+const requiresCv = computed(() => !!props.program.is_cv_required);
 const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(props.program.category));
 
 const form = useForm({

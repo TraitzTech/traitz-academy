@@ -18,6 +18,7 @@ interface Program {
   certification: string | null
   price: number
   max_installments: number
+  is_cv_required?: boolean
   image_url: string | null
   is_featured: boolean
   is_active: boolean
@@ -50,6 +51,7 @@ const form = useForm({
   certification: props.program.certification || '',
   price: props.program.price,
   max_installments: props.program.max_installments || 1,
+  is_cv_required: !!props.program.is_cv_required,
   image: null as File | null,
   is_featured: props.program.is_featured,
   is_active: props.program.is_active,
@@ -378,6 +380,14 @@ const submit = () => {
               class="rounded border-gray-300 dark:border-gray-600 text-[#42b6c5] focus:ring-[#42b6c5]"
             />
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Featured (shown on homepage)</span>
+          </label>
+          <label class="flex items-center">
+            <input
+              v-model="form.is_cv_required"
+              type="checkbox"
+              class="rounded border-gray-300 dark:border-gray-600 text-[#42b6c5] focus:ring-[#42b6c5]"
+            />
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Require CV for applications</span>
           </label>
         </div>
       </div>

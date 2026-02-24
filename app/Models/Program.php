@@ -24,6 +24,7 @@ class Program extends Model
         'certification',
         'price',
         'max_installments',
+        'is_cv_required',
         'image_url',
         'is_featured',
         'is_active',
@@ -57,6 +58,7 @@ class Program extends Model
         return [
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'is_cv_required' => 'boolean',
             'max_installments' => 'integer',
             'start_date' => 'datetime',
             'end_date' => 'datetime',

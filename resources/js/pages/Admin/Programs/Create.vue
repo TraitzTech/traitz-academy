@@ -27,6 +27,7 @@ const form = useForm({
   certification: 'Industry-recognized certificate of completion',
   price: 0,
   max_installments: 1,
+  is_cv_required: false,
   image: null as File | null,
   is_featured: false,
   is_active: true,
@@ -339,6 +340,14 @@ const submit = () => {
               class="rounded border-gray-300 dark:border-gray-600 text-[#42b6c5] focus:ring-[#42b6c5]"
             />
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Featured (shown on homepage)</span>
+          </label>
+          <label class="flex items-center">
+            <input
+              v-model="form.is_cv_required"
+              type="checkbox"
+              class="rounded border-gray-300 dark:border-gray-600 text-[#42b6c5] focus:ring-[#42b6c5]"
+            />
+            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Require CV for applications</span>
           </label>
         </div>
       </div>

@@ -34,6 +34,7 @@ class ProgramFactory extends Factory
             'certification' => 'Industry-recognized certificate of completion',
             'price' => $price,
             'max_installments' => $price > 0 ? fake()->numberBetween(1, 4) : 1,
+            'is_cv_required' => false,
             'image_url' => 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400',
             'is_featured' => fake()->boolean(30),
             'is_active' => true,
