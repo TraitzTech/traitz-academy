@@ -192,21 +192,13 @@ class PaymentController extends Controller
         $payment->load(['application.program', 'user', 'recordedBy', 'updatedBy']);
 
         $receiptUrl = route('payments.receipt', $payment);
-        $verificationPayload = json_encode([
-            'receipt_number' => $payment->receipt_number,
-            'reference' => $payment->reference,
-            'amount' => (float) $payment->amount,
-            'currency' => $payment->currency,
-            'paid_at' => optional($payment->paid_at)->toIso8601String(),
-            'url' => $receiptUrl,
-        ]);
 
         $renderer = new ImageRenderer(
             new RendererStyle(180),
             new SvgImageBackEnd
         );
 
-        $qrCodeSvg = (new Writer($renderer))->writeString($verificationPayload ?: $receiptUrl);
+        $qrCodeSvg = (new Writer($renderer))->writeString($receiptUrl);
         $qrCodeDataUri = 'data:image/svg+xml;base64,'.base64_encode($qrCodeSvg);
 
         return Pdf::loadView('payments.receipt-pdf', [
