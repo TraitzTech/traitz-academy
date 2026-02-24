@@ -7,6 +7,7 @@ use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,6 +21,7 @@ class SettingsController extends Controller
             'content' => SiteSetting::where('group', 'content')->get()->values(),
             'contact' => SiteSetting::where('group', 'contact')->get()->values(),
             'social' => SiteSetting::where('group', 'social')->get()->values(),
+            'payments' => SiteSetting::where('group', 'payments')->get()->values(),
         ];
 
         return Inertia::render('Admin/Settings/Index', [
@@ -34,6 +36,17 @@ class SettingsController extends Controller
         ]);
 
         foreach ($validated['settings'] as $key => $value) {
+            if ($key === 'online_payment_surcharge_percentage') {
+                $normalizedValue = ($value === null || $value === '') ? 2 : (float) $value;
+
+                Validator::make(
+                    ['value' => $normalizedValue],
+                    ['value' => ['numeric', 'min:0', 'max:100']]
+                )->validate();
+
+                $value = (string) round((float) $normalizedValue, 2);
+            }
+
             // Skip image fields - they're handled separately
             $setting = SiteSetting::where('key', $key)->first();
             if ($setting && $setting->type !== 'image') {
@@ -104,6 +117,7 @@ class SettingsController extends Controller
             'content' => ['youtube_video_url', 'hero_title', 'hero_subtitle'],
             'contact' => ['contact_email', 'contact_phone', 'contact_address'],
             'social' => ['social_facebook', 'social_twitter', 'social_linkedin', 'social_instagram', 'social_youtube'],
+            'payments' => ['online_payment_surcharge_percentage'],
         ];
 
         foreach ($groups as $group => $keys) {

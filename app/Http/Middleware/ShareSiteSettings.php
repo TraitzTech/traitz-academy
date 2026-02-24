@@ -58,6 +58,9 @@ class ShareSiteSettings
             // Footer
             'footer_copyright_text' => SiteSetting::get('footer_copyright_text', '© 2024 Traitz Academy. All rights reserved.'),
             'footer_powered_by' => SiteSetting::get('footer_powered_by', 'Powered by Traitz Tech'),
+
+            // Payments
+            'online_payment_surcharge_percentage' => (float) SiteSetting::get('online_payment_surcharge_percentage', 2),
         ];
     }
 }

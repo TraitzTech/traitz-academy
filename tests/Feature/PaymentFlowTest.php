@@ -3,6 +3,7 @@
 use App\Models\Application;
 use App\Models\Payment;
 use App\Models\Program;
+use App\Models\SiteSetting;
 use App\Models\User;
 use App\Notifications\PaymentReceiptNotification;
 use App\Notifications\PaymentReminderNotification;
@@ -52,6 +53,7 @@ it('shows checkout page for accepted application', function () {
         ->component('Payments/Checkout')
         ->where('summary.remaining_amount', 100000)
         ->where('summary.max_installments', 4)
+        ->where('summary.online_surcharge_percentage', 2)
     );
 });
 
@@ -95,10 +97,64 @@ it('records a successful installment payment and generates a receipt', function 
 
     expect($payment)->not->toBeNull();
     expect($payment->status)->toBe('successful');
-    expect((float) $payment->amount)->toBe(25000.0);
+    expect((float) $payment->amount)->toBe(25500.0);
+    expect((float) $payment->base_amount)->toBe(25000.0);
+    expect((float) $payment->surcharge_amount)->toBe(500.0);
+    expect((float) $payment->surcharge_percentage)->toBe(2.0);
     expect($payment->installment_number)->toBe(1);
     expect($payment->total_installments)->toBe(4);
     expect($payment->receipt_number)->not->toBeNull();
+});
+
+it('applies custom admin surcharge percentage to online payment amount', function () {
+    SiteSetting::set('online_payment_surcharge_percentage', '5', [
+        'type' => 'text',
+        'group' => 'payments',
+        'label' => 'Online Payment Surcharge (%)',
+    ]);
+
+    $user = User::factory()->create();
+    $program = Program::factory()->create([
+        'price' => 100000,
+        'max_installments' => 4,
+    ]);
+
+    $application = Application::factory()->create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+        'phone' => '670000000',
+    ]);
+
+    app()->bind(PaymentGateway::class, fn () => new class implements PaymentGateway
+    {
+        public function collect(array $payload): PaymentGatewayResult
+        {
+            return new PaymentGatewayResult(
+                operationSuccessful: true,
+                transactionSuccessful: true,
+                transactionId: 'trx-test-custom-surcharge',
+                message: 'ok',
+                rawResponse: ['ok' => true],
+            );
+        }
+    });
+
+    $response = $this->actingAs($user)->post(route('payments.store', $application), [
+        'payer_phone' => '670000000',
+        'provider' => 'MTN',
+        'payment_mode' => 'installment',
+    ]);
+
+    $payment = Payment::query()->latest('id')->first();
+
+    $response->assertRedirect(route('payments.receipt', $payment));
+
+    expect($payment)->not->toBeNull();
+    expect((float) $payment->base_amount)->toBe(25000.0);
+    expect((float) $payment->surcharge_percentage)->toBe(5.0);
+    expect((float) $payment->surcharge_amount)->toBe(1250.0);
+    expect((float) $payment->amount)->toBe(26250.0);
 });
 
 it('prevents non-accepted applications from accessing checkout', function () {
@@ -446,6 +502,8 @@ it('automatically classifies partial manual payment as installment', function ()
 
     expect($payment)->not->toBeNull();
     expect((float) $payment->amount)->toBe(10000.0);
+    expect((float) $payment->base_amount)->toBe(10000.0);
+    expect((float) $payment->surcharge_amount)->toBe(0.0);
     expect($payment->payment_type)->toBe('installment');
     expect($payment->installment_number)->toBe(1);
     expect($payment->total_installments)->toBe(2);
@@ -453,7 +511,7 @@ it('automatically classifies partial manual payment as installment', function ()
     $paidAmount = (float) Payment::query()
         ->where('application_id', $application->id)
         ->where('status', 'successful')
-        ->sum('amount');
+        ->sum('base_amount');
 
     expect($paidAmount)->toBe(10000.0);
     expect(20000.0 - $paidAmount)->toBe(10000.0);

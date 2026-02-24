@@ -24,6 +24,9 @@ class Payment extends Model
         'provider',
         'payment_channel',
         'amount',
+        'base_amount',
+        'surcharge_amount',
+        'surcharge_percentage',
         'currency',
         'payment_type',
         'installment_number',
@@ -40,6 +43,9 @@ class Payment extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'base_amount' => 'decimal:2',
+            'surcharge_amount' => 'decimal:2',
+            'surcharge_percentage' => 'decimal:2',
             'manual_entry' => 'boolean',
             'raw_response' => 'array',
             'paid_at' => 'datetime',

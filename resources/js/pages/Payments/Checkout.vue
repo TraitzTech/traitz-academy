@@ -28,6 +28,7 @@ interface Summary {
   installment_amount: number
   completed_installments: number
   next_installment_number: number
+  online_surcharge_percentage: number
   can_pay: boolean
 }
 
@@ -48,8 +49,12 @@ const form = useForm({
 })
 
 const installmentDue = computed(() => Math.min(props.summary.installment_amount, props.summary.remaining_amount))
-const selectedAmount = computed(() => form.payment_mode === 'installment' ? installmentDue.value : props.summary.remaining_amount)
-const balanceAfterPayment = computed(() => Math.max(0, props.summary.remaining_amount - selectedAmount.value))
+const selectedBaseAmount = computed(() => form.payment_mode === 'installment' ? installmentDue.value : props.summary.remaining_amount)
+const selectedSurchargeAmount = computed(() => {
+  return (selectedBaseAmount.value * props.summary.online_surcharge_percentage) / 100
+})
+const selectedAmount = computed(() => selectedBaseAmount.value + selectedSurchargeAmount.value)
+const balanceAfterPayment = computed(() => Math.max(0, props.summary.remaining_amount - selectedBaseAmount.value))
 const installmentsAfterPayment = computed(() => {
   if (form.payment_mode === 'installment' && props.summary.remaining_amount > 0) {
     return Math.min(props.summary.max_installments, props.summary.completed_installments + 1)
@@ -145,7 +150,7 @@ const formatMoney = (amount: number) => {
               <label class="block cursor-pointer rounded-lg border border-gray-300 dark:border-gray-600 p-4" :class="form.payment_mode === 'full' ? 'ring-2 ring-[#42b6c5] border-[#42b6c5]' : ''">
                 <input v-model="form.payment_mode" type="radio" value="full" class="mr-2" />
                 <span class="font-semibold text-gray-900 dark:text-gray-100">Pay Full Amount</span>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pay {{ formatMoney(summary.remaining_amount) }} now.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pay {{ formatMoney(summary.remaining_amount + (summary.remaining_amount * summary.online_surcharge_percentage) / 100) }} now (including {{ summary.online_surcharge_percentage }}% surcharge).</p>
               </label>
 
               <label
@@ -156,7 +161,7 @@ const formatMoney = (amount: number) => {
                 <span class="font-semibold text-gray-900 dark:text-gray-100">Pay Next Installment</span>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Installment {{ summary.next_installment_number }} of {{ summary.max_installments }}
-                  • {{ formatMoney(installmentDue) }}
+                  • {{ formatMoney(installmentDue + (installmentDue * summary.online_surcharge_percentage) / 100) }} including surcharge
                 </p>
               </label>
             </div>
@@ -192,12 +197,16 @@ const formatMoney = (amount: number) => {
             <span class="text-gray-500 dark:text-gray-400">Remaining</span>
             <span class="font-semibold text-amber-700 dark:text-amber-400">{{ formatMoney(summary.remaining_amount) }}</span>
           </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500 dark:text-gray-400">Online surcharge ({{ summary.online_surcharge_percentage }}%)</span>
+            <span class="font-medium text-gray-900 dark:text-gray-100">{{ formatMoney(selectedSurchargeAmount) }}</span>
+          </div>
           <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-3">
             <span class="text-gray-700 dark:text-gray-300 font-medium">You pay now</span>
             <span class="font-bold text-[#42b6c5]">{{ formatMoney(selectedAmount) }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500 dark:text-gray-400">Balance after payment</span>
+            <span class="text-gray-500 dark:text-gray-400">Fee balance after payment</span>
             <span class="font-medium text-gray-900 dark:text-gray-100">{{ formatMoney(balanceAfterPayment) }}</span>
           </div>
           <div class="flex justify-between">

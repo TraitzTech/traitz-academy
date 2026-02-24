@@ -206,6 +206,16 @@ class SiteSettingSeeder extends Seeder
                 'label' => 'Footer Powered By Text',
                 'description' => 'Attribution text in the footer',
             ],
+
+            // Payments
+            [
+                'key' => 'online_payment_surcharge_percentage',
+                'value' => '2',
+                'type' => 'text',
+                'group' => 'payments',
+                'label' => 'Online Payment Surcharge (%)',
+                'description' => 'Percentage surcharge added to online checkout payments (e.g. 2 for 2%).',
+            ],
         ];
 
         foreach ($settings as $setting) {

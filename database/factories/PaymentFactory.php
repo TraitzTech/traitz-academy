@@ -19,6 +19,8 @@ class PaymentFactory extends Factory
      */
     public function definition(): array
     {
+        $amount = fake()->randomFloat(2, 1000, 250000);
+
         return [
             'application_id' => Application::factory(),
             'user_id' => User::factory(),
@@ -30,7 +32,14 @@ class PaymentFactory extends Factory
             'payer_phone' => '67'.fake()->numerify('######'),
             'provider' => fake()->randomElement(['MTN', 'ORANGE']),
             'payment_channel' => fake()->randomElement(['ONLINE', 'ONSITE']),
-            'amount' => fake()->randomFloat(2, 1000, 250000),
+            'amount' => $amount,
+            'base_amount' => fn (array $attributes) => (float) ($attributes['amount'] ?? $amount),
+            'surcharge_amount' => fn (array $attributes) => round(
+                (float) ($attributes['amount'] ?? $amount)
+                - (float) ($attributes['base_amount'] ?? ($attributes['amount'] ?? $amount)),
+                2
+            ),
+            'surcharge_percentage' => 0,
             'currency' => 'XAF',
             'payment_type' => fake()->randomElement(['full', 'installment']),
             'installment_number' => 1,

@@ -70,9 +70,9 @@ class DashboardController extends Controller
                 $successfulPayments = $application->payments()
                     ->where('status', 'successful')
                     ->orderBy('paid_at')
-                    ->get(['id', 'amount', 'status', 'paid_at', 'receipt_number']);
+                    ->get(['id', 'amount', 'base_amount', 'status', 'paid_at', 'receipt_number']);
 
-                $paidAmount = (float) $successfulPayments->sum('amount');
+                $paidAmount = (float) $successfulPayments->sum('base_amount');
                 $remainingAmount = max(0, round($programPrice - $paidAmount, 2));
                 $installmentAmount = $maxInstallments > 0 ? round($programPrice / $maxInstallments, 2) : $programPrice;
 

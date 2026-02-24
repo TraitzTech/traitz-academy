@@ -38,7 +38,7 @@ class PaymentController extends Controller
             ->with(['program:id,title,price,max_installments', 'user:id,name,email'])
             ->withSum(['payments as successful_payments_sum_amount' => function ($paymentQuery) {
                 $paymentQuery->where('status', 'successful');
-            }], 'amount')
+            }], 'base_amount')
             ->withCount(['payments as successful_payments_count' => function ($paymentQuery) {
                 $paymentQuery->where('status', 'successful');
             }])
@@ -224,10 +224,10 @@ class PaymentController extends Controller
             $successfulPayments = $application->payments()
                 ->where('status', 'successful')
                 ->orderBy('paid_at')
-                ->get(['id', 'amount']);
+                ->get(['id', 'base_amount']);
 
             $programPrice = (float) ($application->program?->price ?? 0);
-            $paidAmount = (float) $successfulPayments->sum('amount');
+            $paidAmount = (float) $successfulPayments->sum('base_amount');
             $remainingAmount = max(0, round($programPrice - $paidAmount, 2));
             $maxInstallments = max(1, (int) ($application->program?->max_installments ?? 1));
             $nextInstallment = min($maxInstallments, $successfulPayments->count() + 1);
@@ -260,6 +260,9 @@ class PaymentController extends Controller
                 'provider' => $validated['provider'],
                 'payment_channel' => $validated['payment_channel'],
                 'amount' => $amount,
+                'base_amount' => $amount,
+                'surcharge_amount' => 0,
+                'surcharge_percentage' => 0,
                 'currency' => 'XAF',
                 'payment_type' => $effectivePaymentType,
                 'installment_number' => $installmentNumber,

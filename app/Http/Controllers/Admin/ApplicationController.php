@@ -22,7 +22,7 @@ class ApplicationController extends Controller
         $query = Application::with(['program', 'user'])
             ->withSum(['payments as successful_payments_sum_amount' => function ($paymentQuery) {
                 $paymentQuery->where('status', 'successful');
-            }], 'amount')
+            }], 'base_amount')
             ->withCount(['payments as successful_payments_count' => function ($paymentQuery) {
                 $paymentQuery->where('status', 'successful');
             }]);
@@ -192,7 +192,7 @@ class ApplicationController extends Controller
         $application->load(['program', 'user'])
             ->loadSum(['payments as successful_payments_sum_amount' => function ($query) {
                 $query->where('status', 'successful');
-            }], 'amount')
+            }], 'base_amount')
             ->loadCount(['payments as successful_payments_count' => function ($query) {
                 $query->where('status', 'successful');
             }]);
@@ -220,7 +220,7 @@ class ApplicationController extends Controller
             ->with(['program', 'user'])
             ->withSum(['payments as successful_payments_sum_amount' => function ($query) {
                 $query->where('status', 'successful');
-            }], 'amount')
+            }], 'base_amount')
             ->withCount(['payments as successful_payments_count' => function ($query) {
                 $query->where('status', 'successful');
             }])

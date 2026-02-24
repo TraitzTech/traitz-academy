@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Payment;
+use App\Models\SiteSetting;
 use App\Notifications\PaymentReceiptNotification;
 use App\Support\Payments\Contracts\PaymentGateway;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -75,9 +76,13 @@ class PaymentController extends Controller
 
             $isInstallmentPayment = $validated['payment_mode'] === 'installment';
 
-            $amount = $isInstallmentPayment
+            $baseAmount = $isInstallmentPayment
                 ? min((float) $summary['installment_amount'], (float) $summary['remaining_amount'])
                 : (float) $summary['remaining_amount'];
+
+            $surchargePercentage = (float) $summary['online_surcharge_percentage'];
+            $surchargeAmount = round(($baseAmount * $surchargePercentage) / 100, 2);
+            $amount = round($baseAmount + $surchargeAmount, 2);
 
             return Payment::create([
                 'application_id' => $lockedApplication->id,
@@ -87,6 +92,9 @@ class PaymentController extends Controller
                 'payer_phone' => $validated['payer_phone'],
                 'provider' => $validated['provider'],
                 'amount' => $amount,
+                'base_amount' => $baseAmount,
+                'surcharge_amount' => $surchargeAmount,
+                'surcharge_percentage' => $surchargePercentage,
                 'currency' => (string) config('services.mesomb.currency', 'XAF'),
                 'payment_type' => $validated['payment_mode'],
                 'installment_number' => (int) $summary['next_installment_number'],
@@ -215,10 +223,11 @@ class PaymentController extends Controller
     {
         $programPrice = (float) ($application->program?->price ?? 0);
         $maxInstallments = max(1, (int) ($application->program?->max_installments ?? 1));
-        $paidAmount = (float) $application->payments()->where('status', 'successful')->sum('amount');
+        $paidAmount = (float) $application->payments()->where('status', 'successful')->sum('base_amount');
         $successfulInstallments = $application->payments()->where('status', 'successful')->count();
         $remainingAmount = max(0, round($programPrice - $paidAmount, 2));
         $installmentAmount = $maxInstallments > 0 ? round($programPrice / $maxInstallments, 2) : $programPrice;
+        $onlineSurchargePercentage = $this->getOnlineSurchargePercentage();
 
         return [
             'program_price' => $programPrice,
@@ -228,8 +237,16 @@ class PaymentController extends Controller
             'installment_amount' => $installmentAmount,
             'completed_installments' => $successfulInstallments,
             'next_installment_number' => min($maxInstallments, $successfulInstallments + 1),
+            'online_surcharge_percentage' => $onlineSurchargePercentage,
             'can_pay' => $application->status === 'accepted' && $programPrice > 0 && $remainingAmount > 0,
         ];
+    }
+
+    private function getOnlineSurchargePercentage(): float
+    {
+        $configuredPercentage = (float) SiteSetting::get('online_payment_surcharge_percentage', 2);
+
+        return max(0, min(100, round($configuredPercentage, 2)));
     }
 
     private function canManageApplicationPayment(Application $application): bool
