@@ -5,7 +5,9 @@ import {
     Calendar,
     ClipboardList,
     Folder, 
+    Image,
     LayoutGrid,
+    Library,
     Mail,
     MessageSquare,
     Receipt,
@@ -58,6 +60,16 @@ const adminNavItems: NavItem[] = [
         title: 'Events',
         href: '/admin/events',
         icon: Calendar,
+    },
+    {
+        title: 'Gallery',
+        href: '/admin/gallery',
+        icon: Image,
+    },
+    {
+        title: 'Resources',
+        href: '/admin/learning-resources',
+        icon: Library,
     },
     {
         title: 'Applications',

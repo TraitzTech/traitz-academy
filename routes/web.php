@@ -6,7 +6,9 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\GalleryItemController as AdminGalleryItemController;
 use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
+use App\Http\Controllers\Admin\LearningResourceController as AdminLearningResourceController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -15,7 +17,9 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\GalleryItemController;
 use App\Http\Controllers\InterviewController;
+use App\Http\Controllers\LearningResourceController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProgramController;
@@ -39,6 +43,10 @@ Route::prefix('api/search')->name('search.')->group(function () {
 // Programs
 Route::get('/programs', [ProgramController::class, 'index'])->name('programs.index');
 Route::get('/programs/{program:slug}', [ProgramController::class, 'show'])->name('programs.show');
+Route::get('/gallery', [GalleryItemController::class, 'index'])->name('gallery.index');
+Route::get('/gallery/{galleryItem:slug}', [GalleryItemController::class, 'show'])->name('gallery.show');
+Route::get('/resources', [LearningResourceController::class, 'index'])->name('resources.index');
+Route::get('/resources/{learningResource:slug}', [LearningResourceController::class, 'show'])->name('resources.show');
 
 // Applications (Authenticated)
 Route::middleware(['auth', 'ensure.phone'])->group(function () {
@@ -81,6 +89,8 @@ Route::prefix('admin')
 
         // Programs CRUD
         Route::resource('programs', AdminProgramController::class)->except(['show']);
+        Route::resource('gallery', AdminGalleryItemController::class)->except(['show']);
+        Route::resource('learning-resources', AdminLearningResourceController::class)->except(['show']);
         Route::post('/programs/{program}/toggle-status', [AdminProgramController::class, 'toggleStatus'])->name('programs.toggle-status');
         Route::post('/programs/{program}/toggle-featured', [AdminProgramController::class, 'toggleFeatured'])->name('programs.toggle-featured');
         Route::post('/programs/bulk-destroy', [AdminProgramController::class, 'bulkDestroy'])->name('programs.bulk-destroy');

@@ -276,6 +276,34 @@ const openingBadge = (category: string) => openingCategoryLabels[category] || 'C
       </div>
     </section>
 
+    <!-- Gallery & Resources -->
+    <section class="py-20 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+          <h2 class="text-4xl md:text-5xl font-bold text-[#000928] mb-4">Explore More</h2>
+          <p class="text-gray-600 text-lg max-w-2xl mx-auto">Browse our dedicated pages for media highlights and learning materials.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="rounded-2xl border border-gray-200 p-8 bg-gray-50 hover:shadow-lg transition-shadow">
+            <h3 class="text-2xl font-bold text-[#000928] mb-2">Gallery</h3>
+            <p class="text-gray-600 mb-6">View images and videos from events, classes, and community activities.</p>
+            <Link href="/gallery" class="inline-flex items-center px-5 py-2.5 bg-[#42b6c5] text-white rounded-lg font-semibold hover:bg-[#35919e] transition-colors">
+              Open Gallery
+            </Link>
+          </div>
+
+          <div class="rounded-2xl border border-gray-200 p-8 bg-gray-50 hover:shadow-lg transition-shadow">
+            <h3 class="text-2xl font-bold text-[#000928] mb-2">Learning Resources</h3>
+            <p class="text-gray-600 mb-6">Access documents, videos, writings, and curated external resources.</p>
+            <Link href="/resources" class="inline-flex items-center px-5 py-2.5 bg-[#381998] text-white rounded-lg font-semibold hover:bg-[#2d1377] transition-colors">
+              Open Resources
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Teaching Model -->
     <section class="py-20 bg-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -549,6 +577,7 @@ const openingBadge = (category: string) => openingCategoryLabels[category] || 'C
         </div>
       </div>
     </section>
+
   </PublicLayout>
 </template>
 
