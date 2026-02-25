@@ -24,10 +24,11 @@ class ApplicationAcceptanceNotification extends Notification implements ShouldQu
     {
         $siteName = SettingHelper::get('site_name', config('app.name'));
         $whatsappCommunityLink = SettingHelper::whatsAppCommunityLink();
+        $recipientName = $this->application->first_name ?: ($this->application->user?->name ?? 'there');
 
         $mail = (new MailMessage)
             ->subject('Congratulations! Your Application Has Been Accepted')
-            ->greeting("Hello {$this->application->user?->first_name},")
+            ->greeting("Hello {$recipientName},")
             ->line("We are delighted to inform you that your application for **{$this->application->program->title}** has been accepted.")
             ->line('Welcome to Traitz Academy!')
             ->line('')
@@ -35,7 +36,7 @@ class ApplicationAcceptanceNotification extends Notification implements ShouldQu
             ->line('- Check your dashboard for program details')
             ->line('- Connect with other accepted applicants')
             ->line('- Reach out if you have any questions')
-            ->action('View Your Dashboard', url('/dashboard'));
+            ->action('View Your Dashboard', route('dashboard'));
 
         if ($whatsappCommunityLink) {
             $mail->line('')

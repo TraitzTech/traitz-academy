@@ -108,6 +108,18 @@ class SettingHelper
      */
     public static function whatsAppCommunityLink(): ?string
     {
-        return self::get('social_whatsapp_community');
+        $communityLink = trim((string) self::get('social_whatsapp_community', ''));
+        if ($communityLink !== '') {
+            return $communityLink;
+        }
+
+        $contactWhatsApp = trim((string) self::contactWhatsApp());
+        if ($contactWhatsApp === '') {
+            return null;
+        }
+
+        $phoneDigits = preg_replace('/\D+/', '', $contactWhatsApp) ?? '';
+
+        return $phoneDigits !== '' ? "https://wa.me/{$phoneDigits}" : null;
     }
 }

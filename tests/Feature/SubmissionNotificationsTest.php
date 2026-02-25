@@ -3,7 +3,9 @@
 use App\Models\Application;
 use App\Models\Event;
 use App\Models\Program;
+use App\Models\SiteSetting;
 use App\Models\User;
+use App\Notifications\ApplicationAcceptanceNotification;
 use App\Notifications\ApplicationConfirmation;
 use App\Notifications\EventRegistrationConfirmation;
 use App\Notifications\NewApplicationSubmitted;
@@ -56,7 +58,12 @@ describe('Application Submission Notifications', function () {
             'experience' => '3 years of experience',
         ]);
 
-        Notification::assertSentOnDemand(ApplicationConfirmation::class);
+        Notification::assertSentOnDemand(ApplicationConfirmation::class, function (ApplicationConfirmation $notification, array $channels) {
+            $mail = $notification->toMail(new \stdClass)->render();
+
+            return in_array('mail', $channels, true)
+                && str_contains($mail, route('applications.index'));
+        });
     });
 
     test('application notification includes program title', function () {
@@ -136,6 +143,70 @@ describe('Application Submission Notifications', function () {
         $response2->assertRedirect();
 
         expect(Application::where('email', 'john@example.com')->count())->toBe(2);
+    });
+
+    test('get applications route redirects to dashboard applications section', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('applications.index'))
+            ->assertRedirect('/dashboard#applications');
+    });
+});
+
+describe('Application Acceptance Notifications', function () {
+    test('accepted interns receive community link from contact WhatsApp fallback', function () {
+        Notification::fake();
+
+        SiteSetting::set('social_whatsapp_community', null, [
+            'type' => 'url',
+            'group' => 'social',
+            'label' => 'WhatsApp Community Link',
+        ]);
+        SiteSetting::set('contact_whatsapp', '+234 801 234 5678', [
+            'type' => 'text',
+            'group' => 'contact',
+            'label' => 'WhatsApp Number',
+        ]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+        $program = Program::factory()->create();
+        $application = Application::factory()->create([
+            'program_id' => $program->id,
+            'user_id' => $user->id,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.applications.accept', $application))
+            ->assertRedirect();
+
+        Notification::assertSentTo($user, ApplicationAcceptanceNotification::class, function (ApplicationAcceptanceNotification $notification, array $channels) use ($user) {
+            $mail = $notification->toMail($user)->render();
+
+            return in_array('mail', $channels, true)
+                && str_contains($mail, 'https://wa.me/2348012345678');
+        });
+    });
+
+    test('accepted interns without a linked user still receive acceptance email', function () {
+        Notification::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $program = Program::factory()->create();
+        $application = Application::factory()->create([
+            'program_id' => $program->id,
+            'user_id' => null,
+            'status' => 'pending',
+            'email' => 'intern@example.com',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.applications.accept', $application))
+            ->assertRedirect();
+
+        Notification::assertSentOnDemand(ApplicationAcceptanceNotification::class);
     });
 });
 

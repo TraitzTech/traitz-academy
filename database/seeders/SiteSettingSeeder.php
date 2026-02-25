@@ -181,6 +181,14 @@ class SiteSettingSeeder extends Seeder
                 'description' => 'Link to your YouTube channel',
             ],
             [
+                'key' => 'social_whatsapp_community',
+                'value' => null,
+                'type' => 'url',
+                'group' => 'social',
+                'label' => 'WhatsApp Community Link',
+                'description' => 'Invite link for your WhatsApp community group.',
+            ],
+            [
                 'key' => 'social_tiktok',
                 'value' => null,
                 'type' => 'url',

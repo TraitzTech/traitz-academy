@@ -11,6 +11,7 @@ use App\Notifications\InterviewInvitationNotification;
 use App\Notifications\PaymentReminderNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -146,6 +147,8 @@ class ApplicationController extends Controller
 
     public function update(Request $request, Application $application): RedirectResponse
     {
+        $wasAccepted = $application->status === 'accepted';
+
         $validated = $request->validate([
             'program_id' => ['required', 'exists:programs,id'],
             'first_name' => ['required', 'string', 'max:255'],
@@ -181,6 +184,10 @@ class ApplicationController extends Controller
         }
 
         $application->update($payload);
+
+        if (! $wasAccepted && $application->status === 'accepted') {
+            $this->sendAcceptanceNotification($application);
+        }
 
         return redirect()
             ->route('admin.applications.show', $application)
@@ -243,14 +250,15 @@ class ApplicationController extends Controller
 
     public function accept(Application $application): RedirectResponse
     {
+        $wasAccepted = $application->status === 'accepted';
+
         $application->update([
             'status' => 'accepted',
             'reviewed_at' => now(),
         ]);
 
-        // Notify the applicant with acceptance notification (includes WhatsApp community link)
-        if ($application->user) {
-            $application->user->notify(new ApplicationAcceptanceNotification($application));
+        if (! $wasAccepted) {
+            $this->sendAcceptanceNotification($application);
         }
 
         return back()->with('success', 'Application accepted successfully.');
@@ -293,9 +301,11 @@ class ApplicationController extends Controller
 
         foreach ($applications as $application) {
             if ($validated['action'] === 'accept') {
+                $wasAccepted = $application->status === 'accepted';
+
                 $application->update(['status' => 'accepted', 'reviewed_at' => now()]);
-                if ($application->user) {
-                    $application->user->notify(new ApplicationAcceptanceNotification($application));
+                if (! $wasAccepted) {
+                    $this->sendAcceptanceNotification($application);
                 }
             } elseif ($validated['action'] === 'reject') {
                 $application->update(['status' => 'rejected', 'reviewed_at' => now()]);
@@ -449,5 +459,22 @@ class ApplicationController extends Controller
         }
 
         return [$sent, $skipped];
+    }
+
+    private function sendAcceptanceNotification(Application $application): void
+    {
+        $application->loadMissing(['program', 'user']);
+
+        if ($application->user) {
+            $application->user->notify(new ApplicationAcceptanceNotification($application));
+
+            return;
+        }
+
+        if (! empty($application->email)) {
+            (new AnonymousNotifiable)
+                ->route('mail', $application->email)
+                ->notify(new ApplicationAcceptanceNotification($application));
+        }
     }
 }

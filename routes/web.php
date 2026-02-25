@@ -51,6 +51,7 @@ Route::get('/resources/{learningResource:slug}', [LearningResourceController::cl
 // Applications (Authenticated)
 Route::middleware(['auth', 'ensure.phone'])->group(function () {
     Route::get('/programs/{program}/apply', [ApplicationController::class, 'create'])->name('applications.create');
+    Route::get('/applications', fn () => redirect('/dashboard#applications'))->name('applications.index');
     Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 });
 
