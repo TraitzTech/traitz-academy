@@ -24,6 +24,22 @@ interface Props {
   careerOpenings: any[];
   upcomingEvents: any[];
   successStories: SuccessStory[];
+  aiForgeEvent: {
+    id: number;
+    title: string;
+    tagline: string | null;
+    short_description: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    location: string | null;
+    hero_image: string | null;
+    registration_open: boolean;
+    registration_fee: number;
+    early_bird_fee: number | null;
+    early_bird_deadline: string | null;
+    currency: string;
+    registrations_count: number;
+  } | null;
   siteSettings: {
     youtube_video_url: string | null;
     hero_title: string;
@@ -71,6 +87,27 @@ const getImageUrl = (imageUrl: string | null) => {
 };
 
 const openingBadge = (category: string) => openingCategoryLabels[category] || 'Career Opening';
+
+const formatEventDate = (dateString: string | null) => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
+const formatMoney = (amount: number, currency: string = 'XAF') => {
+  return new Intl.NumberFormat('en-CM', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+};
+
+const aiForgeCurrentPrice = computed(() => {
+  const event = props.aiForgeEvent;
+  if (!event || event.registration_fee <= 0) return null;
+  const isEarlyBird = event.early_bird_fee !== null && event.early_bird_deadline !== null && new Date() <= new Date(event.early_bird_deadline);
+  return {
+    amount: isEarlyBird ? event.early_bird_fee! : event.registration_fee,
+    isEarlyBird,
+    regularFee: event.registration_fee,
+    currency: event.currency || 'XAF',
+  };
+});
 </script>
 
 <template>
@@ -127,6 +164,93 @@ const openingBadge = (category: string) => openingCategoryLabels[category] || 'C
           <div class="text-center">
             <div class="text-5xl font-bold text-[#000928] mb-2">{{ stats.events_count }}+</div>
             <p class="text-gray-600 text-lg">Upcoming Events</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Forge Banner -->
+    <section v-if="aiForgeEvent" class="py-16 relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-[#000928] via-[#0f0635] to-[#1a0052]">
+        <div class="absolute inset-0 opacity-20">
+          <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-[#42b6c5] rounded-full blur-[100px]"></div>
+          <div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-[#381998] rounded-full blur-[100px]"></div>
+        </div>
+        <div class="absolute inset-0 opacity-5" style="background-image: linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px); background-size: 50px 50px;"></div>
+      </div>
+
+      <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col lg:flex-row items-center gap-10">
+          <!-- Left: Info -->
+          <div class="flex-1 text-center lg:text-left">
+            <div class="inline-flex items-center gap-2 bg-[#42b6c5]/20 border border-[#42b6c5]/30 rounded-full px-4 py-1.5 mb-4">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#42b6c5] opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-[#42b6c5]"></span>
+              </span>
+              <span class="text-[#42b6c5] text-sm font-semibold">{{ aiForgeEvent.registration_open ? 'Registration Open' : 'Coming Soon' }}</span>
+            </div>
+
+            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-3">
+              <span class="bg-gradient-to-r from-[#42b6c5] via-white to-[#42b6c5] bg-clip-text text-transparent">{{ aiForgeEvent.title }}</span>
+            </h2>
+
+            <p v-if="aiForgeEvent.tagline" class="text-lg text-[#42b6c5] font-semibold mb-3">{{ aiForgeEvent.tagline }}</p>
+
+            <p v-if="aiForgeEvent.short_description" class="text-gray-300 mb-5 max-w-xl leading-relaxed">{{ aiForgeEvent.short_description }}</p>
+
+            <div class="flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-gray-400 mb-6">
+              <div v-if="aiForgeEvent.start_date" class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{{ formatEventDate(aiForgeEvent.start_date) }} — {{ formatEventDate(aiForgeEvent.end_date) }}</span>
+              </div>
+              <div v-if="aiForgeEvent.location" class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-[#42b6c5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>{{ aiForgeEvent.location }}</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link href="/ai-forge" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#42b6c5] to-[#2d9aa8] text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-[#42b6c5]/25 hover:shadow-[#42b6c5]/40 transition-all duration-300 hover:-translate-y-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                </svg>
+                Learn More & Register
+              </Link>
+            </div>
+          </div>
+
+          <!-- Right: Stats / Price card -->
+          <div class="shrink-0 w-full lg:w-auto">
+            <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center max-w-xs mx-auto">
+              <!-- Pricing -->
+              <div v-if="aiForgeCurrentPrice" class="mb-6">
+                <div v-if="aiForgeCurrentPrice.isEarlyBird" class="text-sm text-gray-400 line-through mb-1">{{ formatMoney(aiForgeCurrentPrice.regularFee, aiForgeCurrentPrice.currency) }}</div>
+                <div class="text-4xl font-black text-[#42b6c5]">{{ formatMoney(aiForgeCurrentPrice.amount, aiForgeCurrentPrice.currency) }}</div>
+                <div class="text-sm text-gray-400 mt-1">{{ aiForgeCurrentPrice.isEarlyBird ? 'Early Bird Price' : 'Registration Fee' }}</div>
+              </div>
+              <div v-else class="mb-6">
+                <div class="text-4xl font-black text-[#42b6c5]">FREE</div>
+                <div class="text-sm text-gray-400 mt-1">Registration</div>
+              </div>
+
+              <!-- Mini stats -->
+              <div class="grid grid-cols-2 gap-4 border-t border-white/10 pt-6">
+                <div>
+                  <div class="text-2xl font-bold text-white">{{ aiForgeEvent.registrations_count ?? 0 }}</div>
+                  <div class="text-xs text-gray-400">Registered</div>
+                </div>
+                <div>
+                  <div class="text-2xl font-bold text-white">10+</div>
+                  <div class="text-xs text-gray-400">Weeks</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

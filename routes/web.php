@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\AiForgeController as AdminAiForgeController;
+use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderController;
+use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
+use App\Http\Controllers\Admin\AiForgeSwagController as AdminAiForgeSwagController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
@@ -14,6 +18,9 @@ use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AiForgeCartController;
+use App\Http\Controllers\AiForgeController;
+use App\Http\Controllers\AiForgeSwagController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
@@ -59,6 +66,21 @@ Route::middleware(['auth', 'ensure.phone'])->group(function () {
 Route::get('/events', [EventController::class, 'index'])->name('events.index');
 Route::get('/events/{event:slug}', [EventController::class, 'show'])->name('events.show');
 Route::post('/events/register', [EventController::class, 'register'])->name('events.register');
+
+// AI Forge
+Route::prefix('ai-forge')->name('ai-forge.')->group(function () {
+    Route::get('/', [AiForgeController::class, 'index'])->name('index');
+    Route::post('/register', [AiForgeController::class, 'register'])->name('register');
+    Route::get('/swags', [AiForgeSwagController::class, 'index'])->name('swags.index');
+    Route::get('/swags/{swag:slug}', [AiForgeSwagController::class, 'show'])->name('swags.show');
+    Route::get('/cart', [AiForgeCartController::class, 'index'])->name('cart');
+    Route::post('/cart/add', [AiForgeCartController::class, 'addToCart'])->name('cart.add');
+    Route::put('/cart/update', [AiForgeCartController::class, 'updateCart'])->name('cart.update');
+    Route::delete('/cart/remove', [AiForgeCartController::class, 'removeFromCart'])->name('cart.remove');
+    Route::get('/checkout', [AiForgeCartController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout', [AiForgeCartController::class, 'processPayment'])->name('checkout.process');
+    Route::get('/orders/{order}/confirmation', [AiForgeCartController::class, 'confirmation'])->name('order.confirmation');
+});
 
 // User Dashboard (Authenticated)
 Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -169,6 +191,35 @@ Route::prefix('admin')
         Route::resource('success-stories', SuccessStoryController::class)->except(['show']);
         Route::post('/success-stories/{success_story}/toggle-status', [SuccessStoryController::class, 'toggleStatus'])->name('success-stories.toggle-status');
         Route::post('/success-stories/bulk-destroy', [SuccessStoryController::class, 'bulkDestroy'])->name('success-stories.bulk-destroy');
+
+        // AI Forge Management
+        Route::prefix('ai-forge')->name('ai-forge.')->group(function () {
+            Route::get('/', [AdminAiForgeController::class, 'index'])->name('index');
+            Route::post('/', [AdminAiForgeController::class, 'store'])->name('store');
+            Route::put('/{event}', [AdminAiForgeController::class, 'update'])->name('update');
+            Route::post('/{event}/toggle-active', [AdminAiForgeController::class, 'toggleActive'])->name('toggle-active');
+            Route::post('/{event}/toggle-registration', [AdminAiForgeController::class, 'toggleRegistration'])->name('toggle-registration');
+            Route::post('/{event}/toggle-swag-store', [AdminAiForgeController::class, 'toggleSwagStore'])->name('toggle-swag-store');
+            Route::put('/{event}/stats', [AdminAiForgeController::class, 'updateStats'])->name('update-stats');
+
+            // Swags CRUD
+            Route::resource('swags', AdminAiForgeSwagController::class)->except(['show']);
+            Route::post('/swags/{swag}/toggle-active', [AdminAiForgeSwagController::class, 'toggleActive'])->name('swags.toggle-active');
+            Route::post('/swags/{swag}/toggle-featured', [AdminAiForgeSwagController::class, 'toggleFeatured'])->name('swags.toggle-featured');
+
+            // Registrations
+            Route::get('/registrations', [AdminAiForgeRegistrationController::class, 'index'])->name('registrations.index');
+            Route::patch('/registrations/{registration}', [AdminAiForgeRegistrationController::class, 'updateStatus'])->name('registrations.update-status');
+            Route::delete('/registrations/{registration}', [AdminAiForgeRegistrationController::class, 'destroy'])->name('registrations.destroy');
+            Route::post('/registrations/bulk-update', [AdminAiForgeRegistrationController::class, 'bulkUpdateStatus'])->name('registrations.bulk-update');
+            Route::post('/registrations/{registration}/send-reminder', [AdminAiForgeRegistrationController::class, 'sendReminder'])->name('registrations.send-reminder');
+            Route::get('/registrations/export', [AdminAiForgeRegistrationController::class, 'export'])->name('registrations.export');
+
+            // Orders
+            Route::get('/orders', [AdminAiForgeOrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/{order}', [AdminAiForgeOrderController::class, 'show'])->name('orders.show');
+            Route::patch('/orders/{order}/status', [AdminAiForgeOrderController::class, 'updateStatus'])->name('orders.update-status');
+        });
 
         // Interviews Management
         Route::resource('interviews', AdminInterviewController::class)->except(['show']);

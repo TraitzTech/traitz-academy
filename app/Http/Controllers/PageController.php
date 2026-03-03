@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\SettingHelper;
 use App\Http\Requests\ContactFormRequest;
+use App\Models\AiForgeEvent;
 use App\Models\Application;
 use App\Models\Event;
 use App\Models\Program;
@@ -45,12 +46,18 @@ class PageController extends Controller
             ->limit(6)
             ->get();
 
+        $aiForgeEvent = AiForgeEvent::query()
+            ->where('is_active', true)
+            ->withCount('registrations')
+            ->first();
+
         return Inertia::render('Home', [
             'stats' => $stats,
             'featuredPrograms' => $featuredPrograms,
             'upcomingEvents' => $upcomingEvents,
             'successStories' => $successStories,
             'careerOpenings' => $careerOpenings,
+            'aiForgeEvent' => $aiForgeEvent,
         ]);
     }
 

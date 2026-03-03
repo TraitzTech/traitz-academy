@@ -61,7 +61,13 @@ class PaymentController extends Controller
 
         $application->load('program');
 
-        $payment = DB::transaction(function () use ($application, $validated) {
+        // Sanitize payer phone: strip all non-digit characters, then remove leading country code (237)
+        $sanitizedPayerPhone = preg_replace('/\D/', '', $validated['payer_phone']);
+        if (str_starts_with($sanitizedPayerPhone, '237') && strlen($sanitizedPayerPhone) > 9) {
+            $sanitizedPayerPhone = substr($sanitizedPayerPhone, 3);
+        }
+
+        $payment = DB::transaction(function () use ($application, $validated, $sanitizedPayerPhone) {
             $lockedApplication = Application::query()
                 ->whereKey($application->id)
                 ->with('program')
@@ -89,7 +95,7 @@ class PaymentController extends Controller
                 'user_id' => (int) auth()->id(),
                 'program_id' => $lockedApplication->program_id,
                 'reference' => $this->buildReference(),
-                'payer_phone' => $validated['payer_phone'],
+                'payer_phone' => $sanitizedPayerPhone,
                 'provider' => $validated['provider'],
                 'amount' => $amount,
                 'base_amount' => $baseAmount,
@@ -106,8 +112,8 @@ class PaymentController extends Controller
 
         try {
             $gatewayResponse = $this->paymentGateway->collect([
-                'payer' => preg_replace('/\s+/', '', $payment->payer_phone),
-                'amount' => (float) $payment->amount,
+                'payer' => $sanitizedPayerPhone,
+                'amount' => (int) round((float) $payment->amount),
                 'service' => $payment->provider,
                 'country' => (string) config('services.mesomb.country', 'CM'),
                 'currency' => (string) $payment->currency,

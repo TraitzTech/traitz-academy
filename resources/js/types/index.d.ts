@@ -17,6 +17,12 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface NavGroup {
+    label: string;
+    icon?: LucideIcon;
+    items: NavItem[];
+}
+
 export type AppPageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {

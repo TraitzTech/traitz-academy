@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
                 'status' => fn () => $request->session()->get('status'),
             ],
+            'cartCount' => fn () => collect($request->session()->get('ai_forge_cart', []))->sum('quantity'),
         ];
     }
 }

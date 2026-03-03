@@ -14,118 +14,140 @@
           </Link>
 
           <!-- Desktop Navigation Links -->
-          <div class="hidden lg:flex items-center space-x-8">
-            <Link 
+          <div class="hidden lg:flex items-center gap-1">
+            <Link
               href="/"
               :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
                 page.url === '/'
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
               ]"
             >
               Home
-              <span v-if="page.url === '/'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
             </Link>
 
-            <Link 
+            <Link
               href="/programs"
               :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
                 page.url.includes('/programs')
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
               ]"
             >
               Programs
-              <span v-if="page.url.includes('/programs')" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
             </Link>
 
-            <Link 
+            <Link
               href="/events"
               :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
                 page.url.includes('/events')
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
               ]"
             >
               Events
-              <span v-if="page.url.includes('/events')" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
             </Link>
 
-            <Link 
-              href="/gallery"
+            <!-- AI Forge -->
+            <Link
+              href="/ai-forge"
               :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
-                page.url.includes('/gallery')
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
+                page.url.includes('/ai-forge')
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
               ]"
             >
-              Gallery
-              <span v-if="page.url.includes('/gallery')" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
+              <span class="flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                AI Forge
+              </span>
             </Link>
 
-            <Link 
-              href="/resources"
-              :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
-                page.url.includes('/resources')
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
-              ]"
-            >
-              Resources
-              <span v-if="page.url.includes('/resources')" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
-            </Link>
+            <!-- Discover Dropdown -->
+            <div class="relative" @mouseenter="discoverOpen = true" @mouseleave="discoverOpen = false">
+              <button
+                :class="[
+                  'flex items-center gap-1 px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
+                  ['/gallery', '/resources', '/about', '/success-stories'].some(p => page.url.includes(p))
+                    ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                    : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
+                ]"
+              >
+                Discover
+                <svg :class="['w-3.5 h-3.5 transition-transform duration-200', discoverOpen ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </button>
 
-            <Link 
-              href="/about"
-              :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
-                page.url === '/about'
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
-              ]"
-            >
-              About
-              <span v-if="page.url === '/about'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
-            </Link>
+              <transition
+                enter-active-class="transition ease-out duration-150"
+                enter-from-class="opacity-0 -translate-y-1"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-100"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-1"
+              >
+                <div v-if="discoverOpen" class="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                  <Link href="/gallery" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#42b6c5] transition-colors">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Gallery
+                  </Link>
+                  <Link href="/resources" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#42b6c5] transition-colors">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    Resources
+                  </Link>
+                  <Link href="/success-stories" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#42b6c5] transition-colors">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                    Success Stories
+                  </Link>
+                  <Link href="/about" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#42b6c5] transition-colors">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    About Us
+                  </Link>
+                </div>
+              </transition>
+            </div>
 
-            <Link 
-              href="/success-stories"
-              :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
-                page.url === '/success-stories'
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
-              ]"
-            >
-              Success Stories
-              <span v-if="page.url === '/success-stories'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
-            </Link>
-
-            <Link 
+            <Link
               href="/contact"
               :class="[
-                'relative px-1 py-1 text-sm font-semibold transition-colors duration-200',
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
                 page.url === '/contact'
-                  ? 'text-[#42b6c5]'
-                  : 'text-gray-700 hover:text-[#42b6c5]'
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
               ]"
             >
               Contact
-              <span v-if="page.url === '/contact'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#42b6c5] rounded-full"></span>
             </Link>
           </div>
 
-          <!-- Desktop Auth & CTA Buttons -->
-          <div class="hidden lg:flex items-center space-x-4">
+          <!-- Desktop Right: Cart + Auth -->
+          <div class="hidden lg:flex items-center gap-3">
+            <!-- Cart Icon -->
+            <Link
+              href="/ai-forge/cart"
+              class="relative p-2 rounded-lg text-gray-600 hover:text-[#42b6c5] hover:bg-gray-50 transition-colors"
+              title="Shopping Cart"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+              </svg>
+              <span
+                v-if="cartCount > 0"
+                class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-[#42b6c5] text-white text-[10px] font-bold rounded-full px-1"
+              >
+                {{ cartCount > 99 ? '99+' : cartCount }}
+              </span>
+            </Link>
+
+            <div class="w-px h-6 bg-gray-200"></div>
+
             <template v-if="$page.props.auth.user">
               <Link
                 :href="['cto', 'ceo', 'program_coordinator', 'admin'].includes($page.props.auth.user.role) ? '/admin/dashboard' : '/dashboard'"
-                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#42b6c5] transition-colors"
+                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#42b6c5] transition-colors rounded-lg hover:bg-gray-50"
               >
                 Dashboard
               </Link>
@@ -133,7 +155,7 @@
                 href="/logout"
                 method="post"
                 as="button"
-                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-red-600 transition-colors"
+                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-50"
               >
                 Logout
               </Link>
@@ -141,13 +163,13 @@
             <template v-else>
               <Link
                 href="/login"
-                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#42b6c5] transition-colors"
+                class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#42b6c5] transition-colors rounded-lg hover:bg-gray-50"
               >
                 Login
               </Link>
               <Link
                 href="/programs"
-                class="inline-flex items-center px-7 py-2.5 bg-[#42b6c5] text-white rounded-lg font-semibold text-sm hover:bg-[#35919e] shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                class="inline-flex items-center px-6 py-2.5 bg-[#42b6c5] text-white rounded-lg font-semibold text-sm hover:bg-[#35919e] shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
               >
                 Apply Now
                 <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,8 +179,24 @@
             </template>
           </div>
 
-          <!-- Mobile menu button -->
-          <div class="lg:hidden flex items-center space-x-2">
+          <!-- Mobile: Cart + menu button -->
+          <div class="lg:hidden flex items-center gap-2">
+            <!-- Mobile Cart Icon -->
+            <Link
+              href="/ai-forge/cart"
+              class="relative p-2 rounded-lg text-gray-600 hover:text-[#42b6c5] transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+              </svg>
+              <span
+                v-if="cartCount > 0"
+                class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-[#42b6c5] text-white text-[10px] font-bold rounded-full px-1"
+              >
+                {{ cartCount > 99 ? '99+' : cartCount }}
+              </span>
+            </Link>
+
             <Link
               href="/programs"
               class="inline-flex items-center px-4 py-2 bg-[#42b6c5] text-white rounded-lg font-semibold text-xs hover:bg-[#35919e] transition-colors"
@@ -180,7 +218,7 @@
           </div>
         </div>
 
-        <!-- Mobile menu with slide transition -->
+        <!-- Mobile menu -->
         <transition
           enter-active-class="transition duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-2"
@@ -191,7 +229,21 @@
         >
           <div v-if="mobileMenuOpen" class="lg:hidden border-t border-gray-100 bg-white py-4">
             <div class="space-y-1 px-2">
-              <Link 
+              <!-- Main Links -->
+              <Link
+                href="/"
+                @click="mobileMenuOpen = false"
+                :class="[
+                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
+                  page.url === '/'
+                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
+                    : 'text-gray-700 hover:bg-gray-100'
+                ]"
+              >
+                Home
+              </Link>
+
+              <Link
                 href="/programs"
                 @click="mobileMenuOpen = false"
                 :class="[
@@ -201,15 +253,10 @@
                     : 'text-gray-700 hover:bg-gray-100'
                 ]"
               >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.25c0 2.848.992 5.541 2.581 7.65m9.419-10.4C17.5 6.253 22 10.998 22 17.25" />
-                  </svg>
-                  Programs
-                </div>
+                Programs
               </Link>
 
-              <Link 
+              <Link
                 href="/events"
                 @click="mobileMenuOpen = false"
                 :class="[
@@ -219,87 +266,28 @@
                     : 'text-gray-700 hover:bg-gray-100'
                 ]"
               >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Events
-                </div>
+                Events
               </Link>
 
-              <Link 
-                href="/gallery"
+              <Link
+                href="/ai-forge"
                 @click="mobileMenuOpen = false"
                 :class="[
                   'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
-                  page.url.includes('/gallery')
+                  page.url.includes('/ai-forge')
                     ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
                     : 'text-gray-700 hover:bg-gray-100'
                 ]"
               >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-10h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
-                  Gallery
-                </div>
+                  AI Forge
+                </span>
               </Link>
 
-              <Link 
-                href="/resources"
-                @click="mobileMenuOpen = false"
-                :class="[
-                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
-                  page.url.includes('/resources')
-                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
-                    : 'text-gray-700 hover:bg-gray-100'
-                ]"
-              >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.477 6.253 2 10.477 2 15.667 2 20.857 6.477 25 12 25s10-4.143 10-9.333c0-5.19-4.477-9.414-10-9.414z" />
-                  </svg>
-                  Resources
-                </div>
-              </Link>
-
-              <Link 
-                href="/about"
-                @click="mobileMenuOpen = false"
-                :class="[
-                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
-                  page.url === '/about'
-                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
-                    : 'text-gray-700 hover:bg-gray-100'
-                ]"
-              >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  About
-                </div>
-              </Link>
-
-              <Link 
-                href="/success-stories"
-                @click="mobileMenuOpen = false"
-                :class="[
-                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
-                  page.url === '/success-stories'
-                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
-                    : 'text-gray-700 hover:bg-gray-100'
-                ]"
-              >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                  </svg>
-                  Success Stories
-                </div>
-              </Link>
-
-              <Link 
+              <Link
                 href="/contact"
                 @click="mobileMenuOpen = false"
                 :class="[
@@ -309,28 +297,71 @@
                     : 'text-gray-700 hover:bg-gray-100'
                 ]"
               >
-                <div class="flex items-center">
-                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Contact
-                </div>
+                Contact
               </Link>
 
+              <!-- Discover Section -->
+              <div class="pt-2 mt-2 border-t border-gray-100">
+                <p class="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Discover</p>
+                <Link
+                  href="/gallery"
+                  @click="mobileMenuOpen = false"
+                  :class="[
+                    'block px-4 py-2.5 rounded-lg text-sm transition-colors duration-200',
+                    page.url.includes('/gallery')
+                      ? 'bg-[#42b6c5]/10 text-[#42b6c5] font-semibold'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  ]"
+                >
+                  Gallery
+                </Link>
+                <Link
+                  href="/resources"
+                  @click="mobileMenuOpen = false"
+                  :class="[
+                    'block px-4 py-2.5 rounded-lg text-sm transition-colors duration-200',
+                    page.url.includes('/resources')
+                      ? 'bg-[#42b6c5]/10 text-[#42b6c5] font-semibold'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  ]"
+                >
+                  Resources
+                </Link>
+                <Link
+                  href="/success-stories"
+                  @click="mobileMenuOpen = false"
+                  :class="[
+                    'block px-4 py-2.5 rounded-lg text-sm transition-colors duration-200',
+                    page.url === '/success-stories'
+                      ? 'bg-[#42b6c5]/10 text-[#42b6c5] font-semibold'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  ]"
+                >
+                  Success Stories
+                </Link>
+                <Link
+                  href="/about"
+                  @click="mobileMenuOpen = false"
+                  :class="[
+                    'block px-4 py-2.5 rounded-lg text-sm transition-colors duration-200',
+                    page.url === '/about'
+                      ? 'bg-[#42b6c5]/10 text-[#42b6c5] font-semibold'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  ]"
+                >
+                  About Us
+                </Link>
+              </div>
+
               <!-- Mobile Auth Links -->
-              <div class="border-t border-gray-100 mt-3 pt-3">
+              <div class="border-t border-gray-100 mt-2 pt-2">
                 <template v-if="$page.props.auth.user">
                   <Link
                     :href="['cto', 'ceo', 'program_coordinator', 'admin'].includes($page.props.auth.user.role) ? '/admin/dashboard' : '/dashboard'"
                     @click="mobileMenuOpen = false"
                     class="block px-4 py-3 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <div class="flex items-center">
-                      <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                      </svg>
-                      Dashboard
-                    </div>
+                    Dashboard
                   </Link>
                   <Link
                     href="/logout"
@@ -339,12 +370,7 @@
                     @click="mobileMenuOpen = false"
                     class="w-full block px-4 py-3 rounded-lg font-semibold text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
                   >
-                    <div class="flex items-center">
-                      <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      Logout
-                    </div>
+                    Logout
                   </Link>
                 </template>
                 <template v-else>
@@ -353,12 +379,7 @@
                     @click="mobileMenuOpen = false"
                     class="block px-4 py-3 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <div class="flex items-center">
-                      <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                      </svg>
-                      Login
-                    </div>
+                    Login
                   </Link>
                 </template>
               </div>
@@ -378,6 +399,30 @@
         </div>
         <div class="ml-3">
           <p class="text-sm font-medium text-green-800">{{ page.props.flash?.success }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-if="page.props.flash?.error" class="bg-red-50 border-l-4 border-red-500 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium text-red-800">{{ page.props.flash?.error }}</p>
+        </div>
+      </div>
+    </div>
+    <div v-if="page.props.flash?.info" class="bg-blue-50 border-l-4 border-blue-500 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium text-blue-800">{{ page.props.flash?.info }}</p>
         </div>
       </div>
     </div>
@@ -417,6 +462,7 @@
               <li><Link href="/about" class="hover:text-[#42b6c5] transition-colors">About Us</Link></li>
               <li><Link href="/events" class="hover:text-[#42b6c5] transition-colors">Events</Link></li>
               <li><Link href="/success-stories" class="hover:text-[#42b6c5] transition-colors">Success Stories</Link></li>
+              <li><Link href="/ai-forge" class="hover:text-[#42b6c5] transition-colors">AI Forge</Link></li>
               <li><Link href="/contact" class="hover:text-[#42b6c5] transition-colors">Contact</Link></li>
             </ul>
           </div>
@@ -484,10 +530,15 @@
 
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 import { Toaster } from '@/components/ui/toast';
 
 const page = usePage();
 const mobileMenuOpen = ref(false);
+const discoverOpen = ref(false);
+
+const cartCount = computed(() => {
+  return (page.props as Record<string, unknown>).cartCount as number ?? 0;
+});
 </script>
