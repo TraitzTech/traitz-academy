@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    ArrowDownToLine,
     BookOpen,
     Calendar,
     ClipboardList,
@@ -116,6 +117,27 @@ const financeGroup: NavGroup = {
     ],
 };
 
+const financeGroupWithWithdrawals: NavGroup = {
+    label: 'Finance',
+    items: [
+        {
+            title: 'Payments',
+            href: '/admin/payments',
+            icon: Wallet,
+        },
+        {
+            title: 'Expenses',
+            href: '/admin/expenses',
+            icon: Receipt,
+        },
+        {
+            title: 'Withdrawals',
+            href: '/admin/withdrawals',
+            icon: ArrowDownToLine,
+        },
+    ],
+};
+
 const contentGroup: NavGroup = {
     label: 'Content',
     items: [
@@ -219,7 +241,7 @@ const navGroups = computed<NavGroup[]>(() => {
         return userGroups;
     }
 
-    const groups = [academyGroup, admissionsGroup, financeGroup, contentGroup, aiForgeGroup];
+    const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup];
 
     if (isExecutive.value) {
         groups.push(systemGroup);

@@ -36,6 +36,7 @@ class User extends Authenticatable
         'phone',
         'role',
         'phone_required_prompted',
+        'withdrawal_pin',
     ];
 
     /**
@@ -48,6 +49,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'withdrawal_pin',
     ];
 
     /**
@@ -61,6 +63,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'withdrawal_pin' => 'hashed',
         ];
     }
 
@@ -102,6 +105,16 @@ class User extends Authenticatable
     public function recordedExpenses(): HasMany
     {
         return $this->hasMany(Expense::class, 'recorded_by');
+    }
+
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(Withdrawal::class);
+    }
+
+    public function hasWithdrawalPin(): bool
+    {
+        return ! is_null($this->withdrawal_pin);
     }
 
     public static function managedRoleOptions(): array

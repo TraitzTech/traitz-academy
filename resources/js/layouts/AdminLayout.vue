@@ -164,6 +164,22 @@
         </Link>
 
         <Link
+          href="/admin/withdrawals"
+          @click="closeSidebarOnMobile"
+          :class="[
+            'flex items-center px-4 py-3 rounded-lg font-semibold transition-colors duration-200',
+            page.url.includes('/admin/withdrawals')
+              ? 'bg-[#42b6c5] text-white'
+              : 'text-gray-300 hover:bg-gray-800'
+          ]"
+        >
+          <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l-4-4m4 4l4-4M5 12h14" />
+          </svg>
+          Withdrawals
+        </Link>
+
+        <Link
           href="/admin/settings"
           @click="closeSidebarOnMobile"
           :class="[

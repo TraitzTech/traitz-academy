@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WithdrawalController;
 use App\Http\Controllers\AiForgeCartController;
 use App\Http\Controllers\AiForgeController;
 use App\Http\Controllers\AiForgeSwagController;
@@ -185,6 +186,12 @@ Route::prefix('admin')
             Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
             Route::post('/emails/media', [EmailController::class, 'uploadMedia'])->name('emails.upload-media');
             Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
+
+            // Withdrawals
+            Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+            Route::post('/withdrawals/set-pin', [WithdrawalController::class, 'setPin'])->name('withdrawals.set-pin');
+            Route::post('/withdrawals/verify-account', [WithdrawalController::class, 'verifyAccount'])->name('withdrawals.verify-account');
+            Route::post('/withdrawals', [WithdrawalController::class, 'withdraw'])->name('withdrawals.store');
         });
 
         // Success Stories CRUD
