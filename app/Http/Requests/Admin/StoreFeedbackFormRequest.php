@@ -31,9 +31,26 @@ class StoreFeedbackFormRequest extends FormRequest
             'questions' => ['required', 'array', 'min:1'],
             'questions.*.question' => ['required', 'string', 'max:1000'],
             'questions.*.type' => ['required', 'in:text,multiple_choice'],
-            'questions.*.options' => ['nullable', 'array', 'min:2'],
+            'questions.*.options' => ['nullable', 'array'],
             'questions.*.options.*' => ['string', 'max:500'],
             'questions.*.required' => ['boolean'],
         ];
+    }
+
+    public function withValidator(\Illuminate\Contracts\Validation\Validator $validator): void
+    {
+        $validator->after(function ($validator) {
+            foreach ($this->input('questions', []) as $index => $question) {
+                if (($question['type'] ?? '') === 'multiple_choice') {
+                    $options = $question['options'] ?? [];
+                    if (! is_array($options) || count($options) < 2) {
+                        $validator->errors()->add(
+                            "questions.{$index}.options",
+                            'Multiple choice questions require at least 2 options.'
+                        );
+                    }
+                }
+            }
+        });
     }
 }

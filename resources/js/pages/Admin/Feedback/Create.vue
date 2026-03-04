@@ -73,7 +73,14 @@ const removeOption = (qIndex: number, oIndex: number) => {
 }
 
 const submit = () => {
-  form.post('/admin/feedback', {
+  const payload = {
+    ...form.data(),
+    questions: form.questions.map((q) => ({
+      ...q,
+      options: q.type === 'multiple_choice' ? q.options : null,
+    })),
+  }
+  form.transform(() => payload).post('/admin/feedback', {
     onSuccess: () => toast.success('Feedback form created!'),
     onError: () => toast.error('Please fix the errors and try again.'),
   })

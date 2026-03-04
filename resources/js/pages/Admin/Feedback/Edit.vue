@@ -94,7 +94,14 @@ const removeOption = (qIndex: number, oIndex: number) => {
 }
 
 const submit = () => {
-  editForm.put(`/admin/feedback/${props.form.id}`, {
+  const payload = {
+    ...editForm.data(),
+    questions: editForm.questions.map((q) => ({
+      ...q,
+      options: q.type === 'multiple_choice' ? q.options : null,
+    })),
+  }
+  editForm.transform(() => payload).put(`/admin/feedback/${props.form.id}`, {
     onSuccess: () => toast.success('Feedback form updated!'),
     onError: () => toast.error('Please fix the errors and try again.'),
   })
