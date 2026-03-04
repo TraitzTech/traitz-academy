@@ -238,11 +238,12 @@ const copyLink = (slug: string) => {
   </div>
 
   <ConfirmationModal
-    :show="showDeleteModal"
+    :open="showDeleteModal"
     title="Delete Feedback Form"
-    :message="`Are you sure you want to delete '${formToDelete?.title}'? All responses will be permanently deleted.`"
+    :description="`Are you sure you want to delete '${formToDelete?.title}'? All responses will be permanently deleted.`"
     confirm-text="Delete"
+    variant="destructive"
     @confirm="confirmDelete"
-    @cancel="showDeleteModal = false"
+    @update:open="showDeleteModal = $event"
   />
 </template>

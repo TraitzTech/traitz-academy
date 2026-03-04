@@ -7,6 +7,7 @@ import {
     ClipboardList,
     Folder,
     Image,
+    MessageCircle,
     LayoutGrid,
     Library,
     Lightbulb,
@@ -97,6 +98,11 @@ const admissionsGroup: NavGroup = {
             title: 'Interviews',
             href: '/admin/interviews',
             icon: MessageSquare,
+        },
+        {
+            title: 'Feedback',
+            href: '/admin/feedback',
+            icon: MessageCircle,
         },
     ],
 };

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { BarChart3, CheckCircle, Copy, ExternalLink, MessageSquare, Users } from 'lucide-vue-next'
+import { BarChart3, CheckCircle, Copy, ExternalLink, MessageSquare, Trash2, Users } from 'lucide-vue-next'
 import { ref } from 'vue'
 
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -91,6 +92,22 @@ const toggleStatus = () => {
   })
 }
 
+const showDeleteModal = ref(false)
+const deleteProcessing = ref(false)
+
+const confirmDelete = () => {
+  deleteProcessing.value = true
+  router.delete(`/admin/feedback/${props.form.id}`, {
+    onSuccess: () => {
+      toast.success('Feedback form deleted.')
+      showDeleteModal.value = false
+    },
+    onFinish: () => {
+      deleteProcessing.value = false
+    },
+  })
+}
+
 const maxBarValue = (data?: number[]) => Math.max(...(data ?? [1]), 1)
 
 const barWidth = (value: number, max: number) => `${Math.round((value / max) * 100)}%`
@@ -157,6 +174,13 @@ const barColors = ['bg-[#42b6c5]', 'bg-blue-400', 'bg-purple-400', 'bg-pink-400'
           <ExternalLink class="w-3.5 h-3.5" />
           Preview
         </a>
+        <button
+          @click="showDeleteModal = true"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+          Delete
+        </button>
       </div>
     </div>
 
@@ -347,4 +371,15 @@ const barColors = ['bg-[#42b6c5]', 'bg-blue-400', 'bg-purple-400', 'bg-pink-400'
       </div>
     </div>
   </div>
+
+  <ConfirmationModal
+    :open="showDeleteModal"
+    title="Delete Feedback Form"
+    :description="`Are you sure you want to delete '${form.title}'? All responses will be permanently deleted.`"
+    confirm-text="Delete"
+    variant="destructive"
+    :processing="deleteProcessing"
+    @confirm="confirmDelete"
+    @update:open="showDeleteModal = $event"
+  />
 </template>
