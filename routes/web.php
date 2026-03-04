@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\Admin\GalleryItemController as AdminGalleryItemController;
 use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Admin\LearningResourceController as AdminLearningResourceController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\AiForgeSwagController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GalleryItemController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\LearningResourceController;
@@ -33,6 +35,13 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
+
+// Feedback (public – no auth required)
+Route::prefix('feedback')->name('feedback.')->group(function () {
+    Route::get('/{slug}', [FeedbackController::class, 'fill'])->name('fill');
+    Route::post('/{slug}', [FeedbackController::class, 'submit'])->name('submit');
+    Route::get('/{slug}/thanks', [FeedbackController::class, 'thanks'])->name('thanks');
+});
 
 // Public pages
 Route::get('/', [PageController::class, 'home'])->name('home');
@@ -234,6 +243,11 @@ Route::prefix('admin')
         Route::get('/interviews/{interview}/responses', [AdminInterviewController::class, 'responses'])->name('interviews.responses');
         Route::get('/interviews/{interview}/responses/{response}', [AdminInterviewController::class, 'showResponse'])->name('interviews.responses.show');
         Route::post('/interviews/{interview}/responses/{response}/review', [AdminInterviewController::class, 'reviewResponse'])->name('interviews.responses.review');
+
+        // Feedback Forms
+        Route::resource('feedback', AdminFeedbackController::class)->except(['show'])->parameter('feedback', 'feedback');
+        Route::get('/feedback/{feedback}', [AdminFeedbackController::class, 'show'])->name('feedback.show');
+        Route::post('/feedback/{feedback}/toggle-status', [AdminFeedbackController::class, 'toggleStatus'])->name('feedback.toggle-status');
 
         // Account Settings
         Route::get('/account', AccountController::class)->name('account');
