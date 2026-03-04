@@ -58,6 +58,33 @@ class MesombDepositService
     }
 
     /**
+     * Fetch the current MeSomb application balance.
+     *
+     * @return array{total: float, balances: array<int, array{provider: string, country: string, value: float}>}
+     *
+     * @throws \RuntimeException
+     */
+    public function getBalance(): array
+    {
+        $creds = $this->credentials();
+
+        $client = new PaymentOperation($creds['application_key'], $creds['access_key'], $creds['secret_key']);
+
+        $application = $client->getStatus();
+
+        $balances = array_map(fn ($b) => [
+            'provider' => $b->provider ?? '',
+            'country' => $b->country ?? '',
+            'value' => (float) ($b->value ?? 0),
+        ], $application->balances ?? []);
+
+        return [
+            'total' => (float) $application->getBalance(),
+            'balances' => array_values($balances),
+        ];
+    }
+
+    /**
      * Look up the account holder name for a mobile money number via MeSomb Contact Info API.
      *
      * @param  array{provider: string, service_key: string, country?: string}  $params

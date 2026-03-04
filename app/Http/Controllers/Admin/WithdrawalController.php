@@ -42,6 +42,15 @@ class WithdrawalController extends Controller
             'stats' => $stats,
             'hasPin' => $user->hasWithdrawalPin(),
             'services' => Withdrawal::availableServices(),
+            'mesombBalance' => Inertia::defer(function () {
+                try {
+                    return app(MesombDepositService::class)->getBalance();
+                } catch (\Exception $e) {
+                    Log::warning('Failed to fetch MeSomb balance', ['error' => $e->getMessage()]);
+
+                    return null;
+                }
+            }),
         ]);
     }
 

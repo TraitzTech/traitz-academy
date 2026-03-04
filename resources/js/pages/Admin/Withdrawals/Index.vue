@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage, WhenVisible } from '@inertiajs/vue3'
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -65,6 +65,10 @@ interface Props {
   }
   hasPin: boolean
   services: string[]
+  mesombBalance: {
+    total: number
+    balances: Array<{ provider: string; country: string; value: number }>
+  } | null
 }
 
 const props = defineProps<Props>()
@@ -388,6 +392,52 @@ const goBackToVerificationFromPin = () => {
         </div>
       </div>
     </div>
+
+    <!-- MeSomb Account Balance -->
+    <WhenVisible data="mesombBalance">
+      <template #fallback>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 lg:p-6 mb-6 lg:mb-8 border border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div v-for="i in 3" :key="i" class="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+          </div>
+        </div>
+      </template>
+
+      <div v-if="mesombBalance !== null" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 lg:p-6 mb-6 lg:mb-8 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center gap-2 mb-4">
+          <Banknote class="w-5 h-5 text-[#42b6c5]" />
+          <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">MeSomb Account Balance</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Total -->
+          <div class="bg-cyan-50 dark:bg-cyan-900/20 rounded-lg p-4 border-l-4 border-[#42b6c5]">
+            <p class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">Total Balance</p>
+            <p class="text-2xl font-bold text-[#000928] dark:text-gray-100">{{ formatMoney(mesombBalance.total) }}</p>
+            <p class="text-xs text-gray-400 mt-0.5">XAF</p>
+          </div>
+
+          <!-- Per provider -->
+          <template v-for="balance in mesombBalance.balances" :key="balance.provider + balance.country">
+            <div
+              :class="[
+                'rounded-lg p-4 border-l-4',
+                balance.provider === 'MTN'
+                  ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400'
+                  : 'bg-orange-50 dark:bg-orange-900/20 border-orange-500',
+              ]"
+            >
+              <p class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">{{ balance.provider }}</p>
+              <p class="text-2xl font-bold text-[#000928] dark:text-gray-100">{{ formatMoney(balance.value) }}</p>
+              <p class="text-xs text-gray-400 mt-0.5">{{ balance.country }} · XAF</p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </WhenVisible>
 
     <!-- Withdrawal History -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
