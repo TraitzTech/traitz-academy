@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreFeedbackFormRequest;
 use App\Models\FeedbackAnswer;
 use App\Models\FeedbackForm;
 use App\Models\FeedbackQuestion;
+use App\Models\FeedbackResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -171,5 +172,15 @@ class FeedbackController extends Controller
         $feedback->update(['is_active' => ! $feedback->is_active]);
 
         return back()->with('success', $feedback->is_active ? 'Form activated.' : 'Form deactivated.');
+    }
+
+    public function destroyResponse(FeedbackForm $feedback, FeedbackResponse $response): RedirectResponse
+    {
+        abort_unless($response->feedback_form_id === $feedback->id, 404);
+
+        $response->answers()->delete();
+        $response->delete();
+
+        return back()->with('success', 'Response deleted successfully.');
     }
 }

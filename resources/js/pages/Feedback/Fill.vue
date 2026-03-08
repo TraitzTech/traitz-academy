@@ -52,11 +52,19 @@ const canSkipInfo = computed(() => {
   return (submitForm.respondent_name.trim().length > 0)
 })
 
+const attemptedSubmit = ref(false)
+
 const requiredUnanswered = computed(() => {
   return props.form.questions.filter((q) => {
     return q.required && !submitForm.answers[q.id]?.trim()
   })
 })
+
+const isQuestionInvalid = (questionId: number) => {
+  if (!attemptedSubmit.value) { return false }
+  const question = props.form.questions.find((q) => q.id === questionId)
+  return question?.required && !submitForm.answers[questionId]?.trim()
+}
 
 const proceed = () => {
   if (!canSkipInfo.value) { return }
@@ -65,6 +73,8 @@ const proceed = () => {
 }
 
 const submit = () => {
+  attemptedSubmit.value = true
+  if (requiredUnanswered.value.length > 0) { return }
   submitForm.is_anonymous = isAnonymous.value
   submitForm.post(`/feedback/${props.form.slug}`)
 }
@@ -201,7 +211,12 @@ const progressPercent = computed(() => {
               <div
                 v-for="(question, index) in form.questions"
                 :key="question.id"
-                class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
+                :class="[
+                  'bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border-2 transition-colors',
+                  isQuestionInvalid(question.id)
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-100 dark:border-gray-700',
+                ]"
               >
                 <div class="flex items-start gap-3 mb-4">
                   <span class="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-[#42b6c5]/10 text-[#42b6c5] text-sm font-bold rounded-full mt-0.5">
@@ -222,8 +237,16 @@ const progressPercent = computed(() => {
                   v-model="submitForm.answers[question.id]"
                   :placeholder="question.required ? 'Your answer is required…' : 'Your answer (optional)…'"
                   rows="4"
-                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/40 resize-none"
+                  :class="[
+                    'w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 resize-none border',
+                    isQuestionInvalid(question.id)
+                      ? 'border-red-400 dark:border-red-500 focus:ring-red-400/40'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-[#42b6c5]/40',
+                  ]"
                 />
+                <p v-if="question.type === 'text' && isQuestionInvalid(question.id)" class="mt-1.5 text-xs text-red-500 dark:text-red-400">
+                  This question requires an answer.
+                </p>
 
                 <!-- Multiple choice -->
                 <div v-else-if="question.type === 'multiple_choice' && question.options" class="space-y-2.5">
@@ -234,7 +257,9 @@ const progressPercent = computed(() => {
                       'flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all',
                       submitForm.answers[question.id] === option
                         ? 'border-[#42b6c5] bg-[#42b6c5]/5 dark:bg-[#42b6c5]/10'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-[#42b6c5]/50 hover:bg-gray-50 dark:hover:bg-gray-700/50',
+                        : isQuestionInvalid(question.id)
+                          ? 'border-red-300 dark:border-red-600 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-[#42b6c5]/50 hover:bg-gray-50 dark:hover:bg-gray-700/50',
                     ]"
                   >
                     <div
@@ -257,12 +282,15 @@ const progressPercent = computed(() => {
                       class="sr-only"
                     />
                   </label>
+                  <p v-if="isQuestionInvalid(question.id)" class="mt-1.5 text-xs text-red-500 dark:text-red-400">
+                    Please select an option.
+                  </p>
                 </div>
               </div>
 
               <!-- Required validation hint -->
-              <div v-if="requiredUnanswered.length > 0 && submitForm.hasErrors" class="px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
-                Please answer all required questions before submitting.
+              <div v-if="requiredUnanswered.length > 0 && attemptedSubmit" class="px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                Please answer all required questions ({{ requiredUnanswered.length }} remaining) before submitting.
               </div>
 
               <!-- Action buttons -->

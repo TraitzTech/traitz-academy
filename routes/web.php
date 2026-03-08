@@ -248,6 +248,7 @@ Route::prefix('admin')
         Route::resource('feedback', AdminFeedbackController::class)->except(['show'])->parameter('feedback', 'feedback');
         Route::get('/feedback/{feedback}', [AdminFeedbackController::class, 'show'])->name('feedback.show');
         Route::post('/feedback/{feedback}/toggle-status', [AdminFeedbackController::class, 'toggleStatus'])->name('feedback.toggle-status');
+        Route::delete('/feedback/{feedback}/responses/{response}', [AdminFeedbackController::class, 'destroyResponse'])->name('feedback.responses.destroy');
 
         // Account Settings
         Route::get('/account', AccountController::class)->name('account');

@@ -3,6 +3,7 @@
 use App\Models\FeedbackAnswer;
 use App\Models\FeedbackForm;
 use App\Models\FeedbackQuestion;
+use App\Models\FeedbackResponse;
 use App\Models\User;
 use App\Notifications\FeedbackThankYouNotification;
 use Illuminate\Support\Facades\Notification;
@@ -227,6 +228,36 @@ it('admin can delete a feedback form and its responses', function () {
         ->assertRedirect(route('admin.feedback.index'));
 
     $this->assertDatabaseMissing('feedback_forms', ['id' => $form->id]);
+});
+
+it('admin can delete an individual feedback response', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_CEO]);
+    $form = FeedbackForm::factory()->create(['created_by' => $admin->id]);
+    $question = FeedbackQuestion::factory()->create(['feedback_form_id' => $form->id]);
+    $response = FeedbackResponse::factory()->create(['feedback_form_id' => $form->id]);
+    $answer = FeedbackAnswer::factory()->create([
+        'feedback_response_id' => $response->id,
+        'feedback_question_id' => $question->id,
+        'answer' => 'Test answer',
+    ]);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.feedback.responses.destroy', [$form, $response]))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('feedback_responses', ['id' => $response->id]);
+    $this->assertDatabaseMissing('feedback_answers', ['id' => $answer->id]);
+});
+
+it('cannot delete a response that does not belong to the given form', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_CEO]);
+    $form = FeedbackForm::factory()->create(['created_by' => $admin->id]);
+    $otherForm = FeedbackForm::factory()->create(['created_by' => $admin->id]);
+    $response = FeedbackResponse::factory()->create(['feedback_form_id' => $otherForm->id]);
+
+    $this->actingAs($admin)
+        ->delete(route('admin.feedback.responses.destroy', [$form, $response]))
+        ->assertNotFound();
 });
 
 // -----------------------------------------------------------------------
