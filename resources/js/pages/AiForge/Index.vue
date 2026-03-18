@@ -203,7 +203,7 @@ const iconComponents: Record<string, string> = {
                 <!-- Stats -->
                 <div v-if="event.stats" class="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto">
                     <div class="text-center">
-                        <div class="text-3xl sm:text-4xl font-black text-white">{{ event.stats.total_registered ?? event.registrations_count ?? 0 }}</div>
+                        <div class="text-3xl sm:text-4xl font-black text-white">{{ (event.stats.total_registered ?? event.registrations_count ?? 0) + 20 }}</div>
                         <div class="text-sm text-gray-400 mt-1">Registered</div>
                     </div>
                     <div class="text-center">
