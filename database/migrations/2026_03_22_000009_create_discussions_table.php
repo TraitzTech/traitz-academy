@@ -11,29 +11,18 @@ return new class extends Migration
         Schema::create('discussions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('course_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('course_lesson_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('title');
+            $table->foreignId('lesson_id')->nullable()->constrained('course_lessons')->nullOnDelete();
+            $table->foreignId('parent_id')->nullable()->constrained('discussions')->cascadeOnDelete(); // null = top-level post, set = reply
             $table->text('body');
-            $table->boolean('is_pinned')->default(false);
-            $table->boolean('is_resolved')->default(false);
-            $table->unsignedInteger('replies_count')->default(0);
-            $table->timestamps();
-        });
-
-        Schema::create('discussion_replies', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('discussion_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->text('body');
-            $table->boolean('is_answer')->default(false); // marks reply as the accepted answer
+            $table->boolean('is_accepted_answer')->default(false);
+            $table->unsignedInteger('upvotes_count')->default(0);
+            $table->softDeletes();
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('discussion_replies');
         Schema::dropIfExists('discussions');
     }
 };

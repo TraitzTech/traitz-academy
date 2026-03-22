@@ -15,7 +15,8 @@ class Certificate extends Model
         'user_id',
         'course_id',
         'enrollment_id',
-        'certificate_number',
+        'verification_code',
+        'pdf_path',
         'issued_at',
     ];
 
@@ -26,8 +27,8 @@ class Certificate extends Model
         ];
     }
 
-    public static function generateNumber(): string
+    public static function generateVerificationCode(): string
     {
-        return 'CERT-'.now()->format('Y').'-'.strtoupper(Str::random(8));
+        return strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4));
     }
 }

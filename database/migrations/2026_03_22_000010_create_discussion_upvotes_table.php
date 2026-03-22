@@ -11,10 +11,10 @@ return new class extends Migration
         Schema::create('discussion_upvotes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->morphs('upvotable'); // supports both discussions and discussion_replies
+            $table->foreignId('discussion_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['user_id', 'upvotable_id', 'upvotable_type']);
+            $table->unique(['user_id', 'discussion_id']);
         });
     }
 

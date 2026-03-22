@@ -11,7 +11,7 @@ class QuizQuestion extends Model
     use HasFactory;
 
     protected $fillable = [
-        'course_lesson_id',
+        'quiz_id',
         'question',
         'type',
         'options',
@@ -24,9 +24,10 @@ class QuizQuestion extends Model
     protected function casts(): array
     {
         return [
-            'options'    => 'array',
-            'points'     => 'integer',
-            'sort_order' => 'integer',
+            'options'        => 'array',
+            'correct_answer' => 'array',
+            'points'         => 'integer',
+            'sort_order'     => 'integer',
         ];
     }
 

@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->foreignId('enrollment_id')->constrained()->cascadeOnDelete();
-            $table->string('certificate_number')->unique(); // e.g. CERT-2026-00042
+            $table->string('verification_code')->unique();
+            $table->string('pdf_path')->nullable();
             $table->timestamp('issued_at')->useCurrent();
             $table->timestamps();
 

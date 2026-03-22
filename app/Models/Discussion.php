@@ -4,44 +4,46 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Discussion extends Model
 {
-    /** @use HasFactory<\Database\Factories\DiscussionFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
-        'course_id',
-        'course_lesson_id',
-        'title',
+        'lesson_id',
+        'parent_id',
         'body',
-        'is_pinned',
-        'is_resolved',
-        'replies_count',
+        'is_accepted_answer',
+        'upvotes_count',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_pinned'    => 'boolean',
-            'is_resolved'  => 'boolean',
-            'replies_count' => 'integer',
+            'is_accepted_answer' => 'boolean',
+            'upvotes_count'      => 'integer',
         ];
     }
 
-    public function scopePinned($query)
+    public function isTopLevel(): bool
     {
-        return $query->where('is_pinned', true);
+        return is_null($this->parent_id);
     }
 
-    public function scopeResolved($query)
+    public function isReply(): bool
     {
-        return $query->where('is_resolved', true);
+        return ! is_null($this->parent_id);
     }
 
-    public function scopeUnresolved($query)
+    public function scopeTopLevel($query)
     {
-        return $query->where('is_resolved', false);
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeReplies($query)
+    {
+        return $query->whereNotNull('parent_id');
     }
 }

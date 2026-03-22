@@ -12,9 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_lesson_id')->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('watched_seconds')->default(0);  // seconds watched
-            $table->unsignedInteger('duration_seconds')->default(0); // total video duration
-            $table->decimal('percentage', 5, 2)->default(0.00);      // 0.00 – 100.00
+            $table->unsignedInteger('watched_seconds')->default(0);
+            $table->unsignedInteger('duration_seconds')->default(0);
+            $table->decimal('percentage', 5, 2)->default(0.00);
             $table->timestamp('last_watched_at')->useCurrent();
             $table->timestamps();
 

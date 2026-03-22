@@ -10,12 +10,12 @@ return new class extends Migration
     {
         Schema::create('quiz_questions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('course_lesson_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('quiz_id')->constrained()->cascadeOnDelete();
             $table->text('question');
-            $table->enum('type', ['multiple_choice', 'true_false', 'short_answer'])->default('multiple_choice');
-            $table->json('options')->nullable();      // array of answer choices for multiple_choice
-            $table->string('correct_answer');         // index (0-3) for multiple_choice, "true"/"false", or text for short_answer
-            $table->text('explanation')->nullable();  // shown to student after answering
+            $table->enum('type', ['multiple_choice', 'multiple_select', 'true_false', 'short_answer'])->default('multiple_choice');
+            $table->json('options')->nullable();      // array of answer choices
+            $table->json('correct_answer');           // single index, array of indices, "true"/"false", or text
+            $table->text('explanation')->nullable();  // shown after answering
             $table->unsignedTinyInteger('points')->default(1);
             $table->integer('sort_order')->default(0);
             $table->timestamps();

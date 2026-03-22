@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class DiscussionUpvote extends Model
 {
@@ -13,12 +12,6 @@ class DiscussionUpvote extends Model
 
     protected $fillable = [
         'user_id',
-        'upvotable_id',
-        'upvotable_type',
+        'discussion_id',
     ];
-
-    public function upvotable(): MorphTo
-    {
-        return $this->morphTo();
-    }
 }

@@ -13,9 +13,9 @@ return new class extends Migration
             $table->foreignId('enrollment_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_instalment_plan_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->unsignedTinyInteger('instalment_number'); // 1, 2, 3 ...
+            $table->unsignedTinyInteger('instalment_number');
             $table->decimal('amount', 10, 2);
-            $table->enum('status', ['pending', 'paid', 'failed', 'overdue'])->default('pending');
+            $table->enum('status', ['pending', 'paid', 'failed', 'overdue', 'refunded'])->default('pending');
             $table->string('transaction_reference')->nullable();
             $table->timestamp('due_date');
             $table->timestamp('paid_at')->nullable();

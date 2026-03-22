@@ -13,7 +13,9 @@ class Enrollment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
-        'status',
+        'instalment_plan_id',
+        'payment_type',
+        'access_status',
         'progress',
         'enrolled_at',
         'completed_at',
@@ -28,18 +30,33 @@ class Enrollment extends Model
         ];
     }
 
-    public function scopeActive($query)
+    public function isActive(): bool
     {
-        return $query->where('status', 'active');
+        return $this->access_status === 'active';
     }
 
-    public function scopeCompleted($query)
+    public function isSuspended(): bool
     {
-        return $query->where('status', 'completed');
+        return $this->access_status === 'suspended';
     }
 
     public function isCompleted(): bool
     {
-        return $this->status === 'completed';
+        return $this->access_status === 'completed';
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('access_status', 'active');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('access_status', 'completed');
+    }
+
+    public function scopeSuspended($query)
+    {
+        return $query->where('access_status', 'suspended');
     }
 }
