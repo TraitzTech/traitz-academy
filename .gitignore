@@ -17,6 +17,7 @@
 .phpactor.json
 .phpunit.result.cache
 Traitz_Academy_LMS_SRS.docx
+.~lock.Traitz_Academy_LMS_SRS.docx
 Homestead.json
 Homestead.yaml
 npm-debug.log
