@@ -14,14 +14,14 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained('course_categories')->nullOnDelete();
             $table->string('title');
             $table->string('slug')->unique();
-            $table->text('short_description');             // shown on catalog cards
-            $table->longText('description')->nullable();   // full detail page content
+            $table->text('short_description');
+            $table->longText('description')->nullable();
             $table->string('cover_image')->nullable();
             $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
             $table->enum('status', ['draft', 'pending_review', 'published', 'archived'])->default('draft');
             $table->decimal('price', 10, 2)->default(0.00);
             $table->decimal('sale_price', 10, 2)->nullable();
-            $table->string('duration')->nullable();        // e.g. "8 weeks", "10 hours"
+            $table->string('duration')->nullable();
             $table->boolean('is_featured')->default(false);
             $table->integer('enrolled_count')->default(0);
             $table->decimal('rating', 3, 2)->default(0.00);
