@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('instalment_plan_id')->nullable()->constrained('course_instalment_plans')->nullOnDelete();
+            $table->unsignedBigInteger('instalment_plan_id')->nullable(); // FK added after course_instalment_plans exists
             $table->enum('payment_type', ['full', 'instalment', 'free', 'admin_granted'])->default('full');
             $table->enum('access_status', ['active', 'suspended', 'revoked', 'completed'])->default('active');
             $table->unsignedTinyInteger('progress')->default(0); // 0–100 percentage, derived from lesson_completions
