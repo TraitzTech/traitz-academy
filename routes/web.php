@@ -1,0 +1,257 @@
+<?php
+
+use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\AiForgeController as AdminAiForgeController;
+use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderController;
+use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
+use App\Http\Controllers\Admin\AiForgeSwagController as AdminAiForgeSwagController;
+use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EmailController;
+use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
+use App\Http\Controllers\Admin\GalleryItemController as AdminGalleryItemController;
+use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
+use App\Http\Controllers\Admin\LearningResourceController as AdminLearningResourceController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SuccessStoryController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WithdrawalController;
+use App\Http\Controllers\AiForgeCartController;
+use App\Http\Controllers\AiForgeController;
+use App\Http\Controllers\AiForgeSwagController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\GalleryItemController;
+use App\Http\Controllers\InterviewController;
+use App\Http\Controllers\LearningResourceController;
+use App\Http\Controllers\PageController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\SearchController;
+use Illuminate\Support\Facades\Route;
+
+// Feedback (public – no auth required)
+Route::prefix('feedback')->name('feedback.')->group(function () {
+    Route::get('/{slug}', [FeedbackController::class, 'fill'])->name('fill');
+    Route::post('/{slug}', [FeedbackController::class, 'submit'])->name('submit');
+    Route::get('/{slug}/thanks', [FeedbackController::class, 'thanks'])->name('thanks');
+});
+
+// Public pages
+Route::get('/', [PageController::class, 'home'])->name('home');
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/success-stories', [PageController::class, 'successStories'])->name('success-stories');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::post('/contact', [PageController::class, 'submitContact'])->name('contact.submit');
+
+// Search API Routes
+Route::prefix('api/search')->name('search.')->group(function () {
+    Route::get('/options', [SearchController::class, 'options'])->name('options');
+    Route::get('/programs', [SearchController::class, 'programs'])->name('programs');
+    Route::get('/events', [SearchController::class, 'events'])->name('events');
+});
+
+// Programs
+Route::get('/programs', [ProgramController::class, 'index'])->name('programs.index');
+Route::get('/programs/{program:slug}', [ProgramController::class, 'show'])->name('programs.show');
+Route::get('/gallery', [GalleryItemController::class, 'index'])->name('gallery.index');
+Route::get('/gallery/{galleryItem:slug}', [GalleryItemController::class, 'show'])->name('gallery.show');
+Route::get('/resources', [LearningResourceController::class, 'index'])->name('resources.index');
+Route::get('/resources/{learningResource:slug}', [LearningResourceController::class, 'show'])->name('resources.show');
+
+// Applications (Authenticated)
+Route::middleware(['auth', 'ensure.phone'])->group(function () {
+    Route::get('/programs/{program}/apply', [ApplicationController::class, 'create'])->name('applications.create');
+    Route::get('/applications', fn () => redirect('/dashboard#applications'))->name('applications.index');
+    Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
+});
+
+// Events
+Route::get('/events', [EventController::class, 'index'])->name('events.index');
+Route::get('/events/{event:slug}', [EventController::class, 'show'])->name('events.show');
+Route::post('/events/register', [EventController::class, 'register'])->name('events.register');
+
+// AI Forge
+Route::prefix('ai-forge')->name('ai-forge.')->group(function () {
+    Route::get('/', [AiForgeController::class, 'index'])->name('index');
+    Route::post('/register', [AiForgeController::class, 'register'])->name('register');
+    Route::get('/swags', [AiForgeSwagController::class, 'index'])->name('swags.index');
+    Route::get('/swags/{swag:slug}', [AiForgeSwagController::class, 'show'])->name('swags.show');
+    Route::get('/cart', [AiForgeCartController::class, 'index'])->name('cart');
+    Route::post('/cart/add', [AiForgeCartController::class, 'addToCart'])->name('cart.add');
+    Route::put('/cart/update', [AiForgeCartController::class, 'updateCart'])->name('cart.update');
+    Route::delete('/cart/remove', [AiForgeCartController::class, 'removeFromCart'])->name('cart.remove');
+    Route::get('/checkout', [AiForgeCartController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout', [AiForgeCartController::class, 'processPayment'])->name('checkout.process');
+    Route::get('/orders/{order}/confirmation', [AiForgeCartController::class, 'confirmation'])->name('order.confirmation');
+});
+
+// User Dashboard (Authenticated)
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified', 'ensure.phone'])
+    ->name('dashboard');
+
+// Interviews (Authenticated)
+Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->name('interviews.')->group(function () {
+    Route::get('/{interview}', [InterviewController::class, 'show'])->name('show');
+    Route::post('/{interview}/submit', [InterviewController::class, 'submit'])->name('submit');
+    Route::get('/{interview}/result', [InterviewController::class, 'result'])->name('result');
+});
+
+Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('payments')->name('payments.')->group(function () {
+    Route::get('/{application}/checkout', [PaymentController::class, 'checkout'])->name('checkout');
+    Route::post('/{application}', [PaymentController::class, 'store'])->name('store');
+    Route::get('/receipts/{payment}/print', [PaymentController::class, 'printReceiptPdf'])->name('receipt.print');
+    Route::get('/receipts/{payment}/download', [PaymentController::class, 'downloadReceiptPdf'])->name('receipt.download');
+    Route::get('/receipts/{payment}', [PaymentController::class, 'receipt'])->name('receipt');
+});
+
+// Admin Routes (Protected)
+Route::prefix('admin')
+    ->middleware(['auth', 'verified', 'admin'])
+    ->name('admin.')
+    ->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+        // Programs CRUD
+        Route::resource('programs', AdminProgramController::class)->except(['show']);
+        Route::resource('gallery', AdminGalleryItemController::class)->except(['show']);
+        Route::resource('learning-resources', AdminLearningResourceController::class)->except(['show']);
+        Route::post('/programs/{program}/toggle-status', [AdminProgramController::class, 'toggleStatus'])->name('programs.toggle-status');
+        Route::post('/programs/{program}/toggle-featured', [AdminProgramController::class, 'toggleFeatured'])->name('programs.toggle-featured');
+        Route::post('/programs/bulk-destroy', [AdminProgramController::class, 'bulkDestroy'])->name('programs.bulk-destroy');
+
+        // Events CRUD
+        Route::resource('events', AdminEventController::class)->except(['show']);
+        Route::post('/events/{event}/toggle-status', [AdminEventController::class, 'toggleStatus'])->name('events.toggle-status');
+        Route::post('/events/bulk-destroy', [AdminEventController::class, 'bulkDestroy'])->name('events.bulk-destroy');
+        Route::get('/events/{event}/registrations', [AdminEventController::class, 'registrations'])->name('events.registrations');
+        Route::patch('/events/{event}/registrations/{registration}', [AdminEventController::class, 'updateRegistrationStatus'])->name('events.registrations.update');
+        Route::post('/events/{event}/registrations/bulk-update', [AdminEventController::class, 'bulkUpdateRegistrationStatus'])->name('events.registrations.bulk-update');
+        Route::post('/events/{event}/registrations/bulk-destroy', [AdminEventController::class, 'bulkDeleteRegistrations'])->name('events.registrations.bulk-destroy');
+        Route::post('/events/{event}/send-reminder', [AdminEventController::class, 'sendReminder'])->name('events.send-reminder');
+
+        // Applications Management
+        Route::get('/applications', [AdminApplicationController::class, 'index'])->name('applications.index');
+        Route::get('/applications/{application}', [AdminApplicationController::class, 'show'])->name('applications.show');
+        Route::get('/applications/{application}/edit', [AdminApplicationController::class, 'edit'])->name('applications.edit');
+        Route::put('/applications/{application}', [AdminApplicationController::class, 'update'])->name('applications.update');
+        Route::post('/applications/{application}/accept', [AdminApplicationController::class, 'accept'])->name('applications.accept');
+        Route::post('/applications/{application}/reject', [AdminApplicationController::class, 'reject'])->name('applications.reject');
+        Route::post('/applications/{application}/schedule-interview', [AdminApplicationController::class, 'scheduleInterview'])->name('applications.schedule-interview');
+        Route::post('/applications/{application}/payment-reminder', [AdminApplicationController::class, 'sendPaymentReminder'])->name('applications.payment-reminder');
+        Route::post('/applications/bulk', [AdminApplicationController::class, 'bulkAction'])->name('applications.bulk');
+        Route::post('/applications/bulk-schedule-interview', [AdminApplicationController::class, 'bulkScheduleInterview'])->name('applications.bulk-schedule-interview');
+        Route::post('/applications/bulk-payment-reminder', [AdminApplicationController::class, 'bulkPaymentReminder'])->name('applications.bulk-payment-reminder');
+        Route::delete('/applications/{application}', [AdminApplicationController::class, 'destroy'])->name('applications.destroy');
+
+        // Payments Management
+        Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
+        Route::post('/payments/manual', [AdminPaymentController::class, 'storeManual'])->name('payments.manual-store');
+        Route::patch('/payments/{payment}', [AdminPaymentController::class, 'update'])->name('payments.update');
+        Route::get('/payments/export', [AdminPaymentController::class, 'export'])
+            ->middleware('executive')
+            ->name('payments.export');
+
+        // Expenses Management
+        Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::patch('/expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('/expenses/bulk-destroy', [ExpenseController::class, 'bulkDestroy'])->name('expenses.bulk-destroy');
+        Route::get('/expenses/export', [ExpenseController::class, 'export'])->name('expenses.export');
+
+        Route::middleware('executive')->group(function () {
+            // Expense Categories (executive only)
+            Route::get('/expense-categories', [ExpenseController::class, 'categories'])->name('expense-categories.index');
+            Route::post('/expense-categories', [ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+            Route::patch('/expense-categories/{category}', [ExpenseController::class, 'updateCategory'])->name('expense-categories.update');
+            Route::delete('/expense-categories/{category}', [ExpenseController::class, 'destroyCategory'])->name('expense-categories.destroy');
+        });
+
+        Route::middleware('executive')->group(function () {
+            // Users Management
+            Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
+            Route::resource('users', UserController::class);
+            Route::post('/users/{user}/toggle-role', [UserController::class, 'toggleRole'])->name('users.toggle-role');
+            Route::post('/users/bulk-destroy', [UserController::class, 'bulkDestroy'])->name('users.bulk-destroy');
+
+            // Settings
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+            Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/upload', [SettingsController::class, 'uploadImage'])->name('settings.upload');
+            Route::delete('/settings/image/{key}', [SettingsController::class, 'deleteImage'])->name('settings.delete-image');
+
+            // Email Notifications
+            Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+            Route::post('/emails', [EmailController::class, 'send'])->name('emails.send');
+            Route::post('/emails/media', [EmailController::class, 'uploadMedia'])->name('emails.upload-media');
+            Route::post('/emails/preview', [EmailController::class, 'preview'])->name('emails.preview');
+
+            // Withdrawals
+            Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+            Route::post('/withdrawals/set-pin', [WithdrawalController::class, 'setPin'])->name('withdrawals.set-pin');
+            Route::post('/withdrawals/verify-account', [WithdrawalController::class, 'verifyAccount'])->name('withdrawals.verify-account');
+            Route::post('/withdrawals', [WithdrawalController::class, 'withdraw'])->name('withdrawals.store');
+        });
+
+        // Success Stories CRUD
+        Route::resource('success-stories', SuccessStoryController::class)->except(['show']);
+        Route::post('/success-stories/{success_story}/toggle-status', [SuccessStoryController::class, 'toggleStatus'])->name('success-stories.toggle-status');
+        Route::post('/success-stories/bulk-destroy', [SuccessStoryController::class, 'bulkDestroy'])->name('success-stories.bulk-destroy');
+
+        // AI Forge Management
+        Route::prefix('ai-forge')->name('ai-forge.')->group(function () {
+            Route::get('/', [AdminAiForgeController::class, 'index'])->name('index');
+            Route::post('/', [AdminAiForgeController::class, 'store'])->name('store');
+            Route::put('/{event}', [AdminAiForgeController::class, 'update'])->name('update');
+            Route::post('/{event}/toggle-active', [AdminAiForgeController::class, 'toggleActive'])->name('toggle-active');
+            Route::post('/{event}/toggle-registration', [AdminAiForgeController::class, 'toggleRegistration'])->name('toggle-registration');
+            Route::post('/{event}/toggle-swag-store', [AdminAiForgeController::class, 'toggleSwagStore'])->name('toggle-swag-store');
+            Route::put('/{event}/stats', [AdminAiForgeController::class, 'updateStats'])->name('update-stats');
+
+            // Swags CRUD
+            Route::resource('swags', AdminAiForgeSwagController::class)->except(['show']);
+            Route::post('/swags/{swag}/toggle-active', [AdminAiForgeSwagController::class, 'toggleActive'])->name('swags.toggle-active');
+            Route::post('/swags/{swag}/toggle-featured', [AdminAiForgeSwagController::class, 'toggleFeatured'])->name('swags.toggle-featured');
+
+            // Registrations
+            Route::get('/registrations', [AdminAiForgeRegistrationController::class, 'index'])->name('registrations.index');
+            Route::patch('/registrations/{registration}', [AdminAiForgeRegistrationController::class, 'updateStatus'])->name('registrations.update-status');
+            Route::delete('/registrations/{registration}', [AdminAiForgeRegistrationController::class, 'destroy'])->name('registrations.destroy');
+            Route::post('/registrations/bulk-update', [AdminAiForgeRegistrationController::class, 'bulkUpdateStatus'])->name('registrations.bulk-update');
+            Route::post('/registrations/{registration}/send-reminder', [AdminAiForgeRegistrationController::class, 'sendReminder'])->name('registrations.send-reminder');
+            Route::get('/registrations/export', [AdminAiForgeRegistrationController::class, 'export'])->name('registrations.export');
+
+            // Orders
+            Route::get('/orders', [AdminAiForgeOrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/{order}', [AdminAiForgeOrderController::class, 'show'])->name('orders.show');
+            Route::patch('/orders/{order}/status', [AdminAiForgeOrderController::class, 'updateStatus'])->name('orders.update-status');
+        });
+
+        // Interviews Management
+        Route::resource('interviews', AdminInterviewController::class)->except(['show']);
+        Route::post('/interviews/{interview}/toggle-status', [AdminInterviewController::class, 'toggleStatus'])->name('interviews.toggle-status');
+        Route::get('/interviews/{interview}/responses', [AdminInterviewController::class, 'responses'])->name('interviews.responses');
+        Route::get('/interviews/{interview}/responses/{response}', [AdminInterviewController::class, 'showResponse'])->name('interviews.responses.show');
+        Route::post('/interviews/{interview}/responses/{response}/review', [AdminInterviewController::class, 'reviewResponse'])->name('interviews.responses.review');
+
+        // Feedback Forms
+        Route::resource('feedback', AdminFeedbackController::class)->except(['show'])->parameter('feedback', 'feedback');
+        Route::get('/feedback/{feedback}', [AdminFeedbackController::class, 'show'])->name('feedback.show');
+        Route::post('/feedback/{feedback}/toggle-status', [AdminFeedbackController::class, 'toggleStatus'])->name('feedback.toggle-status');
+        Route::delete('/feedback/{feedback}/responses/{response}', [AdminFeedbackController::class, 'destroyResponse'])->name('feedback.responses.destroy');
+
+        // Account Settings
+        Route::get('/account', AccountController::class)->name('account');
+    });
+
+require __DIR__.'/settings.php';

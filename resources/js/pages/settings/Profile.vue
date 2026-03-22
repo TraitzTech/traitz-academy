@@ -1,0 +1,233 @@
+<script setup lang="ts">
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import DeleteUser from '@/components/DeleteUser.vue';
+import HeadingSmall from '@/components/HeadingSmall.vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { edit } from '@/routes/profile';
+import { send } from '@/routes/verification';
+import { type BreadcrumbItem } from '@/types';
+import { computed } from 'vue';
+
+interface Props {
+    mustVerifyEmail: boolean;
+    status?: string;
+    sessions: Array<{
+        id: string;
+        ip_address: string | null;
+        user_agent: string | null;
+        device: string;
+        last_active: string;
+        is_current: boolean;
+    }>;
+}
+
+const props = defineProps<Props>();
+
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: 'Profile settings',
+        href: edit().url,
+    },
+];
+
+const page = usePage();
+const user = page.props.auth.user;
+const phoneRequired = computed(() => page.props.flash?.status === 'phone-required' || !user.phone);
+
+const terminateSession = (sessionId: string) => {
+    router.delete(`/settings/sessions/${sessionId}`, {
+        preserveScroll: true,
+    });
+};
+
+const terminateOtherSessions = () => {
+    router.delete('/settings/sessions', {
+        preserveScroll: true,
+    });
+};
+</script>
+
+<template>
+    <AppLayout :breadcrumbs="breadcrumbItems">
+        <Head title="Profile settings" />
+
+        <h1 class="sr-only">Profile Settings</h1>
+
+        <SettingsLayout>
+            <!-- Phone Required Banner -->
+            <div v-if="phoneRequired && !user.phone" class="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600 p-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <svg class="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-amber-800 dark:text-amber-300">Phone Number Required</h3>
+                        <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                            Please add your phone/WhatsApp number to continue using the platform. This helps us reach you for important updates about your applications and interviews.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-6">
+                <HeadingSmall
+                    title="Profile information"
+                    description="Update your name, email address, and phone number"
+                />
+
+                <Form
+                    v-bind="ProfileController.update.form()"
+                    class="space-y-6"
+                    v-slot="{ errors, processing, recentlySuccessful }"
+                >
+                    <div class="grid gap-2">
+                        <Label for="name">Name</Label>
+                        <Input
+                            id="name"
+                            class="mt-1 block w-full"
+                            name="name"
+                            :default-value="user.name"
+                            required
+                            autocomplete="name"
+                            placeholder="Full name"
+                        />
+                        <InputError class="mt-2" :message="errors.name" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="email">Email address</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            class="mt-1 block w-full"
+                            name="email"
+                            :default-value="user.email"
+                            required
+                            autocomplete="username"
+                            placeholder="Email address"
+                        />
+                        <InputError class="mt-2" :message="errors.email" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="phone">Phone / WhatsApp Number <span class="text-red-500">*</span></Label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            class="mt-1 block w-full"
+                            :class="{ 'border-amber-400 ring-2 ring-amber-200': !user.phone }"
+                            name="phone"
+                            :default-value="user.phone || ''"
+                            required
+                            autocomplete="tel"
+                            placeholder="+234xxxxxxxxxx"
+                        />
+                        <p class="text-xs text-muted-foreground">Include country code (e.g., +234 for Nigeria). Used for offline calls and WhatsApp.</p>
+                        <InputError class="mt-2" :message="errors.phone" />
+                    </div>
+
+                    <div v-if="mustVerifyEmail && !user.email_verified_at">
+                        <p class="-mt-4 text-sm text-muted-foreground">
+                            Your email address is unverified.
+                            <Link
+                                :href="send()"
+                                as="button"
+                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                            >
+                                Click here to resend the verification email.
+                            </Link>
+                        </p>
+
+                        <div
+                            v-if="status === 'verification-link-sent'"
+                            class="mt-2 text-sm font-medium text-green-600"
+                        >
+                            A new verification link has been sent to your email
+                            address.
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <Button
+                            :disabled="processing"
+                            data-test="update-profile-button"
+                            >Save</Button
+                        >
+
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
+                            <p
+                                v-show="recentlySuccessful"
+                                class="text-sm text-neutral-600 dark:text-neutral-400"
+                            >
+                                Saved.
+                            </p>
+                        </Transition>
+                    </div>
+                </Form>
+            </div>
+
+            <DeleteUser />
+
+            <div class="mt-10 border-t pt-8 border-gray-200 dark:border-gray-700">
+                <div class="space-y-6">
+                    <HeadingSmall
+                        title="Active Sessions"
+                        description="Manage devices where your account is currently logged in"
+                    />
+
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+                        <div v-for="session in props.sessions" :key="session.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <p class="font-medium text-gray-900 dark:text-gray-100">
+                                    {{ session.device }}
+                                    <span v-if="session.is_current" class="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Current Device</span>
+                                </p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    IP: {{ session.ip_address || 'Unknown' }} • Last active {{ session.last_active }}
+                                </p>
+                            </div>
+
+                            <Button
+                                v-if="!session.is_current"
+                                type="button"
+                                variant="destructive"
+                                @click="terminateSession(session.id)"
+                            >
+                                Log out this device
+                            </Button>
+                        </div>
+
+                        <div v-if="props.sessions.length === 0" class="p-4 text-sm text-gray-500 dark:text-gray-400">
+                            No active sessions found.
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
+                            @click="terminateOtherSessions"
+                        >
+                            Log out other devices
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </SettingsLayout>
+    </AppLayout>
+</template>
