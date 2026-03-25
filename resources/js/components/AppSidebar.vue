@@ -3,6 +3,9 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowDownToLine,
     BookOpen,
+    BookMarked,
+    Award,
+    BarChart3,
     Calendar,
     ClipboardList,
     Folder,
@@ -13,8 +16,11 @@ import {
     Lightbulb,
     Mail,
     MessageSquare,
+    NotebookPen,
     Package,
+    PlusCircle,
     Receipt,
+    Search,
     Settings,
     ShoppingBag,
     UserCheck,
@@ -49,6 +55,7 @@ const adminRoles = ['cto', 'ceo', 'program_coordinator', 'admin']
 const executiveRoles = ['cto', 'ceo', 'admin']
 const isAdmin = computed(() => adminRoles.includes(String(user.value?.role ?? '')))
 const isExecutive = computed(() => executiveRoles.includes(String(user.value?.role ?? '')))
+const isTutor = computed(() => user.value?.role === 'tutor')
 
 // Admin standalone items (always visible at top)
 const adminStandaloneItems: NavItem[] = [
@@ -232,28 +239,95 @@ const userGroups: NavGroup[] = [
             },
         ],
     },
+    {
+        label: 'Courses',
+        items: [
+            {
+                title: 'All Courses',
+                href: '/dashboard/courses',
+                icon: Search,
+            },
+            {
+                title: 'My Courses',
+                href: '/dashboard/my-courses',
+                icon: BookMarked,
+            },
+            {
+                title: 'My Certificates',
+                href: '/dashboard/certificates',
+                icon: Award,
+            },
+            {
+                title: 'My Notes',
+                href: '/dashboard/notes',
+                icon: NotebookPen,
+            },
+        ],
+    },
+];
+
+// Tutor navigation
+const tutorStandaloneItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutGrid,
+    },
+];
+
+const tutorGroups: NavGroup[] = [
+    {
+        label: 'Teaching',
+        items: [
+            {
+                title: 'My Courses',
+                href: '/tutor/courses',
+                icon: BookOpen,
+            },
+            {
+                title: 'Create Course',
+                href: '/tutor/courses/create',
+                icon: PlusCircle,
+            },
+            {
+                title: 'My Students',
+                href: '/tutor/students',
+                icon: Users,
+            },
+            {
+                title: 'Discussions',
+                href: '/tutor/discussions',
+                icon: MessageCircle,
+            },
+        ],
+    },
+    {
+        label: 'Finance',
+        items: [
+            {
+                title: 'Earnings',
+                href: '/tutor/earnings',
+                icon: BarChart3,
+            },
+        ],
+    },
 ];
 
 // Computed navigation based on role
 const standaloneItems = computed<NavItem[]>(() => {
-    if (!isAdmin.value) {
-        return userStandaloneItems;
-    }
-    return adminStandaloneItems;
+    if (isAdmin.value) return adminStandaloneItems;
+    if (isTutor.value) return tutorStandaloneItems;
+    return userStandaloneItems;
 });
 
 const navGroups = computed<NavGroup[]>(() => {
-    if (!isAdmin.value) {
-        return userGroups;
+    if (isAdmin.value) {
+        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup];
+        if (isExecutive.value) groups.push(systemGroup);
+        return groups;
     }
-
-    const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup];
-
-    if (isExecutive.value) {
-        groups.push(systemGroup);
-    }
-
-    return groups;
+    if (isTutor.value) return tutorGroups;
+    return userGroups;
 });
 
 // Home link based on role

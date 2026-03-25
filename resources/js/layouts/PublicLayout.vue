@@ -51,19 +51,6 @@
               Events
             </Link>
 
-            <!-- Online Courses -->
-            <Link
-              href="/online-courses"
-              :class="[
-                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
-                page.url.includes('/online-courses')
-                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
-                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
-              ]"
-            >
-              Online Courses
-            </Link>
-
             <!-- AI Forge -->
             <Link
               href="/ai-forge"
@@ -133,6 +120,19 @@
               ]"
             >
               Contact
+            </Link>
+
+            <!-- Online Courses -->
+            <Link
+              href="/online-courses"
+              :class="[
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
+                page.url.includes('/online-courses')
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
+              ]"
+            >
+              Online Courses
             </Link>
           </div>
 
@@ -283,19 +283,6 @@
               </Link>
 
               <Link
-                href="/online-courses"
-                @click="mobileMenuOpen = false"
-                :class="[
-                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
-                  page.url.includes('/online-courses')
-                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
-                    : 'text-gray-700 hover:bg-gray-100'
-                ]"
-              >
-                Online Courses
-              </Link>
-
-              <Link
                 href="/ai-forge"
                 @click="mobileMenuOpen = false"
                 :class="[
@@ -324,6 +311,19 @@
                 ]"
               >
                 Contact
+              </Link>
+
+              <Link
+                href="/online-courses"
+                @click="mobileMenuOpen = false"
+                :class="[
+                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
+                  page.url.includes('/online-courses')
+                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
+                    : 'text-gray-700 hover:bg-gray-100'
+                ]"
+              >
+                Online Courses
               </Link>
 
               <!-- Discover Section -->
