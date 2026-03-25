@@ -51,6 +51,19 @@
               Events
             </Link>
 
+            <!-- Online Courses -->
+            <Link
+              href="/online-courses"
+              :class="[
+                'relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-200',
+                page.url.includes('/online-courses')
+                  ? 'text-[#42b6c5] bg-[#42b6c5]/5'
+                  : 'text-gray-700 hover:text-[#42b6c5] hover:bg-gray-50'
+              ]"
+            >
+              Online Courses
+            </Link>
+
             <!-- AI Forge -->
             <Link
               href="/ai-forge"
@@ -270,6 +283,19 @@
               </Link>
 
               <Link
+                href="/online-courses"
+                @click="mobileMenuOpen = false"
+                :class="[
+                  'block px-4 py-3 rounded-lg font-semibold text-sm transition-colors duration-200',
+                  page.url.includes('/online-courses')
+                    ? 'bg-[#42b6c5]/10 text-[#42b6c5]'
+                    : 'text-gray-700 hover:bg-gray-100'
+                ]"
+              >
+                Online Courses
+              </Link>
+
+              <Link
                 href="/ai-forge"
                 @click="mobileMenuOpen = false"
                 :class="[
@@ -460,6 +486,7 @@
             <h4 class="font-semibold mb-4">Quick Links</h4>
             <ul class="space-y-2 text-sm text-gray-300">
               <li><Link href="/about" class="hover:text-[#42b6c5] transition-colors">About Us</Link></li>
+              <li><Link href="/online-courses" class="hover:text-[#42b6c5] transition-colors">Online Courses</Link></li>
               <li><Link href="/events" class="hover:text-[#42b6c5] transition-colors">Events</Link></li>
               <li><Link href="/success-stories" class="hover:text-[#42b6c5] transition-colors">Success Stories</Link></li>
               <li><Link href="/ai-forge" class="hover:text-[#42b6c5] transition-colors">AI Forge</Link></li>
