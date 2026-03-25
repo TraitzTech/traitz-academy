@@ -40,6 +40,9 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        // Seed course categories
+        $this->call(CourseCategorySeeder::class);
+
         // // Create programs
         // $programs = Program::factory(15)->create();
 
