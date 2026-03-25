@@ -6,6 +6,7 @@ import {
 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
+import ConfirmationModal from '@/components/ConfirmationModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,9 +99,13 @@ function uploadCover() {
 
 // ─── Submit for review ────────────────────────────────────────────────────────
 
+const showSubmitModal = ref(false);
+
 function submitForReview() {
-  if (!confirm("Submit this course for admin review?")) return;
-  router.post(`/tutor/courses/${props.course.id}/submit`, {}, { preserveScroll: true });
+  router.post(`/tutor/courses/${props.course.id}/submit`, {}, {
+    preserveScroll: true,
+    onFinish: () => { showSubmitModal.value = false; },
+  });
 }
 
 // ─── Section management ───────────────────────────────────────────────────────
@@ -696,7 +701,7 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
           </li>
         </ul>
 
-        <button v-if="canSubmit" @click="submitForReview"
+        <button v-if="canSubmit" @click="showSubmitModal = true"
           class="inline-flex items-center gap-2 rounded-xl bg-[#381998] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#000928]">
           <Send class="h-4 w-4" /> Submit for Review
         </button>
@@ -710,4 +715,16 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
     </div>
 
   </AppLayout>
+
+  <!-- Submit for review confirmation -->
+  <ConfirmationModal
+    :open="showSubmitModal"
+    title="Submit for Review"
+    description="Once submitted, an admin will review your course before it goes live. You won't be able to edit it until the review is complete. Are you sure you're ready?"
+    confirm-text="Yes, Submit"
+    cancel-text="Not Yet"
+    variant="default"
+    @update:open="showSubmitModal = $event"
+    @confirm="submitForReview"
+  />
 </template>
