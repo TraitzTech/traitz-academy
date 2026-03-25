@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'executive' => \App\Http\Middleware\IsExecutive::class,
+            'tutor' => \App\Http\Middleware\IsTutor::class,
             'ensure.phone' => \App\Http\Middleware\EnsurePhoneNumber::class,
         ]);
     })

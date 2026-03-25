@@ -16,6 +16,8 @@ class User extends Authenticatable
 
     public const ROLE_USER = 'user';
 
+    public const ROLE_TUTOR = 'tutor';
+
     public const ROLE_CTO = 'cto';
 
     public const ROLE_CEO = 'ceo';
@@ -121,10 +123,16 @@ class User extends Authenticatable
     {
         return [
             self::ROLE_USER,
+            self::ROLE_TUTOR,
             self::ROLE_CTO,
             self::ROLE_CEO,
             self::ROLE_PROGRAM_COORDINATOR,
         ];
+    }
+
+    public function isTutor(): bool
+    {
+        return $this->role === self::ROLE_TUTOR;
     }
 
     public function isExecutive(): bool
