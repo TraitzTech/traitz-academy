@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Admin\AiForgeController as AdminAiForgeController;
 use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderController;
 use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
@@ -122,6 +123,13 @@ Route::prefix('admin')
 
         // Programs CRUD
         Route::resource('programs', AdminProgramController::class)->except(['show']);
+
+        // Course Categories
+        Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('course-categories.index');
+        Route::post('/course-categories', [AdminCourseCategoryController::class, 'store'])->name('course-categories.store');
+        Route::put('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'update'])->name('course-categories.update');
+        Route::delete('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'destroy'])->name('course-categories.destroy');
+        Route::post('/course-categories/{courseCategory}/toggle-active', [AdminCourseCategoryController::class, 'toggleActive'])->name('course-categories.toggle-active');
         Route::resource('gallery', AdminGalleryItemController::class)->except(['show']);
         Route::resource('learning-resources', AdminLearningResourceController::class)->except(['show']);
         Route::post('/programs/{program}/toggle-status', [AdminProgramController::class, 'toggleStatus'])->name('programs.toggle-status');

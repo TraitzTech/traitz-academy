@@ -90,6 +90,11 @@ const academyGroup: NavGroup = {
             href: '/admin/learning-resources',
             icon: Library,
         },
+        {
+            title: 'Course Categories',
+            href: '/admin/course-categories',
+            icon: Folder,
+        },
     ],
 };
 
