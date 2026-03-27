@@ -290,7 +290,7 @@ function formatXaf(n: number) {
     <Teleport to="body">
       <div
         v-if="showAddPlanModal"
-        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-10"
+        class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4"
         @click.self="showAddPlanModal = false"
       >
         <div class="w-full max-w-xl rounded-xl bg-gray-50 shadow-2xl dark:bg-gray-900">
