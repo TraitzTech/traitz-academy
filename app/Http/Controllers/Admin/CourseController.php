@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\CourseCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,6 +55,37 @@ class CourseController extends Controller
         ]);
     }
 
+    public function edit(Course $course): Response
+    {
+        return Inertia::render('Admin/Courses/Edit', [
+            'course' => $course->load('category:id,name,slug'),
+            'categories' => CourseCategory::active()->ordered()->get(['id', 'name', 'slug']),
+        ]);
+    }
+
+    public function update(Request $request, Course $course): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title'             => ['required', 'string', 'max:255'],
+            'category_id'       => ['nullable', 'exists:course_categories,id'],
+            'level'             => ['required', 'in:beginner,intermediate,advanced'],
+            'short_description' => ['required', 'string', 'max:500'],
+            'description'       => ['nullable', 'string'],
+            'price'             => ['required', 'numeric', 'min:0'],
+            'sale_price'        => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'duration'          => ['nullable', 'string', 'max:100'],
+            'status'            => ['required', 'in:draft,pending_review,published,archived'],
+            'is_featured'       => ['boolean'],
+        ]);
+
+        $course->update([
+            ...$validated,
+            'is_featured' => $request->boolean('is_featured'),
+        ]);
+
+        return redirect()->route('admin.courses.index')->with('success', 'Course updated successfully.');
+    }
+
     public function approve(Course $course): RedirectResponse
     {
         if ($course->status !== 'pending_review') {
@@ -84,5 +116,16 @@ class CourseController extends Controller
         $course->update(['status' => 'archived']);
 
         return back()->with('success', "Course \"{$course->title}\" archived.");
+    }
+
+    public function destroy(Course $course): RedirectResponse
+    {
+        if ($course->cover_image) {
+            Storage::disk('public')->delete($course->cover_image);
+        }
+
+        $course->delete();
+
+        return back()->with('success', 'Course deleted successfully.');
     }
 }

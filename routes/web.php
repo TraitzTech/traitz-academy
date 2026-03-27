@@ -129,6 +129,9 @@ Route::prefix('admin')
         // LMS — Courses
         Route::get('/courses', [AdminCourseController::class, 'index'])->name('courses.index');
         Route::get('/courses/{course}', [AdminCourseController::class, 'show'])->name('courses.show');
+        Route::get('/courses/{course}/edit', [AdminCourseController::class, 'edit'])->name('courses.edit');
+        Route::put('/courses/{course}', [AdminCourseController::class, 'update'])->name('courses.update');
+        Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])->name('courses.destroy');
         Route::get('/courses/{course}/pricing', [CoursePricingController::class, 'show'])->name('courses.pricing');
         Route::put('/courses/{course}/pricing', [CoursePricingController::class, 'update'])->name('courses.pricing.update');
         Route::post('/courses/{course}/instalment-plans', [CoursePricingController::class, 'storePlan'])->name('courses.instalment-plans.store');

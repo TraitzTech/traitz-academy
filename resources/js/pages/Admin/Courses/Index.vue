@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { Banknote, BookOpen, CheckSquare, Clock, Eye, Users } from 'lucide-vue-next'
+import { BookOpen, CheckSquare, Clock, Edit2, Eye, Trash2, Users } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import { debounce } from 'lodash-es'
 
@@ -53,10 +53,10 @@ const applyFilters = debounce(() => {
 
 watch([search, status, category], applyFilters)
 
-// Approve / Reject modals
+// Approve / Reject / Delete modals
 const approveTarget  = ref<Course | null>(null)
 const rejectTarget   = ref<Course | null>(null)
-const archiveTarget  = ref<Course | null>(null)
+const deleteTarget   = ref<Course | null>(null)
 
 function confirmApprove() {
   if (!approveTarget.value) return
@@ -70,10 +70,10 @@ function confirmReject() {
     onSuccess: () => { rejectTarget.value = null },
   })
 }
-function confirmArchive() {
-  if (!archiveTarget.value) return
-  router.post(`/admin/courses/${archiveTarget.value.id}/archive`, {}, {
-    onSuccess: () => { archiveTarget.value = null },
+function confirmDelete() {
+  if (!deleteTarget.value) return
+  router.delete(`/admin/courses/${deleteTarget.value.id}`, {
+    onSuccess: () => { deleteTarget.value = null },
   })
 }
 
@@ -237,27 +237,27 @@ function coverSrc(path: string | null) {
             >
               Review
             </button>
-            <button
-              v-if="course.status === 'published'"
-              @click="archiveTarget = course"
-              class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400"
-            >
-              Archive
-            </button>
-            <Link
-              :href="`/admin/courses/${course.id}/pricing`"
-              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/10"
-              title="Pricing & installments"
-            >
-              <Banknote class="h-4 w-4" />
-            </Link>
             <Link
               :href="`/admin/courses/${course.id}`"
               class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/10"
-              title="Preview"
+              title="View"
             >
               <Eye class="h-4 w-4" />
             </Link>
+            <Link
+              :href="`/admin/courses/${course.id}/edit`"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/10"
+              title="Edit"
+            >
+              <Edit2 class="h-4 w-4" />
+            </Link>
+            <button
+              @click="deleteTarget = course"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10"
+              title="Delete"
+            >
+              <Trash2 class="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -309,16 +309,16 @@ function coverSrc(path: string | null) {
       @confirm="confirmReject"
     />
 
-    <!-- Archive confirmation -->
+    <!-- Delete confirmation -->
     <ConfirmationModal
-      :open="!!archiveTarget"
-      title="Archive Course"
-      :description="archiveTarget ? `Archive &quot;${archiveTarget.title}&quot;? It will no longer be visible to students.` : ''"
-      confirm-text="Yes, Archive"
+      :open="!!deleteTarget"
+      title="Delete Course"
+      :description="deleteTarget ? `Delete &quot;${deleteTarget.title}&quot;? This cannot be undone.` : ''"
+      confirm-text="Yes, Delete"
       cancel-text="Cancel"
       variant="destructive"
-      @update:open="(val) => { if (!val) archiveTarget = null }"
-      @confirm="confirmArchive"
+      @update:open="(val) => { if (!val) deleteTarget = null }"
+      @confirm="confirmDelete"
     />
   </div>
 </template>
