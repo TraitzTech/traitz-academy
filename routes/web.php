@@ -1,13 +1,14 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountController;
-use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
-use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\AiForgeController as AdminAiForgeController;
 use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderController;
 use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
 use App\Http\Controllers\Admin\AiForgeSwagController as AdminAiForgeSwagController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Admin\CoursePricingController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
@@ -128,6 +129,11 @@ Route::prefix('admin')
         // LMS — Courses
         Route::get('/courses', [AdminCourseController::class, 'index'])->name('courses.index');
         Route::get('/courses/{course}', [AdminCourseController::class, 'show'])->name('courses.show');
+        Route::get('/courses/{course}/pricing', [CoursePricingController::class, 'show'])->name('courses.pricing');
+        Route::put('/courses/{course}/pricing', [CoursePricingController::class, 'update'])->name('courses.pricing.update');
+        Route::post('/courses/{course}/instalment-plans', [CoursePricingController::class, 'storePlan'])->name('courses.instalment-plans.store');
+        Route::put('/courses/{course}/instalment-plans/{plan}', [CoursePricingController::class, 'updatePlan'])->name('courses.instalment-plans.update');
+        Route::delete('/courses/{course}/instalment-plans/{plan}', [CoursePricingController::class, 'destroyPlan'])->name('courses.instalment-plans.destroy');
         Route::post('/courses/{course}/approve', [AdminCourseController::class, 'approve'])->name('courses.approve');
         Route::post('/courses/{course}/reject', [AdminCourseController::class, 'reject'])->name('courses.reject');
         Route::post('/courses/{course}/archive', [AdminCourseController::class, 'archive'])->name('courses.archive');
