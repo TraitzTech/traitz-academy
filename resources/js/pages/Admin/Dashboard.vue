@@ -176,9 +176,14 @@
             {{ pendingCourses.length }}
           </span>
         </div>
-        <a href="/admin/courses?status=pending_review" class="text-sm font-medium text-[#42b6c5] hover:text-[#35919e] transition-colors">
-          View all →
-        </a>
+        <div class="flex items-center gap-2">
+          <a href="/admin/courses" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-gray-400 dark:border-gray-600 dark:text-gray-300">
+            Manage Courses
+          </a>
+          <a href="/admin/courses?status=pending_review" class="rounded-lg bg-[#42b6c5] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#35919e]">
+            Pending Queue
+          </a>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -187,6 +192,14 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p class="text-sm text-gray-500 dark:text-gray-400">No courses awaiting review — you're all caught up!</p>
+        <div class="mt-4 flex items-center justify-center gap-2">
+          <a href="/admin/courses" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-gray-400 dark:border-gray-600 dark:text-gray-300">
+            Open Courses
+          </a>
+          <a href="/admin/course-categories" class="rounded-lg border border-[#381998]/30 px-3 py-1.5 text-xs font-semibold text-[#381998] transition-colors hover:bg-[#381998]/5 dark:border-[#42b6c5]/40 dark:text-[#42b6c5]">
+            Manage Categories
+          </a>
+        </div>
       </div>
 
       <!-- Course cards -->
@@ -226,6 +239,12 @@
               class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
             >
               Preview
+            </a>
+            <a
+              :href="`/admin/courses/${course.id}/pricing`"
+              class="rounded-lg border border-[#381998]/30 px-3 py-1.5 text-xs font-semibold text-[#381998] transition-colors hover:bg-[#381998]/5 dark:border-[#42b6c5]/40 dark:text-[#42b6c5]"
+            >
+              Pricing
             </a>
             <button
               @click="rejectCourse(course)"
