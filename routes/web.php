@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AccountController;
 use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\AiForgeController as AdminAiForgeController;
 use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderController;
 use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
@@ -123,6 +124,12 @@ Route::prefix('admin')
 
         // Programs CRUD
         Route::resource('programs', AdminProgramController::class)->except(['show']);
+
+        // LMS — Courses
+        Route::get('/courses', [AdminCourseController::class, 'index'])->name('courses.index');
+        Route::post('/courses/{course}/approve', [AdminCourseController::class, 'approve'])->name('courses.approve');
+        Route::post('/courses/{course}/reject', [AdminCourseController::class, 'reject'])->name('courses.reject');
+        Route::post('/courses/{course}/archive', [AdminCourseController::class, 'archive'])->name('courses.archive');
 
         // Course Categories
         Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('course-categories.index');

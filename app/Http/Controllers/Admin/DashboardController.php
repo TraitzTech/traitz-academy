@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
+use App\Models\Course;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Program;
@@ -38,12 +39,13 @@ class DashboardController extends Controller
         }
 
         $stats = [
-            'total_programs' => Program::count(),
-            'total_events' => Event::count(),
-            'pending_applications' => Application::where('status', 'pending')->count(),
-            'total_users' => User::whereNotIn('role', $adminRoles)->count(),
-            'total_collected' => (float) $totalCollectedQuery->sum('amount'),
-            'collected_label' => $authUser->isProgramCoordinator() ? 'My Collected' : 'Total Collected',
+            'total_programs'      => Program::count(),
+            'total_events'        => Event::count(),
+            'pending_applications'=> Application::where('status', 'pending')->count(),
+            'total_users'         => User::whereNotIn('role', $adminRoles)->count(),
+            'total_collected'     => (float) $totalCollectedQuery->sum('amount'),
+            'collected_label'     => $authUser->isProgramCoordinator() ? 'My Collected' : 'Total Collected',
+            'pending_courses'     => Course::where('status', 'pending_review')->count(),
         ];
 
         $recentApplications = Application::with('program')
@@ -51,9 +53,16 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $pendingCourses = Course::where('status', 'pending_review')
+            ->with('instructor:id,name', 'category:id,name,slug')
+            ->withCount('sections', 'enrollments')
+            ->latest()
+            ->get();
+
         return Inertia::render('Admin/Dashboard', [
-            'stats' => $stats,
+            'stats'              => $stats,
             'recentApplications' => $recentApplications,
+            'pendingCourses'     => $pendingCourses,
         ]);
     }
 }
