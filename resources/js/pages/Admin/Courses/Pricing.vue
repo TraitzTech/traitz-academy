@@ -124,7 +124,7 @@ function formatXaf(n: number) {
       </Link>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Pricing & instalments</h2>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Pricing & installments</h2>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ course.title }}</p>
         </div>
         <Link
@@ -180,15 +180,15 @@ function formatXaf(n: number) {
         </form>
       </div>
 
-      <!-- Instalment plans -->
+      <!-- Installment plans -->
       <div class="rounded-xl bg-white p-6 shadow dark:bg-gray-800">
-        <h3 class="mb-2 text-base font-semibold text-gray-900 dark:text-gray-100">Instalment plans</h3>
+        <h3 class="mb-2 text-base font-semibold text-gray-900 dark:text-gray-100">Installment plans</h3>
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
           Optional payment schedules for this course. Students can choose a plan at checkout when enrolment is enabled.
         </p>
 
         <div v-if="plans.length === 0" class="mb-6 rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-400 dark:border-gray-600">
-          No instalment plans yet.
+          No installment plans yet.
         </div>
 
         <div v-else class="mb-6 space-y-3">
@@ -239,7 +239,7 @@ function formatXaf(n: number) {
                   <input v-model="editPlan.name" type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-medium text-gray-600"># Instalments</label>
+                  <label class="mb-1 block text-xs font-medium text-gray-600"># Installments</label>
                   <input v-model.number="editPlan.number_of_instalments" type="number" min="2" max="48" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" />
                 </div>
                 <div>
@@ -271,7 +271,7 @@ function formatXaf(n: number) {
             class="inline-flex items-center gap-2 rounded-lg bg-[#000928] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#381998]"
             @click="openAddPlanModal"
           >
-            <Plus class="h-4 w-4" /> Add instalment plan
+            <Plus class="h-4 w-4" /> Add installment plan
           </button>
         </div>
       </div>
@@ -279,7 +279,7 @@ function formatXaf(n: number) {
 
     <ConfirmationModal
       :open="!!deleteTarget"
-      title="Remove instalment plan"
+      title="Remove installment plan"
       :description="deleteTarget ? `Remove &quot;${deleteTarget.name}&quot;?` : ''"
       confirm-text="Remove"
       variant="destructive"
@@ -295,7 +295,7 @@ function formatXaf(n: number) {
       >
         <div class="w-full max-w-xl rounded-xl bg-gray-50 shadow-2xl dark:bg-gray-900">
           <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">Add instalment plan</h4>
+            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">Add installment plan</h4>
             <button
               type="button"
               class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
@@ -320,7 +320,7 @@ function formatXaf(n: number) {
 
             <div class="grid gap-3 sm:grid-cols-2">
               <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Instalments *</label>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Installments *</label>
                 <input
                   v-model.number="newPlan.number_of_instalments"
                   type="number"

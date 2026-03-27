@@ -65,7 +65,7 @@ class CoursePricingController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        return back()->with('success', 'Instalment plan added.');
+        return back()->with('success', 'Installment plan added.');
     }
 
     public function updatePlan(Request $request, Course $course, CourseInstalmentPlan $plan): RedirectResponse
@@ -85,7 +85,7 @@ class CoursePricingController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        return back()->with('success', 'Instalment plan updated.');
+        return back()->with('success', 'Installment plan updated.');
     }
 
     public function destroyPlan(Course $course, CourseInstalmentPlan $plan): RedirectResponse
@@ -93,6 +93,6 @@ class CoursePricingController extends Controller
         abort_unless($plan->course_id === $course->id, 404);
         $plan->delete();
 
-        return back()->with('success', 'Instalment plan removed.');
+        return back()->with('success', 'Installment plan removed.');
     }
 }

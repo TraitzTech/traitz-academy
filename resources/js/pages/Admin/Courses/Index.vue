@@ -247,7 +247,7 @@ function coverSrc(path: string | null) {
             <Link
               :href="`/admin/courses/${course.id}/pricing`"
               class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/10"
-              title="Pricing & instalments"
+              title="Pricing & installments"
             >
               <Banknote class="h-4 w-4" />
             </Link>

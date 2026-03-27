@@ -123,7 +123,7 @@ function toggleSection(id: number) {
           :href="`/admin/courses/${course.id}/pricing`"
           class="rounded-lg border border-[#381998]/40 bg-[#381998]/5 px-5 py-2 text-sm font-semibold text-[#381998] transition-colors hover:bg-[#381998]/10 dark:border-[#42b6c5]/40 dark:text-[#42b6c5]"
         >
-          Pricing &amp; instalments
+          Pricing &amp; installments
         </Link>
         <template v-if="course.status === 'pending_review'">
           <button

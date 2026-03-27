@@ -294,12 +294,12 @@ const typeLabels: Record<string, string> = {
               <p class="text-center text-xs text-gray-400">Full access after purchase or enrolment.</p>
             </div>
 
-            <!-- Instalment plans -->
+            <!-- Installment plans -->
             <div
               v-if="instalmentPlans.length > 0 && priceInfo.amount > 0"
               class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
             >
-              <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Pay in instalments</h3>
+              <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Pay in installments</h3>
               <ul class="space-y-3">
                 <li
                   v-for="plan in instalmentPlans"
