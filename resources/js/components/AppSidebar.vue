@@ -90,11 +90,6 @@ const academyGroup: NavGroup = {
             href: '/admin/learning-resources',
             icon: Library,
         },
-        {
-            title: 'Course Categories',
-            href: '/admin/course-categories',
-            icon: Folder,
-        },
     ],
 };
 
@@ -189,6 +184,22 @@ const aiForgeGroup: NavGroup = {
             title: 'Orders',
             href: '/admin/ai-forge/orders',
             icon: Package,
+        },
+    ],
+};
+
+const lmsGroup: NavGroup = {
+    label: 'LMS',
+    items: [
+        {
+            title: 'Courses',
+            href: '/admin/courses',
+            icon: BookOpen,
+        },
+        {
+            title: 'Course Categories',
+            href: '/admin/course-categories',
+            icon: Folder,
         },
     ],
 };
@@ -327,7 +338,7 @@ const standaloneItems = computed<NavItem[]>(() => {
 
 const navGroups = computed<NavGroup[]>(() => {
     if (isAdmin.value) {
-        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup];
+        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup, lmsGroup];
         if (isExecutive.value) groups.push(systemGroup);
         return groups;
     }
