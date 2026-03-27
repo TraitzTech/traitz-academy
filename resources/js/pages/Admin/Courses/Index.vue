@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { BookOpen, CheckSquare, Clock, Eye, Users } from 'lucide-vue-next'
+import { Banknote, BookOpen, CheckSquare, Clock, Eye, Users } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import { debounce } from 'lodash-es'
 
@@ -244,6 +244,13 @@ function coverSrc(path: string | null) {
             >
               Archive
             </button>
+            <Link
+              :href="`/admin/courses/${course.id}/pricing`"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/10"
+              title="Pricing & instalments"
+            >
+              <Banknote class="h-4 w-4" />
+            </Link>
             <Link
               :href="`/admin/courses/${course.id}`"
               class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/10"
