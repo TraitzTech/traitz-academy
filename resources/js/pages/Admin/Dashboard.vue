@@ -286,6 +286,18 @@
       @update:open="showRejectModal = $event"
       @confirm="confirmReject"
     />
+
+    <!-- Delete confirmation -->
+    <ConfirmationModal
+      :open="showDeleteModal"
+      title="Delete Course"
+      :description="`Delete &quot;${courseTarget?.title}&quot;? This cannot be undone.`"
+      confirm-text="Yes, Delete"
+      cancel-text="Cancel"
+      variant="destructive"
+      @update:open="showDeleteModal = $event"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
@@ -307,6 +319,7 @@ defineOptions({ layout: AppLayout })
 
 const showApproveModal = ref(false)
 const showRejectModal  = ref(false)
+const showDeleteModal  = ref(false)
 const courseTarget     = ref(null)
 
 function approveCourse(course) {
@@ -317,6 +330,11 @@ function approveCourse(course) {
 function rejectCourse(course) {
   courseTarget.value   = course
   showRejectModal.value = true
+}
+
+function deleteCourse(course) {
+  courseTarget.value    = course
+  showDeleteModal.value = true
 }
 
 function confirmApprove() {
@@ -330,6 +348,13 @@ function confirmReject() {
   router.post(`/admin/courses/${courseTarget.value.id}/reject`, {}, {
     preserveScroll: true,
     onFinish: () => { showRejectModal.value = false; courseTarget.value = null },
+  })
+}
+
+function confirmDelete() {
+  router.delete(`/admin/courses/${courseTarget.value.id}`, {
+    preserveScroll: true,
+    onFinish: () => { showDeleteModal.value = false; courseTarget.value = null },
   })
 }
 
