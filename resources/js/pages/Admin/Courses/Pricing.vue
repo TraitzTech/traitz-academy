@@ -51,12 +51,21 @@ const newPlan = useForm({
   interval_in_days: 30,
   is_active: true,
 })
+const showAddPlanModal = ref(false)
 
 function addPlan() {
   newPlan.post(`/admin/courses/${props.course.id}/instalment-plans`, {
     preserveScroll: true,
-    onSuccess: () => newPlan.reset(),
+    onSuccess: () => {
+      newPlan.reset()
+      showAddPlanModal.value = false
+    },
   })
+}
+
+function openAddPlanModal() {
+  newPlan.reset()
+  showAddPlanModal.value = true
 }
 
 const editingId = ref<number | null>(null)
@@ -257,40 +266,13 @@ function formatXaf(n: number) {
         </div>
 
         <div class="border-t border-gray-100 pt-6 dark:border-gray-700">
-          <h4 class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
-            <Plus class="h-4 w-4" /> Add plan
-          </h4>
-          <form class="grid gap-3 sm:grid-cols-2" @submit.prevent="addPlan">
-            <div class="sm:col-span-2">
-              <label class="mb-1 block text-xs font-medium text-gray-600">Name</label>
-              <input v-model="newPlan.name" type="text" placeholder="e.g. 3-month plan" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" required />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">Instalments</label>
-              <input v-model.number="newPlan.number_of_instalments" type="number" min="2" max="48" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">XAF per instalment</label>
-              <input v-model="newPlan.amount_per_instalment" type="number" min="0" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" required />
-            </div>
-            <div>
-              <label class="mb-1 block text-xs font-medium text-gray-600">Days between payments</label>
-              <input v-model.number="newPlan.interval_in_days" type="number" min="1" max="365" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700" />
-            </div>
-            <label class="flex items-center gap-2 self-end pb-2">
-              <input v-model="newPlan.is_active" type="checkbox" class="rounded" />
-              <span class="text-sm">Active</span>
-            </label>
-            <div class="sm:col-span-2">
-              <button
-                type="submit"
-                :disabled="newPlan.processing"
-                class="rounded-lg bg-[#000928] px-4 py-2 text-sm font-semibold text-white hover:bg-[#381998] disabled:opacity-50"
-              >
-                {{ newPlan.processing ? 'Adding…' : 'Add instalment plan' }}
-              </button>
-            </div>
-          </form>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg bg-[#000928] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#381998]"
+            @click="openAddPlanModal"
+          >
+            <Plus class="h-4 w-4" /> Add instalment plan
+          </button>
         </div>
       </div>
     </div>
@@ -304,5 +286,100 @@ function formatXaf(n: number) {
       @update:open="(v) => { if (!v) deleteTarget = null }"
       @confirm="confirmDeletePlan"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="showAddPlanModal"
+        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-10"
+        @click.self="showAddPlanModal = false"
+      >
+        <div class="w-full max-w-xl rounded-xl bg-gray-50 shadow-2xl dark:bg-gray-900">
+          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+            <h4 class="text-base font-semibold text-gray-900 dark:text-gray-100">Add instalment plan</h4>
+            <button
+              type="button"
+              class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              @click="showAddPlanModal = false"
+            >
+              ×
+            </button>
+          </div>
+
+          <form class="space-y-4 p-6" @submit.prevent="addPlan">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Name *</label>
+              <input
+                v-model="newPlan.name"
+                type="text"
+                placeholder="e.g. 3-month plan"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                required
+              />
+              <p v-if="newPlan.errors.name" class="mt-1 text-xs text-red-600">{{ newPlan.errors.name }}</p>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Instalments *</label>
+                <input
+                  v-model.number="newPlan.number_of_instalments"
+                  type="number"
+                  min="2"
+                  max="48"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                />
+                <p v-if="newPlan.errors.number_of_instalments" class="mt-1 text-xs text-red-600">{{ newPlan.errors.number_of_instalments }}</p>
+              </div>
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Amount each (XAF) *</label>
+                <input
+                  v-model="newPlan.amount_per_instalment"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                  required
+                />
+                <p v-if="newPlan.errors.amount_per_instalment" class="mt-1 text-xs text-red-600">{{ newPlan.errors.amount_per_instalment }}</p>
+              </div>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Days between payments *</label>
+              <input
+                v-model.number="newPlan.interval_in_days"
+                type="number"
+                min="1"
+                max="365"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <p v-if="newPlan.errors.interval_in_days" class="mt-1 text-xs text-red-600">{{ newPlan.errors.interval_in_days }}</p>
+            </div>
+
+            <label class="flex items-center gap-2">
+              <input v-model="newPlan.is_active" type="checkbox" class="rounded" />
+              <span class="text-sm text-gray-700 dark:text-gray-300">Active</span>
+            </label>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                class="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
+                @click="showAddPlanModal = false"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                :disabled="newPlan.processing"
+                class="rounded-lg bg-[#000928] px-4 py-2 text-sm font-semibold text-white hover:bg-[#381998] disabled:opacity-50"
+              >
+                {{ newPlan.processing ? 'Adding…' : 'Add plan' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
