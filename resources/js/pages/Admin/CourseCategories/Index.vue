@@ -279,7 +279,7 @@ function doDelete() {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         @click.self="closeModal"
       >
-        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
           <!-- Modal header -->
           <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">
