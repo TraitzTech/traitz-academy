@@ -119,12 +119,12 @@ function submitForm() {
   if (editingId.value) {
     form.put(`/admin/course-categories/${editingId.value}`, {
       preserveScroll: true,
-      onSuccess: () => { closeModal(); toast.success('Category updated.') },
+      onSuccess: () => closeModal(),
     })
   } else {
     form.post('/admin/course-categories', {
       preserveScroll: true,
-      onSuccess: () => { closeModal(); toast.success('Category created.') },
+      onSuccess: () => closeModal(),
     })
   }
 }
@@ -134,8 +134,7 @@ function submitForm() {
 function toggleActive(cat: Category) {
   router.post(`/admin/course-categories/${cat.id}/toggle-active`, {}, {
     preserveScroll: true,
-    onSuccess: () => toast.success(`Category ${cat.is_active ? 'deactivated' : 'activated'}.`),
-    onError:   () => toast.error('Failed to update status.'),
+    onError: () => toast.error('Failed to update status.'),
   })
 }
 
@@ -151,7 +150,6 @@ function doDelete() {
   router.delete(`/admin/course-categories/${categoryToDelete.value.id}`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Category deleted.')
       showDeleteModal.value  = false
       categoryToDelete.value = null
     },
