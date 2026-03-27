@@ -376,7 +376,7 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
       confirm-text="Delete"
       cancel-text="Cancel"
       variant="destructive"
-      @update:open="if (!$event) deleteTarget = null"
+      @update:open="(val) => { if (!val) deleteTarget = null }"
       @confirm="confirmDelete"
     />
   </div>

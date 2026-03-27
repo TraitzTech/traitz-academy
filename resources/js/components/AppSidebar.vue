@@ -321,11 +321,6 @@ const tutorGroups: NavGroup[] = [
                 icon: Upload,
             },
             {
-                title: 'Upload Lesson',
-                href: '/tutor/lessons/upload',
-                icon: Upload,
-            },
-            {
                 title: 'My Students',
                 href: '/tutor/students',
                 icon: Users,

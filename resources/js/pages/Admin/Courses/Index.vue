@@ -286,7 +286,7 @@ function coverSrc(path: string | null) {
       confirm-text="Yes, Publish"
       cancel-text="Cancel"
       variant="default"
-      @update:open="if (!$event) approveTarget = null"
+      @update:open="(val) => { if (!val) approveTarget = null }"
       @confirm="confirmApprove"
     />
 
@@ -298,7 +298,7 @@ function coverSrc(path: string | null) {
       confirm-text="Yes, Reject"
       cancel-text="Cancel"
       variant="destructive"
-      @update:open="if (!$event) rejectTarget = null"
+      @update:open="(val) => { if (!val) rejectTarget = null }"
       @confirm="confirmReject"
     />
 
@@ -310,7 +310,7 @@ function coverSrc(path: string | null) {
       confirm-text="Yes, Archive"
       cancel-text="Cancel"
       variant="destructive"
-      @update:open="if (!$event) archiveTarget = null"
+      @update:open="(val) => { if (!val) archiveTarget = null }"
       @confirm="confirmArchive"
     />
   </div>
