@@ -2,6 +2,27 @@
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { Edit2, PlusCircle, Trash2, X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
+
+const ICON_OPTIONS = [
+  // Technology
+  '💻', '🖥️', '📱', '⌨️', '🖱️', '🖨️', '💾', '💿', '📡', '🔌',
+  // Data / AI
+  '🤖', '🧠', '📊', '📈', '📉', '🗃️', '🔢', '⚙️', '🔬', '🧪',
+  // Design
+  '🎨', '✏️', '🖊️', '🖌️', '📐', '📏', '🎭', '🖼️', '✂️', '🎬',
+  // Business
+  '💼', '📋', '📌', '🗂️', '📝', '🤝', '🏆', '💡', '🎯', '📣',
+  // Finance
+  '💰', '💵', '💳', '🏦', '📑', '🪙', '💹', '🏧', '💲', '🤑',
+  // Security
+  '🔐', '🔒', '🛡️', '🔑', '🗝️', '🚨', '👁️', '🔍', '🕵️', '⚠️',
+  // Cloud / DevOps
+  '☁️', '🌐', '🚀', '🛠️', '🔧', '🔩', '📦', '🏗️', '🔄', '⚡',
+  // Marketing
+  '📢', '📲', '🌟', '✨', '🎪', '📸', '🎙️', '📰', '🗣️', '👥',
+  // Education
+  '🎓', '📚', '📖', '🏫', '✍️', '🧑‍💻', '👨‍🏫', '📓', '🏅', '🎖️',
+]
 import { debounce } from 'lodash-es'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -323,16 +344,50 @@ function doDelete() {
             <!-- Icon + Colour row -->
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Icon <span class="text-xs font-normal text-gray-400">(emoji)</span>
-                </label>
-                <input
-                  v-model="form.icon"
-                  type="text"
-                  placeholder="🎓"
-                  maxlength="4"
-                  class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-center text-xl focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                />
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Icon</label>
+
+                <!-- Selected icon display -->
+                <div class="mb-2 flex items-center gap-3">
+                  <div
+                    class="flex h-10 w-10 items-center justify-center rounded-xl text-xl shadow-sm"
+                    :style="{ backgroundColor: form.color || '#381998' }"
+                  >
+                    <span v-if="form.icon">{{ form.icon }}</span>
+                    <span v-else class="text-sm font-bold text-white/60">?</span>
+                  </div>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ form.icon ? form.icon : 'No icon selected' }}
+                  </span>
+                  <button
+                    v-if="form.icon"
+                    type="button"
+                    @click="form.icon = ''"
+                    class="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <!-- Emoji picker grid -->
+                <div class="h-36 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-900">
+                  <div class="grid grid-cols-8 gap-1">
+                    <button
+                      v-for="emoji in ICON_OPTIONS"
+                      :key="emoji"
+                      type="button"
+                      @click="form.icon = emoji"
+                      :class="[
+                        'flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110',
+                        form.icon === emoji
+                          ? 'bg-[#381998]/20 ring-2 ring-[#381998] scale-110'
+                          : 'hover:bg-gray-200 dark:hover:bg-gray-700',
+                      ]"
+                      :title="emoji"
+                    >
+                      {{ emoji }}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div>
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Colour</label>
