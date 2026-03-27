@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -22,12 +22,15 @@ interface Course {
   price: string
   sale_price: string | null
   is_featured: boolean
-  instalmentPlans: Plan[]
+  instalmentPlans?: Plan[]
+  instalment_plans?: Plan[]
   instructor: { id: number; name: string } | null
   category: { id: number; name: string; slug: string } | null
 }
 
 const props = defineProps<{ course: Course }>()
+
+const plans = computed(() => props.course.instalment_plans ?? props.course.instalmentPlans ?? [])
 
 defineOptions({ layout: AppLayout })
 
@@ -175,13 +178,13 @@ function formatXaf(n: number) {
           Optional payment schedules for this course. Students can choose a plan at checkout when enrolment is enabled.
         </p>
 
-        <div v-if="course.instalmentPlans.length === 0" class="mb-6 rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-400 dark:border-gray-600">
+        <div v-if="plans.length === 0" class="mb-6 rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-400 dark:border-gray-600">
           No instalment plans yet.
         </div>
 
         <div v-else class="mb-6 space-y-3">
           <div
-            v-for="p in course.instalmentPlans"
+            v-for="p in plans"
             :key="p.id"
             class="rounded-lg border border-gray-100 p-4 dark:border-gray-700"
           >

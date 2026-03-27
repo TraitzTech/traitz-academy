@@ -60,7 +60,8 @@ interface Course {
   is_featured: boolean
   instructor: { id: number; name: string } | null
   category: { id: number; name: string; slug: string; icon: string | null; color: string | null } | null
-  instalmentPlans: InstalmentPlan[]
+  instalmentPlans?: InstalmentPlan[]
+  instalment_plans?: InstalmentPlan[]
   sections: SectionRow[]
 }
 
@@ -114,6 +115,8 @@ function planTotal(plan: InstalmentPlan) {
 }
 
 const enrolHref = computed(() => (isLoggedIn.value ? '/dashboard/courses' : '/login'))
+
+const instalmentPlans = computed(() => props.course.instalment_plans ?? props.course.instalmentPlans ?? [])
 
 const typeLabels: Record<string, string> = {
   video: 'Video',
@@ -293,13 +296,13 @@ const typeLabels: Record<string, string> = {
 
             <!-- Instalment plans -->
             <div
-              v-if="course.instalmentPlans.length > 0 && priceInfo.amount > 0"
+              v-if="instalmentPlans.length > 0 && priceInfo.amount > 0"
               class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
             >
               <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Pay in instalments</h3>
               <ul class="space-y-3">
                 <li
-                  v-for="plan in course.instalmentPlans"
+                  v-for="plan in instalmentPlans"
                   :key="plan.id"
                   class="rounded-xl border border-gray-100 bg-gray-50/80 p-4"
                 >
