@@ -7,6 +7,7 @@ import {
     Award,
     BarChart3,
     Calendar,
+    Clock,
     ClipboardList,
     Folder,
     Image,
@@ -188,7 +189,9 @@ const aiForgeGroup: NavGroup = {
     ],
 };
 
-const lmsGroup: NavGroup = {
+const pendingCoursesCount = computed(() => (page.props as Record<string, unknown>).pendingCoursesCount as number | null)
+
+const lmsGroup = computed<NavGroup>(() => ({
     label: 'LMS',
     items: [
         {
@@ -197,12 +200,18 @@ const lmsGroup: NavGroup = {
             icon: BookOpen,
         },
         {
+            title: 'Pending Courses',
+            href: '/admin/courses?status=pending_review',
+            icon: Clock,
+            badge: pendingCoursesCount.value || undefined,
+        },
+        {
             title: 'Course Categories',
             href: '/admin/course-categories',
             icon: Folder,
         },
     ],
-};
+}));
 
 const systemGroup: NavGroup = {
     label: 'System',
@@ -286,7 +295,7 @@ const userGroups: NavGroup[] = [
 const tutorStandaloneItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: '/dashboard',
+        href: '/tutor/dashboard',
         icon: LayoutGrid,
     },
 ];
@@ -338,7 +347,7 @@ const standaloneItems = computed<NavItem[]>(() => {
 
 const navGroups = computed<NavGroup[]>(() => {
     if (isAdmin.value) {
-        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup, lmsGroup];
+        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup, lmsGroup.value];
         if (isExecutive.value) groups.push(systemGroup);
         return groups;
     }

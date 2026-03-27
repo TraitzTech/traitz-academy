@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Course;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -49,6 +50,9 @@ class HandleInertiaRequests extends Middleware
                 'status' => fn () => $request->session()->get('status'),
             ],
             'cartCount' => fn () => collect($request->session()->get('ai_forge_cart', []))->sum('quantity'),
+            'pendingCoursesCount' => fn () => $request->user()?->role && in_array($request->user()->role, ['cto', 'ceo', 'program_coordinator', 'admin'])
+                ? Course::where('status', 'pending_review')->count()
+                : null,
         ];
     }
 }

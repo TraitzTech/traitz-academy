@@ -4,8 +4,9 @@ use App\Http\Controllers\Lms\AllCoursesController;
 use App\Http\Controllers\Lms\CourseCatalogueController;
 use App\Http\Controllers\Lms\MyCoursesController;
 use App\Http\Controllers\Tutor\CourseController as TutorCourseController;
-use App\Http\Controllers\Tutor\CourseSectionController;
 use App\Http\Controllers\Tutor\CourseLessonController;
+use App\Http\Controllers\Tutor\CourseSectionController;
+use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Public course catalogue
@@ -22,6 +23,9 @@ Route::middleware(['auth', 'verified', 'tutor'])
     ->prefix('tutor')
     ->name('tutor.')
     ->group(function () {
+
+        // Dashboard
+        Route::get('dashboard', [TutorDashboardController::class, 'index'])->name('dashboard');
 
         // Course CRUD
         Route::get('courses', [TutorCourseController::class, 'index'])->name('courses.index');
