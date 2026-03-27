@@ -4,7 +4,7 @@ import {
   ArrowLeft, BookOpen, ChevronDown, ChevronUp, Edit2, FileText,
   GripVertical, ImageIcon, Layers, PlusCircle, Send, Trash2, Video,
 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -77,23 +77,34 @@ function saveDetails() {
 // ─── Cover image ──────────────────────────────────────────────────────────────
 
 const coverForm    = useForm({ cover_image: null as File | null });
-const coverPreview = ref<string | null>(
-  props.course.cover_image
-    ? (props.course.cover_image.startsWith('http') ? props.course.cover_image : `/storage/${props.course.cover_image}`)
-    : null,
-);
+const localPreview = ref<string | null>(null);
+
+// Always reflects the latest prop value; localPreview takes precedence while a
+// file is selected but not yet uploaded.
+const coverPreview = computed(() => {
+  if (localPreview.value) return localPreview.value;
+  if (!props.course.cover_image) return null;
+  return props.course.cover_image.startsWith('http')
+    ? props.course.cover_image
+    : `/storage/${props.course.cover_image}`;
+});
 
 function onCoverSelected(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   coverForm.cover_image = file;
-  coverPreview.value = URL.createObjectURL(file);
+  localPreview.value = URL.createObjectURL(file);
 }
 
 function uploadCover() {
   coverForm.post(`/tutor/courses/${props.course.id}/cover`, {
     preserveScroll: true,
     forceFormData: true,
+    onSuccess: () => {
+      // Clear local blob URL — computed will now show the saved image from props
+      localPreview.value = null;
+      coverForm.cover_image = null;
+    },
   });
 }
 
