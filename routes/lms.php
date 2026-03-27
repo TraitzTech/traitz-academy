@@ -10,8 +10,10 @@ use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
 use App\Http\Controllers\Tutor\LessonUploadController;
 use Illuminate\Support\Facades\Route;
 
-// Public course catalogue
+// Public course catalogue & detail
 Route::get('/online-courses', [CourseCatalogueController::class, 'index'])->name('lms.catalogue');
+Route::get('/online-courses/{course}', [CourseCatalogueController::class, 'show'])->name('lms.catalogue.show');
+Route::get('/online-courses/{course}/lessons/{lesson}/preview', [CourseCatalogueController::class, 'preview'])->name('lms.catalogue.preview');
 
 // Authenticated student routes
 Route::middleware(['auth', 'verified'])->group(function () {

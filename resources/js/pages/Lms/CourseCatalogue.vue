@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BookOpen, Clock, Search, SlidersHorizontal, Star, Users, X } from 'lucide-vue-next';
+import { debounce } from 'lodash-es';
 import { computed, ref, watch } from 'vue';
 
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -57,6 +58,7 @@ interface Filters {
   category?: string;
   level?: string;
   sort?: string;
+  free?: string | boolean;
 }
 
 const props = defineProps<{
@@ -69,6 +71,7 @@ const search = ref(props.filters.search ?? '');
 const selectedCategory = ref(props.filters.category ?? '');
 const selectedLevel = ref(props.filters.level ?? '');
 const selectedSort = ref(props.filters.sort ?? '');
+const freeOnly = ref(props.filters.free === true || props.filters.free === '1' || props.filters.free === 1);
 const filtersOpen = ref(false);
 
 const levelLabels: Record<string, string> = {
@@ -88,21 +91,15 @@ const sortOptions = [
   { value: 'popular', label: 'Most Popular' },
   { value: 'rating', label: 'Highest Rated' },
   { value: 'newest', label: 'Newest' },
+  { value: 'price_asc', label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
 ];
 
-const activeFiltersCount = computed(() =>
-  [selectedCategory.value, selectedLevel.value, selectedSort.value].filter(Boolean).length
+const activeFiltersCount = computed(
+  () => [selectedCategory.value, selectedLevel.value, selectedSort.value, freeOnly.value].filter(Boolean).length,
 );
 
-let searchTimeout: ReturnType<typeof setTimeout>;
-watch(search, (val) => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => applyFilters(), val ? 400 : 0);
-});
-
-watch([selectedCategory, selectedLevel, selectedSort], () => applyFilters());
-
-function applyFilters() {
+const applyFilters = debounce(() => {
   router.get(
     '/online-courses',
     {
@@ -110,16 +107,21 @@ function applyFilters() {
       category: selectedCategory.value || undefined,
       level: selectedLevel.value || undefined,
       sort: selectedSort.value || undefined,
+      free: freeOnly.value ? '1' : undefined,
     },
     { preserveState: true, replace: true },
   );
-}
+}, 300);
+
+watch(search, () => applyFilters());
+watch([selectedCategory, selectedLevel, selectedSort, freeOnly], () => applyFilters());
 
 function clearFilters() {
   search.value = '';
   selectedCategory.value = '';
   selectedLevel.value = '';
   selectedSort.value = '';
+  freeOnly.value = false;
 }
 
 function formatPrice(price: string, salePrice: string | null) {
@@ -226,6 +228,7 @@ function coverUrl(url: string | null) {
             <!-- Clear filters -->
             <button
               v-if="activeFiltersCount > 0 || search"
+              type="button"
               @click="clearFilters"
               class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
             >
@@ -248,6 +251,7 @@ function coverUrl(url: string | null) {
                 <h3 class="mb-3 text-sm font-bold text-[#000928] uppercase tracking-wide">Category</h3>
                 <div class="space-y-1">
                   <button
+                    type="button"
                     @click="selectedCategory = ''"
                     :class="[
                       'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
@@ -257,6 +261,7 @@ function coverUrl(url: string | null) {
                     All Categories
                   </button>
                   <button
+                    type="button"
                     v-for="cat in categories"
                     :key="cat.id"
                     @click="selectedCategory = cat.slug"
@@ -271,11 +276,20 @@ function coverUrl(url: string | null) {
                 </div>
               </div>
 
+              <!-- Free only -->
+              <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                <label class="flex cursor-pointer items-center gap-3">
+                  <input v-model="freeOnly" type="checkbox" class="rounded border-gray-300 text-[#42b6c5] focus:ring-[#42b6c5]" />
+                  <span class="text-sm font-medium text-gray-700">Free courses only</span>
+                </label>
+              </div>
+
               <!-- Level filter -->
               <div class="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
                 <h3 class="mb-3 text-sm font-bold text-[#000928] uppercase tracking-wide">Level</h3>
                 <div class="space-y-1">
                   <button
+                    type="button"
                     @click="selectedLevel = ''"
                     :class="[
                       'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors',
@@ -285,6 +299,7 @@ function coverUrl(url: string | null) {
                     All Levels
                   </button>
                   <button
+                    type="button"
                     v-for="(label, value) in levelLabels"
                     :key="value"
                     @click="selectedLevel = value"
@@ -331,7 +346,7 @@ function coverUrl(url: string | null) {
                 <div class="relative h-44 overflow-hidden bg-gradient-to-br from-[#381998] to-[#42b6c5]">
                   <img
                     v-if="coverUrl(course.cover_image)"
-                    :src="coverUrl(course.cover_image)!"
+                    :src="coverUrl(course.cover_image) ?? undefined"
                     :alt="course.title"
                     class="h-full w-full object-cover opacity-80 transition-transform duration-300 group-hover:scale-105"
                   />
@@ -415,8 +430,7 @@ function coverUrl(url: string | null) {
                       ? 'bg-[#42b6c5] text-white shadow'
                       : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5]'
                   ]"
-                  v-html="link.label"
-                />
+                ><span v-html="link.label" /></Link>
                 <span
                   v-else
                   :class="[
