@@ -14,24 +14,32 @@ use Inertia\Response;
 
 class CourseController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $tutorId = auth()->id();
+        $search  = $request->input('search');
+        $status  = $request->input('status');
 
         $courses = Course::query()
             ->where('instructor_id', $tutorId)
             ->with('category:id,name,slug')
             ->withCount('enrollments')
+            ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
+            ->when($status, fn ($q) => $q->where('status', $status))
             ->latest()
             ->paginate(12)
             ->withQueryString();
 
+        $base = Course::where('instructor_id', $tutorId);
+
         return Inertia::render('Tutor/Courses/Index', [
             'courses' => $courses,
+            'filters' => ['search' => $search, 'status' => $status],
             'stats'   => [
-                'total'    => Course::where('instructor_id', $tutorId)->count(),
-                'active'   => Course::where('instructor_id', $tutorId)->where('status', 'published')->count(),
-                'pending'  => Course::where('instructor_id', $tutorId)->where('status', 'pending_review')->count(),
+                'total'    => (clone $base)->count(),
+                'active'   => (clone $base)->where('status', 'published')->count(),
+                'pending'  => (clone $base)->where('status', 'pending_review')->count(),
+                'draft'    => (clone $base)->where('status', 'draft')->count(),
                 'students' => \App\Models\Enrollment::whereHas(
                     'course', fn ($q) => $q->where('instructor_id', $tutorId)
                 )->distinct('user_id')->count('user_id'),
