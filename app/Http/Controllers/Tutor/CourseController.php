@@ -16,8 +16,10 @@ class CourseController extends Controller
 {
     public function index(): Response
     {
+        $tutorId = auth()->id();
+
         $courses = Course::query()
-            ->where('instructor_id', auth()->id())
+            ->where('instructor_id', $tutorId)
             ->with('category:id,name,slug')
             ->withCount('enrollments')
             ->latest()
@@ -26,6 +28,14 @@ class CourseController extends Controller
 
         return Inertia::render('Tutor/Courses/Index', [
             'courses' => $courses,
+            'stats'   => [
+                'total'    => Course::where('instructor_id', $tutorId)->count(),
+                'active'   => Course::where('instructor_id', $tutorId)->where('status', 'published')->count(),
+                'pending'  => Course::where('instructor_id', $tutorId)->where('status', 'pending_review')->count(),
+                'students' => \App\Models\Enrollment::whereHas(
+                    'course', fn ($q) => $q->where('instructor_id', $tutorId)
+                )->distinct('user_id')->count('user_id'),
+            ],
         ]);
     }
 

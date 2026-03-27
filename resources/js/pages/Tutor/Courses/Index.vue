@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { BookOpen, Clock, Edit2, PlusCircle, Trash2, Users } from 'lucide-vue-next';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { BookOpen, CheckSquare, Clock, Edit2, PlusCircle, Trash2, Users } from 'lucide-vue-next';
 import { ref } from 'vue';
 
+import ConfirmationModal from '@/components/ConfirmationModal.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 interface Category {
@@ -35,9 +36,11 @@ interface PaginatedCourses {
 
 const props = defineProps<{
   courses: PaginatedCourses;
+  stats: { total: number; active: number; pending: number; students: number };
 }>();
 
-const deletingId = ref<number | null>(null);
+const deletingId    = ref<number | null>(null);
+const deleteTarget  = ref<Course | null>(null);
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   draft:          { label: 'Draft',          class: 'bg-gray-100 text-gray-600' },
@@ -65,12 +68,16 @@ function formatPrice(price: string) {
 
 function confirmDelete(course: Course) {
   if (course.status === 'published') return;
-  if (confirm(`Delete "${course.title}"? This cannot be undone.`)) {
-    deletingId.value = course.id;
-    router.delete(`/tutor/courses/${course.id}`, {
-      onFinish: () => (deletingId.value = null),
-    });
-  }
+  deleteTarget.value = course;
+}
+
+function doDelete() {
+  if (!deleteTarget.value) return;
+  deletingId.value = deleteTarget.value.id;
+  router.delete(`/tutor/courses/${deleteTarget.value.id}`, {
+    onSuccess: () => { deleteTarget.value = null; },
+    onFinish:  () => { deletingId.value = null; },
+  });
 }
 </script>
 

@@ -9,6 +9,7 @@ import {
     Calendar,
     Clock,
     ClipboardList,
+    Upload,
     Folder,
     Image,
     MessageCircle,
@@ -313,6 +314,16 @@ const tutorGroups: NavGroup[] = [
                 title: 'Create Course',
                 href: '/tutor/courses/create',
                 icon: PlusCircle,
+            },
+            {
+                title: 'Upload Lesson',
+                href: '/tutor/lessons/upload',
+                icon: Upload,
+            },
+            {
+                title: 'Upload Lesson',
+                href: '/tutor/lessons/upload',
+                icon: Upload,
             },
             {
                 title: 'My Students',

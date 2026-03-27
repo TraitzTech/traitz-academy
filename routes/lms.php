@@ -7,6 +7,7 @@ use App\Http\Controllers\Tutor\CourseController as TutorCourseController;
 use App\Http\Controllers\Tutor\CourseLessonController;
 use App\Http\Controllers\Tutor\CourseSectionController;
 use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
+use App\Http\Controllers\Tutor\LessonUploadController;
 use Illuminate\Support\Facades\Route;
 
 // Public course catalogue
@@ -26,6 +27,11 @@ Route::middleware(['auth', 'verified', 'tutor'])
 
         // Dashboard
         Route::get('dashboard', [TutorDashboardController::class, 'index'])->name('dashboard');
+
+        // Lesson upload
+        Route::get('lessons/upload', [LessonUploadController::class, 'index'])->name('lessons.upload');
+        Route::post('lessons/upload', [LessonUploadController::class, 'store'])->name('lessons.upload.store');
+        Route::delete('lessons/{lesson}', [LessonUploadController::class, 'destroy'])->name('lessons.destroy');
 
         // Course CRUD
         Route::get('courses', [TutorCourseController::class, 'index'])->name('courses.index');
