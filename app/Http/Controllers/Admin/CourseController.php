@@ -15,8 +15,8 @@ class CourseController extends Controller
     public function index(Request $request): Response
     {
         $courses = Course::query()
-            ->with('instructor:id,name', 'category:id,name,slug')
-            ->withCount('enrollments')
+            ->with('instructor:id,name', 'category:id,name,slug,color,icon')
+            ->withCount('enrollments', 'sections')
             ->when($request->search, fn ($q) => $q->where('title', 'like', "%{$request->search}%"))
             ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->when($request->category, fn ($q) => $q->whereHas('category', fn ($c) => $c->where('slug', $request->category)))
@@ -28,6 +28,12 @@ class CourseController extends Controller
             'courses'    => $courses,
             'categories' => CourseCategory::active()->ordered()->get(['id', 'name', 'slug']),
             'filters'    => $request->only(['search', 'status', 'category']),
+            'stats'      => [
+                'total'     => Course::count(),
+                'published' => Course::where('status', 'published')->count(),
+                'pending'   => Course::where('status', 'pending_review')->count(),
+                'students'  => \App\Models\Enrollment::distinct('user_id')->count('user_id'),
+            ],
         ]);
     }
 
