@@ -297,198 +297,222 @@ function doDelete() {
     <Teleport to="body">
       <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-10"
         @click.self="closeModal"
       >
-        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+        <div class="w-full max-w-2xl rounded-xl bg-gray-50 shadow-2xl dark:bg-gray-900">
+
           <!-- Modal header -->
-          <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-              {{ editingId ? 'Edit Category' : 'New Category' }}
-            </h3>
-            <button @click="closeModal" class="rounded-lg p-1 text-gray-400 hover:text-gray-600 transition-colors">
+          <div class="flex items-center justify-between rounded-t-xl border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-800">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {{ editingId ? 'Edit Category' : 'New Course Category' }}
+              </h3>
+              <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                {{ editingId ? 'Update the details below.' : 'Fill in the details to add a new category.' }}
+              </p>
+            </div>
+            <button @click="closeModal" class="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
               <X class="h-5 w-5" />
             </button>
           </div>
 
-          <!-- Modal form -->
-          <form @submit.prevent="submitForm" class="space-y-4 px-6 py-5">
+          <form @submit.prevent="submitForm" class="space-y-5 p-6">
 
-            <!-- Name -->
-            <div>
-              <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Name <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="form.name"
-                type="text"
-                placeholder="e.g. Data Science"
-                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                :class="{ 'border-red-400': form.errors.name }"
-              />
-              <p v-if="form.errors.name" class="mt-1 text-xs text-red-500">{{ form.errors.name }}</p>
-            </div>
+            <!-- ── Basic Information ── -->
+            <div class="rounded-lg bg-white shadow dark:bg-gray-800 p-6">
+              <h4 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">Basic Information</h4>
+              <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 
-            <!-- Description -->
-            <div>
-              <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Description</label>
-              <textarea
-                v-model="form.description"
-                rows="2"
-                maxlength="500"
-                placeholder="Short description (optional)"
-                class="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-              />
-            </div>
-
-            <!-- Icon + Colour row -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Icon</label>
-
-                <!-- Selected icon display -->
-                <div class="mb-2 flex items-center gap-3">
-                  <div
-                    class="flex h-10 w-10 items-center justify-center rounded-xl text-xl shadow-sm"
-                    :style="{ backgroundColor: form.color || '#381998' }"
-                  >
-                    <span v-if="form.icon">{{ form.icon }}</span>
-                    <span v-else class="text-sm font-bold text-white/60">?</span>
-                  </div>
-                  <span class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ form.icon ? form.icon : 'No icon selected' }}
-                  </span>
-                  <button
-                    v-if="form.icon"
-                    type="button"
-                    @click="form.icon = ''"
-                    class="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    Clear
-                  </button>
+                <!-- Name -->
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Category Name <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    v-model="form.name"
+                    type="text"
+                    placeholder="e.g. Data Science & AI"
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                    :class="{ 'border-red-400 focus:ring-red-300': form.errors.name }"
+                  />
+                  <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
                 </div>
 
-                <!-- Emoji picker grid -->
-                <div class="h-36 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-900">
-                  <div class="grid grid-cols-8 gap-1">
-                    <button
-                      v-for="emoji in ICON_OPTIONS"
-                      :key="emoji"
-                      type="button"
-                      @click="form.icon = emoji"
+                <!-- Description -->
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <textarea
+                    v-model="form.description"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="Short description visible to tutors and students (optional)"
+                    class="w-full resize-none px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                  />
+                  <p class="mt-1 text-xs text-gray-400 text-right">{{ form.description.length }}/500</p>
+                </div>
+
+                <!-- Sort Order -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
+                  <input
+                    v-model="form.sort_order"
+                    type="number"
+                    min="0"
+                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Lower numbers appear first.</p>
+                </div>
+
+                <!-- Status -->
+                <div class="flex flex-col justify-center">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                  <label class="flex cursor-pointer items-center gap-3">
+                    <div
+                      @click="form.is_active = !form.is_active"
                       :class="[
-                        'flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110',
-                        form.icon === emoji
-                          ? 'bg-[#381998]/20 ring-2 ring-[#381998] scale-110'
-                          : 'hover:bg-gray-200 dark:hover:bg-gray-700',
+                        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer',
+                        form.is_active ? 'bg-[#42b6c5]' : 'bg-gray-300 dark:bg-gray-600',
                       ]"
-                      :title="emoji"
                     >
-                      {{ emoji }}
+                      <span :class="['inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform', form.is_active ? 'translate-x-6' : 'translate-x-1']" />
+                    </div>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                      {{ form.is_active ? 'Active — visible to tutors' : 'Inactive — hidden from tutors' }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Icon & Colour ── -->
+            <div class="rounded-lg bg-white shadow dark:bg-gray-800 p-6">
+              <h4 class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">Icon &amp; Colour</h4>
+
+              <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+                <!-- Icon picker -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Icon</label>
+
+                  <!-- Selected preview badge -->
+                  <div class="mb-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-700">
+                    <div
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl shadow-sm"
+                      :style="{ backgroundColor: form.color || '#381998' }"
+                    >
+                      <span v-if="form.icon">{{ form.icon }}</span>
+                      <span v-else class="text-sm font-bold text-white/50">?</span>
+                    </div>
+                    <span class="flex-1 text-sm text-gray-600 dark:text-gray-300">
+                      {{ form.icon ? 'Selected: ' + form.icon : 'No icon selected' }}
+                    </span>
+                    <button
+                      v-if="form.icon"
+                      type="button"
+                      @click="form.icon = ''"
+                      class="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Clear
                     </button>
                   </div>
-                </div>
-              </div>
-              <div>
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Colour</label>
-                <div class="flex items-center gap-2">
-                  <input
-                    v-model="form.color"
-                    type="color"
-                    class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-gray-200 p-0.5"
-                  />
-                  <input
-                    v-model="form.color"
-                    type="text"
-                    placeholder="#381998"
-                    class="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-mono focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                    :class="{ 'border-red-400': form.errors.color }"
-                  />
-                </div>
-                <!-- Preset swatches -->
-                <div class="mt-2 flex flex-wrap gap-1.5">
-                  <button
-                    v-for="c in PRESET_COLORS"
-                    :key="c"
-                    type="button"
-                    @click="form.color = c"
-                    :style="{ backgroundColor: c }"
-                    :class="[
-                      'h-5 w-5 rounded-full border-2 transition-transform hover:scale-110',
-                      form.color === c ? 'border-gray-800 scale-110' : 'border-transparent',
-                    ]"
-                  />
-                </div>
-                <p v-if="form.errors.color" class="mt-1 text-xs text-red-500">{{ form.errors.color }}</p>
-              </div>
-            </div>
 
-            <!-- Sort order + Active toggle -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Sort Order</label>
-                <input
-                  v-model="form.sort_order"
-                  type="number"
-                  min="0"
-                  class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              <div class="flex flex-col justify-center">
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Status</label>
-                <label class="flex cursor-pointer items-center gap-3">
-                  <div
-                    @click="form.is_active = !form.is_active"
-                    :class="[
-                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                      form.is_active ? 'bg-[#42b6c5]' : 'bg-gray-300 dark:bg-gray-600',
-                    ]"
-                  >
-                    <span
+                  <!-- Scrollable emoji grid -->
+                  <div class="h-40 overflow-y-auto rounded-lg border border-gray-300 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700">
+                    <div class="grid grid-cols-9 gap-1">
+                      <button
+                        v-for="emoji in ICON_OPTIONS"
+                        :key="emoji"
+                        type="button"
+                        @click="form.icon = emoji"
+                        :class="[
+                          'flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-600',
+                          form.icon === emoji ? 'bg-[#381998]/15 ring-2 ring-[#381998] dark:ring-purple-400 scale-110' : '',
+                        ]"
+                      >
+                        {{ emoji }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Colour picker -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Colour</label>
+
+                  <!-- Hex input + native picker -->
+                  <div class="mb-3 flex items-center gap-3">
+                    <input
+                      v-model="form.color"
+                      type="color"
+                      class="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-gray-300 p-0.5 dark:border-gray-600"
+                    />
+                    <input
+                      v-model="form.color"
+                      type="text"
+                      placeholder="#381998"
+                      class="flex-1 px-4 py-2 font-mono border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent text-sm"
+                      :class="{ 'border-red-400': form.errors.color }"
+                    />
+                  </div>
+                  <p v-if="form.errors.color" class="mb-2 text-sm text-red-600">{{ form.errors.color }}</p>
+
+                  <!-- Preset swatches -->
+                  <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Quick presets</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="c in PRESET_COLORS"
+                      :key="c"
+                      type="button"
+                      @click="form.color = c"
+                      :style="{ backgroundColor: c }"
                       :class="[
-                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                        form.is_active ? 'translate-x-6' : 'translate-x-1',
+                        'h-7 w-7 rounded-lg border-2 shadow-sm transition-all hover:scale-110',
+                        form.color === c ? 'border-gray-800 dark:border-white scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-transparent',
                       ]"
                     />
                   </div>
-                  <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ form.is_active ? 'Active' : 'Inactive' }}
+                </div>
+              </div>
+
+              <!-- Live preview -->
+              <div class="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700/40">
+                <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Live Preview</p>
+                <div class="flex items-center gap-4">
+                  <div
+                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow"
+                    :style="{ backgroundColor: form.color || '#381998' }"
+                  >
+                    <span v-if="form.icon">{{ form.icon }}</span>
+                    <span v-else class="text-sm font-bold text-white">{{ (form.name || 'C').charAt(0).toUpperCase() }}</span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">{{ form.name || 'Category Name' }}</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ form.description || 'Category description will appear here.' }}</p>
+                  </div>
+                  <span
+                    v-if="!form.is_active"
+                    class="ml-auto rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                  >
+                    Inactive
                   </span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Preview -->
-            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 dark:bg-gray-900/40 dark:border-gray-700">
-              <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Preview</p>
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-10 w-10 items-center justify-center rounded-xl text-lg shadow-sm"
-                  :style="{ backgroundColor: form.color || '#381998' }"
-                >
-                  <span v-if="form.icon">{{ form.icon }}</span>
-                  <span v-else class="text-xs font-bold text-white">{{ (form.name || 'C').charAt(0).toUpperCase() }}</span>
-                </div>
-                <div>
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ form.name || 'Category Name' }}</p>
-                  <p class="text-xs text-gray-400">{{ form.description || 'Description…' }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Actions -->
-            <div class="flex items-center justify-end gap-3 pt-2">
+            <!-- ── Actions ── -->
+            <div class="flex items-center justify-end gap-3">
               <button
                 type="button"
                 @click="closeModal"
-                class="rounded-xl px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                class="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 :disabled="form.processing"
-                class="inline-flex items-center gap-2 rounded-xl bg-[#381998] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-60 transition-colors"
+                class="px-6 py-2.5 bg-[#42b6c5] text-white font-semibold rounded-lg hover:bg-[#35919e] transition-colors disabled:opacity-50"
               >
                 {{ form.processing ? 'Saving…' : editingId ? 'Save Changes' : 'Create Category' }}
               </button>
