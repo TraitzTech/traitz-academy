@@ -127,6 +127,7 @@ Route::prefix('admin')
 
         // LMS — Courses
         Route::get('/courses', [AdminCourseController::class, 'index'])->name('courses.index');
+        Route::get('/courses/{course}', [AdminCourseController::class, 'show'])->name('courses.show');
         Route::post('/courses/{course}/approve', [AdminCourseController::class, 'approve'])->name('courses.approve');
         Route::post('/courses/{course}/reject', [AdminCourseController::class, 'reject'])->name('courses.reject');
         Route::post('/courses/{course}/archive', [AdminCourseController::class, 'archive'])->name('courses.archive');

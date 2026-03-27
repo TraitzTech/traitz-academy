@@ -222,7 +222,7 @@
           <!-- Actions -->
           <div class="flex shrink-0 items-center gap-2 self-end sm:self-auto">
             <a
-              :href="`/tutor/courses/${course.id}/edit`"
+              :href="`/admin/courses/${course.id}`"
               class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-gray-400 dark:border-gray-600 dark:text-gray-300"
             >
               Preview

@@ -31,6 +31,23 @@ class CourseController extends Controller
         ]);
     }
 
+    public function show(Course $course): Response
+    {
+        $course->load([
+            'instructor:id,name,email',
+            'category:id,name,slug,icon,color',
+            'sections' => fn ($q) => $q->orderBy('sort_order')->with([
+                'lessons' => fn ($q) => $q->orderBy('sort_order'),
+            ]),
+        ]);
+
+        $course->loadCount('enrollments', 'sections');
+
+        return Inertia::render('Admin/Courses/Show', [
+            'course' => $course,
+        ]);
+    }
+
     public function approve(Course $course): RedirectResponse
     {
         if ($course->status !== 'pending_review') {
