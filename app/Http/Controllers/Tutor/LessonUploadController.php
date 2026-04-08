@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\UploadLessonVideoToYouTube;
 use App\Models\Course;
 use App\Models\CourseLesson;
 use Illuminate\Http\RedirectResponse;
@@ -34,19 +35,19 @@ class LessonUploadController extends Controller
             ->take(10)
             ->get()
             ->map(fn ($l) => [
-                'id'         => $l->id,
-                'title'      => $l->title,
-                'type'       => $l->type,
-                'duration'   => $l->duration,
-                'course'     => $l->course?->title,
-                'section'    => $l->section?->title,
-                'is_free'    => $l->is_free,
-                'has_video'  => !empty($l->video_url),
+                'id' => $l->id,
+                'title' => $l->title,
+                'type' => $l->type,
+                'duration' => $l->duration,
+                'course' => $l->course?->title,
+                'section' => $l->section?->title,
+                'is_free' => $l->is_free,
+                'has_video' => ! empty($l->video_url),
                 'created_at' => $l->created_at?->diffForHumans(),
             ]);
 
         return Inertia::render('Tutor/Lessons/Upload', [
-            'courses'       => $courses,
+            'courses' => $courses,
             'recentLessons' => $recentLessons,
         ]);
     }
@@ -54,16 +55,15 @@ class LessonUploadController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'course_id'   => ['required', 'exists:courses,id'],
-            'section_id'  => ['required', 'exists:course_sections,id'],
-            'title'       => ['required', 'string', 'max:255'],
-            'type'        => ['required', 'in:video,text,quiz'],
+            'course_id' => ['required', 'exists:courses,id'],
+            'section_id' => ['required', 'exists:course_sections,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:video,text,quiz'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'duration'    => ['nullable', 'string', 'max:20'],
-            'is_free'     => ['boolean'],
-            'video_file'  => ['nullable', 'file', 'mimes:mp4,mov,avi,mkv,webm', 'max:512000'], // 500 MB
-            'video_url'   => ['nullable', 'string', 'max:500'],
-            'content'     => ['nullable', 'string'],
+            'duration' => ['nullable', 'string', 'max:20'],
+            'is_free' => ['boolean'],
+            'video_file' => ['nullable', 'required_if:type,video', 'file', 'mimes:mp4,mov,avi,mkv,webm,qt', 'max:512000'], // 500 MB
+            'content' => ['nullable', 'string'],
         ]);
 
         // Authorise — tutor must own the course
@@ -72,28 +72,32 @@ class LessonUploadController extends Controller
             ->firstOrFail();
 
         $videoUrl = null;
+        $youtubeStatus = null;
 
         if ($request->hasFile('video_file')) {
-            $path     = $request->file('video_file')->store('lesson-videos', 'public');
-            $videoUrl = $path;
-        } elseif (!empty($validated['video_url'])) {
-            $videoUrl = $validated['video_url'];
+            $path = $request->file('video_file')->store('lesson-video-uploads', 'local');
+            $youtubeStatus = 'pending';
         }
 
         $sortOrder = CourseLesson::where('course_section_id', $validated['section_id'])->max('sort_order') + 1;
 
-        CourseLesson::create([
-            'course_id'        => $validated['course_id'],
-            'course_section_id'=> $validated['section_id'],
-            'title'            => $validated['title'],
-            'type'             => $validated['type'],
-            'description'      => $validated['description'] ?? null,
-            'video_url'        => $videoUrl,
-            'content'          => $validated['content'] ?? null,
-            'duration'         => $validated['duration'] ?? null,
-            'is_free'          => $validated['is_free'] ?? false,
-            'sort_order'       => $sortOrder,
+        $lesson = CourseLesson::create([
+            'course_id' => $validated['course_id'],
+            'course_section_id' => $validated['section_id'],
+            'title' => $validated['title'],
+            'type' => $validated['type'],
+            'description' => $validated['description'] ?? null,
+            'video_url' => $videoUrl,
+            'youtube_status' => $youtubeStatus,
+            'content' => $validated['content'] ?? null,
+            'duration' => $validated['duration'] ?? null,
+            'is_free' => $validated['is_free'] ?? false,
+            'sort_order' => $sortOrder,
         ]);
+
+        if (isset($path) && $validated['type'] === 'video') {
+            UploadLessonVideoToYouTube::dispatch((int) $lesson->id, $path);
+        }
 
         return back()->with('success', "Lesson \"{$validated['title']}\" uploaded successfully.");
     }
@@ -107,7 +111,7 @@ class LessonUploadController extends Controller
         );
 
         // Delete local video file if stored on disk
-        if ($lesson->video_url && !Str::startsWith($lesson->video_url, ['http://', 'https://'])) {
+        if ($lesson->video_url && ! Str::startsWith($lesson->video_url, ['http://', 'https://'])) {
             Storage::disk('public')->delete($lesson->video_url);
         }
 

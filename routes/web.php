@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Admin\LearningResourceController as AdminLearningResourceController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
+use App\Http\Controllers\Admin\QuizAttemptController as AdminQuizAttemptController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
 use App\Http\Controllers\Admin\UserController;
@@ -27,6 +28,8 @@ use App\Http\Controllers\AiForgeCartController;
 use App\Http\Controllers\AiForgeController;
 use App\Http\Controllers\AiForgeSwagController;
 use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\CourseLessonVideoController;
+use App\Http\Controllers\CourseManualEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FeedbackController;
@@ -134,12 +137,13 @@ Route::prefix('admin')
         Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])->name('courses.destroy');
         Route::get('/courses/{course}/pricing', [CoursePricingController::class, 'show'])->name('courses.pricing');
         Route::put('/courses/{course}/pricing', [CoursePricingController::class, 'update'])->name('courses.pricing.update');
-        Route::post('/courses/{course}/instalment-plans', [CoursePricingController::class, 'storePlan'])->name('courses.instalment-plans.store');
-        Route::put('/courses/{course}/instalment-plans/{plan}', [CoursePricingController::class, 'updatePlan'])->name('courses.instalment-plans.update');
-        Route::delete('/courses/{course}/instalment-plans/{plan}', [CoursePricingController::class, 'destroyPlan'])->name('courses.instalment-plans.destroy');
         Route::post('/courses/{course}/approve', [AdminCourseController::class, 'approve'])->name('courses.approve');
         Route::post('/courses/{course}/reject', [AdminCourseController::class, 'reject'])->name('courses.reject');
         Route::post('/courses/{course}/archive', [AdminCourseController::class, 'archive'])->name('courses.archive');
+        Route::post('/courses/{course}/enroll-student', [CourseManualEnrollmentController::class, 'store'])->name('courses.enroll-student');
+        Route::post('/courses/{course}/sections/{section}/lessons/{lesson}/video', [CourseLessonVideoController::class, 'store'])->name('courses.sections.lessons.video.store');
+        Route::get('/quizzes/{quiz}/attempts', [AdminQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
+        Route::get('/quizzes/{quiz}/attempts/{attempt}', [AdminQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
 
         // Course Categories
         Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('course-categories.index');

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CourseLesson extends Model
 {
@@ -18,6 +19,9 @@ class CourseLesson extends Model
         'description',
         'type',
         'video_url',
+        'youtube_video_id',
+        'youtube_status',
+        'youtube_error',
         'content',
         'duration',
         'is_free',
@@ -27,7 +31,7 @@ class CourseLesson extends Model
     protected function casts(): array
     {
         return [
-            'is_free'    => 'boolean',
+            'is_free' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
@@ -50,5 +54,10 @@ class CourseLesson extends Model
     public function scopeFree($query)
     {
         return $query->where('is_free', true);
+    }
+
+    public function quiz(): HasOne
+    {
+        return $this->hasOne(Quiz::class, 'lesson_id');
     }
 }

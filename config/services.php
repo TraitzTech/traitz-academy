@@ -41,6 +41,20 @@ return [
         'secret_key' => env('MESOMB_SECRET_KEY'),
         'country' => env('MESOMB_COUNTRY', 'CM'),
         'currency' => env('MESOMB_CURRENCY', 'XAF'),
+        // Optional: set to the same product category string as working program payments (e.g. professional-internship).
+        // When empty, LMS uses the course category slug or fallback professional-training.
+        'course_product_category' => env('MESOMB_COURSE_PRODUCT_CATEGORY'),
+    ],
+
+    'youtube' => [
+        'enabled' => (bool) env('YOUTUBE_ENABLED', false),
+        'channel_id' => env('YOUTUBE_CHANNEL_ID'),
+        'client_id' => env('YOUTUBE_CLIENT_ID'),
+        'client_secret' => env('YOUTUBE_CLIENT_SECRET'),
+        'refresh_token' => env('YOUTUBE_REFRESH_TOKEN'),
+        'privacy_status' => env('YOUTUBE_PRIVACY_STATUS', 'unlisted'),
+        'category_id' => env('YOUTUBE_DEFAULT_CATEGORY', '27'),
+        'notify_subscribers' => (bool) env('YOUTUBE_UPLOAD_NOTIFY_SUBSCRIBERS', false),
     ],
 
 ];

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -12,6 +12,11 @@ interface Lesson {
   duration: string | null
   is_free: boolean
   description: string | null
+  video_url?: string | null
+  youtube_video_id?: string | null
+  youtube_status?: 'pending' | 'processing' | 'ready' | 'failed' | null
+  youtube_error?: string | null
+  quiz?: { id: number; lesson_id: number } | null
 }
 
 interface Section {
@@ -44,7 +49,10 @@ interface Course {
   sections: Section[]
 }
 
-const props = defineProps<{ course: Course }>()
+const props = defineProps<{
+  course: Course
+  can_manually_enroll: boolean
+}>()
 
 defineOptions({ layout: AppLayout })
 
@@ -87,6 +95,28 @@ function confirmReject() {
 }
 
 const expandedSections = ref<Set<number>>(new Set(props.course.sections.map(s => s.id)))
+
+const enrollForm = useForm({ email: '' })
+const videoUploadForm = useForm({ video_file: null as File | null })
+
+function submitEnrollStudent() {
+  enrollForm.post(`/admin/courses/${props.course.id}/enroll-student`, { preserveScroll: true })
+}
+
+function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number) {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  if (!file) return
+
+  videoUploadForm.video_file = file
+
+  videoUploadForm.post(`/admin/courses/${props.course.id}/sections/${sectionId}/lessons/${lessonId}/video`, {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      videoUploadForm.reset()
+    },
+  })
+}
 
 function toggleSection(id: number) {
   if (expandedSections.value.has(id)) {
@@ -227,8 +257,9 @@ function toggleSection(id: number) {
                 <div
                   v-for="lesson in section.lessons"
                   :key="lesson.id"
-                  class="flex items-center gap-3 px-4 py-3"
+                  class="px-4 py-3"
                 >
+                <div class="flex items-center gap-3">
                   <!-- Type icon -->
                   <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#42b6c5]/10 text-[#42b6c5]">
                     <svg v-if="lesson.type === 'video'" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
@@ -248,6 +279,58 @@ function toggleSection(id: number) {
                   <span v-if="lesson.is_free" class="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     Free
                   </span>
+                  <Link
+                    v-if="lesson.type === 'quiz' && lesson.quiz"
+                    :href="`/admin/quizzes/${lesson.quiz.id}/attempts`"
+                    class="shrink-0 rounded-md border border-[#42b6c5]/40 px-2 py-1 text-xs font-semibold text-[#42b6c5] hover:bg-[#42b6c5]/10"
+                  >
+                    Attempts
+                  </Link>
+                  <label
+                    v-if="lesson.type === 'video'"
+                    class="cursor-pointer rounded-md border border-[#381998]/40 px-2 py-1 text-xs font-semibold text-[#381998] hover:bg-[#381998]/10"
+                  >
+                    Upload video
+                    <input
+                      type="file"
+                      class="hidden"
+                      accept="video/mp4,video/mov,video/avi,video/mkv,video/webm"
+                      @change="onLessonVideoSelected($event, section.id, lesson.id)"
+                    />
+                  </label>
+                </div>
+                <div
+                  v-if="lesson.type === 'video'"
+                  class="mt-2 flex items-center gap-2 pl-11 text-xs"
+                >
+                  <span class="text-gray-400">YouTube:</span>
+                  <span
+                    :class="[
+                      'rounded-full px-2 py-0.5 font-medium',
+                      lesson.youtube_status === 'ready'
+                        ? 'bg-green-100 text-green-700'
+                        : lesson.youtube_status === 'failed'
+                          ? 'bg-red-100 text-red-700'
+                          : lesson.youtube_status === 'processing'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600',
+                    ]"
+                  >
+                    {{ lesson.youtube_status || 'not uploaded' }}
+                  </span>
+                  <a
+                    v-if="lesson.video_url"
+                    :href="lesson.video_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-[#42b6c5] hover:underline"
+                  >
+                    open video
+                  </a>
+                  <span v-if="lesson.youtube_error" class="truncate text-red-500" :title="lesson.youtube_error">
+                    {{ lesson.youtube_error }}
+                  </span>
+                </div>
                 </div>
                 <div v-if="section.lessons.length === 0" class="px-4 py-3 text-sm italic text-gray-400">
                   No lessons in this section.
@@ -312,6 +395,34 @@ function toggleSection(id: number) {
               <dd class="font-medium text-gray-900 dark:text-gray-100">{{ new Date(course.created_at).toLocaleDateString() }}</dd>
             </div>
           </dl>
+        </div>
+
+        <!-- Manual enrollment (admin) -->
+        <div v-if="can_manually_enroll" class="rounded-lg bg-white shadow dark:bg-gray-800 p-5">
+          <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Enroll a learner</h3>
+          <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            Grant course access by email. The person must already have a registered account with that email.
+          </p>
+          <form class="space-y-3" @submit.prevent="submitEnrollStudent">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Learner email</label>
+              <input
+                v-model="enrollForm.email"
+                type="email"
+                autocomplete="email"
+                placeholder="student@example.com"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#42b6c5] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <p v-if="enrollForm.errors.email" class="mt-1 text-xs text-red-600">{{ enrollForm.errors.email }}</p>
+            </div>
+            <button
+              type="submit"
+              :disabled="enrollForm.processing"
+              class="w-full rounded-lg bg-[#42b6c5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#35919e] disabled:opacity-60"
+            >
+              {{ enrollForm.processing ? 'Enrolling…' : 'Grant access' }}
+            </button>
+          </form>
         </div>
 
         <!-- Readiness checklist -->

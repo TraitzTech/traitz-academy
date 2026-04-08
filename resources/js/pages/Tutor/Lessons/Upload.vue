@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { FileText, Link2, Pencil, Trash2, Upload, Video } from 'lucide-vue-next'
+import { FileText, Pencil, Trash2, Upload, Video } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -32,7 +32,6 @@ const form = useForm({
   duration:    '',
   is_free:     false,
   video_file:  null as File | null,
-  video_url:   '',
   content:     '',
 })
 
@@ -47,8 +46,6 @@ watch(() => form.course_id, () => { form.section_id = '' })
 
 // ── File handling ──────────────────────────────────────────────────────────────
 const dragActive  = ref(false)
-const videoSrcTab = ref<'file' | 'url'>('file')  // toggle between file upload and URL
-
 function onDrop(e: DragEvent | Event) {
   dragActive.value = false
   const file = (e as DragEvent).dataTransfer?.files[0]
@@ -60,13 +57,18 @@ function clearFile() {
   form.video_file = null
 }
 
+function setLessonType(type: string) {
+  if (type === 'video' || type === 'text' || type === 'quiz') {
+    form.type = type
+  }
+}
+
 // ── Submit ────────────────────────────────────────────────────────────────────
 function submit() {
   form.post('/tutor/lessons/upload', {
     forceFormData: true,
     onSuccess: () => {
       form.reset()
-      videoSrcTab.value = 'file'
     },
   })
 }
@@ -140,10 +142,10 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lesson Type *</label>
             <div class="grid grid-cols-3 gap-3">
               <button
-                v-for="[val, icon, label, sub] in [['video', 'video', 'Video', 'MP4, MOV, AVI'], ['text', 'text', 'Text', 'Written content'], ['quiz', 'quiz', 'Quiz', 'Questions']]"
+                v-for="[val, label, sub] in [['video', 'Video', 'MP4, MOV, AVI'], ['text', 'Text', 'Written content'], ['quiz', 'Quiz', 'Questions']]"
                 :key="val"
                 type="button"
-                @click="form.type = val as 'video' | 'text' | 'quiz'"
+                @click="setLessonType(val)"
                 :class="[
                   'flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-colors',
                   form.type === val
@@ -177,30 +179,10 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
             <p v-if="form.errors.title" class="mt-1 text-sm text-red-600">{{ form.errors.title }}</p>
           </div>
 
-          <!-- Video source (file or URL) — only shown for video type -->
+          <!-- Video source — only shown for video type -->
           <div v-if="form.type === 'video'">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video Source</label>
-
-            <!-- Tab toggle: file vs URL -->
-            <div class="mb-3 flex w-fit gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
-              <button
-                type="button"
-                @click="videoSrcTab = 'file'"
-                :class="['rounded-md px-3 py-1 text-xs font-medium transition-colors', videoSrcTab === 'file' ? 'bg-white shadow dark:bg-gray-600 text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400']"
-              >
-                <Upload class="mr-1 inline h-3 w-3" /> Upload File
-              </button>
-              <button
-                type="button"
-                @click="videoSrcTab = 'url'"
-                :class="['rounded-md px-3 py-1 text-xs font-medium transition-colors', videoSrcTab === 'url' ? 'bg-white shadow dark:bg-gray-600 text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400']"
-              >
-                <Link2 class="mr-1 inline h-3 w-3" /> External URL
-              </button>
-            </div>
-
-            <!-- Drag-drop file upload (adapted directly from prototype) -->
-            <div v-if="videoSrcTab === 'file'">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video file</label>
+            <div>
               <div
                 @dragover.prevent="dragActive = true"
                 @dragleave="dragActive = false"
@@ -236,17 +218,7 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
               </div>
               <p v-if="form.errors.video_file" class="mt-1 text-sm text-red-600">{{ form.errors.video_file }}</p>
             </div>
-
-            <!-- External URL (YouTube / Vimeo / direct link) -->
-            <div v-else>
-              <input
-                v-model="form.video_url"
-                type="url"
-                placeholder="https://youtube.com/watch?v=… or direct video URL"
-                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
-              />
-              <p class="mt-1 text-xs text-gray-400">Supports YouTube, Vimeo, or any direct video URL.</p>
-            </div>
+            <p class="mt-1 text-xs text-gray-400">File is uploaded to Traitz Academy's YouTube channel; only the YouTube link is saved in the lesson.</p>
           </div>
 
           <!-- Text content (only for text type) -->

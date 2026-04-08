@@ -2,7 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
   ArrowLeft, BookOpen, ChevronDown, ChevronUp, Edit2, FileText,
-  GripVertical, ImageIcon, Layers, PlusCircle, Send, Trash2, Video,
+  GripVertical, ImageIcon, Layers, PlusCircle, Send, Trash2, UserPlus, Video,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -19,6 +19,10 @@ interface Lesson {
   type: 'video' | 'text' | 'quiz';
   description: string | null;
   content: string | null;
+  video_url?: string | null;
+  youtube_video_id?: string | null;
+  youtube_status?: 'pending' | 'processing' | 'ready' | 'failed' | null;
+  youtube_error?: string | null;
   duration: string | null;
   is_free: boolean;
   sort_order: number;
@@ -43,6 +47,7 @@ interface Course {
   status: 'draft' | 'pending_review' | 'published' | 'archived';
   price: string;
   sale_price: string | null;
+  max_installments?: number;
   duration: string | null;
   category: Category | null;
   sections: Section[];
@@ -51,6 +56,7 @@ interface Course {
 const props = defineProps<{
   course: Course;
   categories: Category[];
+  can_manually_enroll: boolean;
 }>();
 
 // ─── Tab ──────────────────────────────────────────────────────────────────────
@@ -65,8 +71,6 @@ const detailsForm = useForm({
   level:             props.course.level,
   short_description: props.course.short_description,
   description:       props.course.description ?? '',
-  price:             props.course.price,
-  sale_price:        props.course.sale_price ?? '',
   duration:          props.course.duration ?? '',
 });
 
@@ -154,7 +158,11 @@ function deleteSection(sectionId: number) {
 }
 
 function toggleSection(id: number) {
-  expandedSections.value.has(id) ? expandedSections.value.delete(id) : expandedSections.value.add(id);
+  if (expandedSections.value.has(id)) {
+    expandedSections.value.delete(id)
+  } else {
+    expandedSections.value.add(id)
+  }
 }
 
 function moveSectionUp(index: number) {
@@ -251,6 +259,46 @@ const statusConfig: Record<string, { label: string; class: string }> = {
 };
 
 const canSubmit = ['draft', 'archived'].includes(props.course.status);
+
+const enrollForm = useForm({ email: '' });
+
+function submitEnrollStudent() {
+  enrollForm.post(`/tutor/courses/${props.course.id}/enroll-student`, { preserveScroll: true });
+}
+
+const videoUploadForm = useForm({
+  video_file: null as File | null,
+});
+
+function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number) {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  if (!file) return;
+
+  videoUploadForm.video_file = file;
+  uploadLessonVideo(sectionId, lessonId);
+}
+
+function uploadLessonVideo(sectionId: number, lessonId: number) {
+  if (!videoUploadForm.video_file) return;
+
+  videoUploadForm.post(
+    `/tutor/courses/${props.course.id}/sections/${sectionId}/lessons/${lessonId}/video`,
+    {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        videoUploadForm.reset();
+      },
+    }
+  );
+}
+
+function formatXaf(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '—';
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return `${n.toLocaleString()} XAF`;
+}
 </script>
 
 <template>
@@ -333,26 +381,32 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Price (XAF) <span class="text-red-500">*</span></label>
-            <input v-model="detailsForm.price" type="number" min="0" step="100"
-              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-              :class="{ 'border-red-400': detailsForm.errors.price }" />
-            <p v-if="detailsForm.errors.price" class="mt-1 text-xs text-red-500">{{ detailsForm.errors.price }}</p>
-          </div>
-          <div>
-            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Sale Price (XAF)</label>
-            <input v-model="detailsForm.sale_price" type="number" min="0" step="100" placeholder="Optional"
-              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
-              :class="{ 'border-red-400': detailsForm.errors.sale_price }" />
-            <p v-if="detailsForm.errors.sale_price" class="mt-1 text-xs text-red-500">{{ detailsForm.errors.sale_price }}</p>
-          </div>
-          <div>
-            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
-            <input v-model="detailsForm.duration" type="text" placeholder="e.g. 8 weeks"
-              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-          </div>
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/40">
+          <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Pricing &amp; installments</p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Pricing and installments are set by administrators (Admin → Courses → Pricing).
+            If you need changes, contact your platform administrator.
+          </p>
+          <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Price</dt>
+              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ formatXaf(course.price) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale price</dt>
+              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ formatXaf(course.sale_price) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Max installments</dt>
+              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ Math.max(1, course.max_installments ?? 1) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div>
+          <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
+          <input v-model="detailsForm.duration" type="text" placeholder="e.g. 8 weeks"
+            class="w-full max-w-md rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
         </div>
 
         <div>
@@ -474,7 +528,7 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
                     <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Duration (e.g. 5:30)</label>
                     <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
                       class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                    <p class="mt-0.5 text-xs text-gray-400">Video upload will be available soon.</p>
+                    <p class="mt-0.5 text-xs text-gray-400">Save this lesson, then upload the video file from the lesson row.</p>
                   </div>
                   <div v-if="lessonForm.type === 'text'">
                     <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Content</label>
@@ -525,6 +579,25 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
                   </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
+                  <label
+                    v-if="lesson.type === 'video'"
+                    class="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-semibold text-[#42b6c5] hover:bg-[#42b6c5]/10"
+                  >
+                    Upload Video
+                    <input
+                      type="file"
+                      class="hidden"
+                      accept="video/mp4,video/mov,video/avi,video/mkv,video/webm"
+                      @change="onLessonVideoSelected($event, section.id, lesson.id)"
+                    />
+                  </label>
+                  <Link
+                    v-if="lesson.type === 'quiz'"
+                    :href="`/tutor/courses/${course.id}/lessons/${lesson.id}/quiz`"
+                    class="rounded-lg px-2 py-1 text-[11px] font-semibold text-[#381998] hover:bg-[#381998]/10"
+                  >
+                    Build Quiz
+                  </Link>
                   <button @click="openEditLesson(section, lesson)"
                     class="rounded-lg p-1.5 text-gray-400 hover:text-[#381998] transition-colors">
                     <Edit2 class="h-3.5 w-3.5" />
@@ -534,6 +607,40 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
                     <Trash2 class="h-3.5 w-3.5" />
                   </button>
                 </div>
+              </div>
+              <div
+                v-if="lesson.type === 'video'"
+                class="flex items-center justify-between gap-3 border-t border-gray-50 px-6 py-2 text-xs dark:border-gray-700/50"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-400">YouTube:</span>
+                  <span
+                    :class="[
+                      'rounded-full px-2 py-0.5 font-medium',
+                      lesson.youtube_status === 'ready'
+                        ? 'bg-green-100 text-green-700'
+                        : lesson.youtube_status === 'failed'
+                          ? 'bg-red-100 text-red-700'
+                          : lesson.youtube_status === 'processing'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-gray-100 text-gray-600',
+                    ]"
+                  >
+                    {{ lesson.youtube_status || 'not uploaded' }}
+                  </span>
+                  <a
+                    v-if="lesson.video_url"
+                    :href="lesson.video_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-[#42b6c5] hover:underline"
+                  >
+                    open video
+                  </a>
+                </div>
+                <span v-if="lesson.youtube_error" class="max-w-[45ch] truncate text-red-500" :title="lesson.youtube_error">
+                  {{ lesson.youtube_error }}
+                </span>
               </div>
             </div>
 
@@ -562,7 +669,7 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
                   <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Duration (e.g. 5:30)</label>
                   <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
                     class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                  <p class="mt-0.5 text-xs text-gray-400">Video upload will be available soon.</p>
+                  <p class="mt-0.5 text-xs text-gray-400">After adding this lesson, upload the video file from the lesson row.</p>
                 </div>
                 <div v-if="lessonForm.type === 'text'">
                   <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Content</label>
@@ -722,6 +829,42 @@ const canSubmit = ['draft', 'archived'].includes(props.course.status);
         <p v-else-if="course.status === 'published'" class="text-sm font-medium text-green-600">
           ✓ Your course is live.
         </p>
+      </div>
+
+      <!-- Enroll a learner (published courses only; backend enforces ownership) -->
+      <div
+        v-if="can_manually_enroll"
+        class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:bg-gray-800 dark:border-gray-700"
+      >
+        <div class="mb-4 flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#42b6c5]/10">
+            <UserPlus class="h-5 w-5 text-[#42b6c5]" />
+          </div>
+          <h2 class="font-bold text-[#000928] dark:text-white">Enroll a learner</h2>
+        </div>
+        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+          Grant access to your published course by email. The learner must already have a registered account with that email.
+        </p>
+        <form class="space-y-3" @submit.prevent="submitEnrollStudent">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Learner email</label>
+            <input
+              v-model="enrollForm.email"
+              type="email"
+              autocomplete="email"
+              placeholder="student@example.com"
+              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+            />
+            <p v-if="enrollForm.errors.email" class="mt-1 text-xs text-red-500">{{ enrollForm.errors.email }}</p>
+          </div>
+          <button
+            type="submit"
+            :disabled="enrollForm.processing"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#42b6c5] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#35919e] disabled:opacity-50 sm:w-auto"
+          >
+            {{ enrollForm.processing ? 'Enrolling…' : 'Grant access' }}
+          </button>
+        </form>
       </div>
     </div>
 
