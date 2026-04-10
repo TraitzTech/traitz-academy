@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CourseLesson extends Model
@@ -59,5 +60,15 @@ class CourseLesson extends Model
     public function quiz(): HasOne
     {
         return $this->hasOne(Quiz::class, 'lesson_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(LessonAttachment::class, 'course_lesson_id')->orderBy('sort_order');
+    }
+
+    public function discussions(): HasMany
+    {
+        return $this->hasMany(Discussion::class, 'lesson_id');
     }
 }
