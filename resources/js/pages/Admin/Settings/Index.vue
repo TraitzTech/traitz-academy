@@ -4,6 +4,7 @@ import { ref, computed, watch } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
 interface Setting {
   id: number
@@ -239,10 +240,11 @@ const getImageUrl = (value: string | null) => {
               <div v-if="setting.key === 'youtube_video_url' && formData[setting.key]" class="mt-4 max-w-xl">
                 <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
                   <iframe
-                    :src="formData[setting.key]?.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')"
+                    :src="streamingEmbedSrc(formData[setting.key] ?? null) ?? ''"
                     class="w-full h-full"
                     frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    :allow="STREAMING_IFRAME_ALLOW"
                     allowfullscreen
                   ></iframe>
                 </div>

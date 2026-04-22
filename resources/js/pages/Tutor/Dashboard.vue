@@ -11,7 +11,7 @@ interface Enrollment {
   course: string | null
   cover_image: string | null
   enrolled_at: string
-  status: string
+  access_status: string
 }
 
 interface Course {
@@ -60,11 +60,21 @@ const statusColors: Record<string, string> = {
   archived: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const enrollmentStatusColors: Record<string, string> = {
+const enrollmentAccessColors: Record<string, string> = {
   active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  cancelled: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  refunded: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
+  suspended: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  revoked: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+}
+
+function accessStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    active: 'Active',
+    completed: 'Completed',
+    suspended: 'Suspended',
+    revoked: 'Revoked',
+  }
+  return labels[status] ?? status
 }
 
 function coverSrc(path: string | null) {
@@ -288,7 +298,7 @@ function initials(name: string | null) {
         <div class="rounded-xl bg-white shadow dark:bg-gray-800">
           <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
             <h3 class="font-semibold text-gray-900 dark:text-gray-100">Recent Enrollments</h3>
-            <span class="text-xs text-gray-400">Latest students</span>
+            <Link href="/tutor/students" class="text-xs font-semibold text-[#42b6c5] hover:text-[#35919e]">View all</Link>
           </div>
 
           <div v-if="recentEnrollments.length === 0" class="py-8 text-center text-sm text-gray-400 px-4">
@@ -308,8 +318,8 @@ function initials(name: string | null) {
                 <p class="truncate text-xs font-medium text-gray-900 dark:text-gray-100">{{ enrollment.student }}</p>
                 <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ enrollment.course }}</p>
               </div>
-              <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold', enrollmentStatusColors[enrollment.status] ?? 'bg-gray-100 text-gray-500']">
-                {{ enrollment.status }}
+              <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold', enrollmentAccessColors[enrollment.access_status] ?? 'bg-gray-100 text-gray-500']">
+                {{ accessStatusLabel(enrollment.access_status) }}
               </span>
             </div>
           </div>
@@ -318,7 +328,10 @@ function initials(name: string | null) {
         <!-- Quick Actions (bottom right — same position as prototype) -->
         <div class="rounded-xl bg-white shadow dark:bg-gray-800 p-5">
           <h3 class="mb-3 font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h3>
-          <div class="space-y-2">
+          <div class="space-y-4">
+            <div>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Courses</p>
+              <div class="space-y-2">
             <Link
               href="/tutor/courses/create"
               class="flex w-full items-center gap-3 rounded-lg border border-[#381998]/30 bg-[#381998]/5 px-4 py-2.5 text-sm font-medium text-[#381998] transition-colors hover:bg-[#381998]/10 dark:border-purple-700/30 dark:text-purple-300 dark:hover:bg-purple-900/20"
@@ -331,6 +344,11 @@ function initials(name: string | null) {
             >
               <BookOpen class="h-4 w-4 shrink-0" /> Manage My Courses
             </Link>
+              </div>
+            </div>
+            <div>
+              <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Learners & Community</p>
+              <div class="space-y-2">
             <Link
               href="/tutor/discussions"
               class="flex w-full items-center gap-3 rounded-lg border border-green-200 px-4 py-2.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-50 dark:border-green-700/30 dark:text-green-400 dark:hover:bg-green-900/10"
@@ -343,6 +361,8 @@ function initials(name: string | null) {
             >
               <Users class="h-4 w-4 shrink-0" /> My Students
             </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -71,4 +71,9 @@ class CourseLesson extends Model
     {
         return $this->hasMany(Discussion::class, 'lesson_id');
     }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(LessonNote::class, 'course_lesson_id');
+    }
 }

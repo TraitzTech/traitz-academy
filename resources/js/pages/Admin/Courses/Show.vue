@@ -4,6 +4,8 @@ import { ref } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
 interface Lesson {
   id: number
@@ -103,9 +105,30 @@ function submitEnrollStudent() {
   enrollForm.post(`/admin/courses/${props.course.id}/enroll-student`, { preserveScroll: true })
 }
 
+function shouldConfirmVideoReplacement(sectionId: number, lessonId: number): boolean {
+  const section = props.course.sections.find((s) => s.id === sectionId)
+  if (!section) return false
+
+  const lesson = section.lessons.find((l) => l.id === lessonId)
+  if (!lesson) return false
+
+  return Boolean(lesson.video_url || lesson.youtube_video_id)
+}
+
 function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number) {
-  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
   if (!file) return
+
+  if (shouldConfirmVideoReplacement(sectionId, lessonId)) {
+    const shouldReplace = window.confirm(
+      'Replace this video? The current YouTube video will be deleted and replaced with the new upload.'
+    )
+    if (!shouldReplace) {
+      input.value = ''
+      return
+    }
+  }
 
   videoUploadForm.video_file = file
 
@@ -124,6 +147,10 @@ function toggleSection(id: number) {
   } else {
     expandedSections.value.add(id)
   }
+}
+
+function lessonEmbedUrl(url: string | null | undefined): string | null {
+  return streamingEmbedSrc(url ?? null)
 }
 </script>
 
@@ -211,9 +238,12 @@ function toggleSection(id: number) {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ course.title }}</h1>
           <p class="mt-2 text-base text-gray-600 dark:text-gray-300">{{ course.short_description }}</p>
 
-          <div v-if="course.description" class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
-            <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Full Description</h3>
-            <p class="whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-400">{{ course.description }}</p>
+          <div v-if="course.description?.trim()" class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-700">
+            <h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Full description</h3>
+            <div
+              class="prose prose-sm max-w-none text-gray-600 dark:prose-invert dark:text-gray-400"
+              v-html="courseDescriptionHtml(course.description)"
+            />
           </div>
         </div>
 
@@ -290,7 +320,7 @@ function toggleSection(id: number) {
                     v-if="lesson.type === 'video'"
                     class="cursor-pointer rounded-md border border-[#381998]/40 px-2 py-1 text-xs font-semibold text-[#381998] hover:bg-[#381998]/10"
                   >
-                    Upload video
+                    {{ lesson.video_url ? 'Replace video' : 'Upload video' }}
                     <input
                       type="file"
                       class="hidden"
@@ -303,7 +333,7 @@ function toggleSection(id: number) {
                   v-if="lesson.type === 'video'"
                   class="mt-2 flex items-center gap-2 pl-11 text-xs"
                 >
-                  <span class="text-gray-400">YouTube:</span>
+                  <span class="text-gray-400">Video:</span>
                   <span
                     :class="[
                       'rounded-full px-2 py-0.5 font-medium',
@@ -318,18 +348,23 @@ function toggleSection(id: number) {
                   >
                     {{ lesson.youtube_status || 'not uploaded' }}
                   </span>
-                  <a
-                    v-if="lesson.video_url"
-                    :href="lesson.video_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-[#42b6c5] hover:underline"
-                  >
-                    open video
-                  </a>
                   <span v-if="lesson.youtube_error" class="truncate text-red-500" :title="lesson.youtube_error">
                     {{ lesson.youtube_error }}
                   </span>
+                </div>
+                <div
+                  v-if="lesson.type === 'video' && lessonEmbedUrl(lesson.video_url)"
+                  class="mt-2 pl-11"
+                >
+                  <div class="aspect-video max-w-2xl overflow-hidden rounded-lg bg-black">
+                    <iframe
+                      :src="lessonEmbedUrl(lesson.video_url) ?? undefined"
+                      class="h-full w-full"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      :allow="STREAMING_IFRAME_ALLOW"
+                      allowfullscreen
+                    />
+                  </div>
                 </div>
                 </div>
                 <div v-if="section.lessons.length === 0" class="px-4 py-3 text-sm italic text-gray-400">

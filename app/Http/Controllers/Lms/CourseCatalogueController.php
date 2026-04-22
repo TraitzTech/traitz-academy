@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseLesson;
 use App\Models\Enrollment;
+use App\Models\LessonNote;
 use App\Models\LessonCompletion;
 use App\Models\LessonVideoProgress;
 use Illuminate\Http\RedirectResponse;
@@ -76,11 +77,43 @@ class CourseCatalogueController extends Controller
 
         $requiresCheckout = auth()->check() && ! $isEnrolled && $course->effectivePrice() > 0;
 
+        $courseNotes = collect();
+        if ($isEnrolled) {
+            $courseNotes = LessonNote::query()
+                ->where('lesson_notes.user_id', auth()->id())
+                ->whereHas('lesson', fn ($lessonQuery) => $lessonQuery->where('course_id', $course->id))
+                ->join('course_lessons', 'course_lessons.id', '=', 'lesson_notes.course_lesson_id')
+                ->join('course_sections', 'course_sections.id', '=', 'course_lessons.course_section_id')
+                ->orderBy('course_sections.sort_order')
+                ->orderBy('course_lessons.sort_order')
+                ->orderBy('lesson_notes.created_at')
+                ->select('lesson_notes.*')
+                ->with([
+                    'lesson:id,course_section_id,title,sort_order',
+                    'lesson.section:id,title,sort_order',
+                ])
+                ->get()
+                ->map(fn (LessonNote $note) => [
+                    'id' => (int) $note->id,
+                    'content' => $note->content,
+                    'timestamp' => $note->timestamp,
+                    'timestamp_seconds' => $note->timestamp_seconds !== null ? (int) $note->timestamp_seconds : null,
+                    'lesson' => [
+                        'id' => (int) $note->lesson->id,
+                        'title' => $note->lesson->title,
+                        'section_title' => $note->lesson->section?->title,
+                    ],
+                    'updated_at' => optional($note->updated_at)->toIso8601String(),
+                ])
+                ->values();
+        }
+
         return Inertia::render('Lms/CourseShow', [
             'course' => $course,
             'previewLessons' => $previewLessons,
             'isEnrolled' => $isEnrolled,
             'requiresCheckout' => $requiresCheckout,
+            'courseNotes' => $courseNotes,
         ]);
     }
 
@@ -90,7 +123,7 @@ class CourseCatalogueController extends Controller
         abort_unless($lesson->course_id === $course->id, 404);
         abort_unless($lesson->is_free, 403);
 
-        $lesson->load('section:id,title');
+        $lesson->load('section:id,title', 'attachments');
 
         return Inertia::render('Lms/LessonPreview', [
             'course' => [
@@ -106,6 +139,14 @@ class CourseCatalogueController extends Controller
                     $lesson->video_url,
                     $lesson->youtube_video_id
                 ),
+                'attachments' => $lesson->attachments->map(fn ($a) => [
+                    'id' => $a->id,
+                    'name' => $a->name,
+                    'file_url' => $a->file_url,
+                    'file_type' => $a->file_type,
+                    'file_size' => $a->file_size,
+                    'formatted_file_size' => $a->formatted_file_size,
+                ])->values(),
             ],
         ]);
     }
@@ -115,13 +156,20 @@ class CourseCatalogueController extends Controller
         abort_unless($course->status === 'published', 404);
         abort_unless((int) $lesson->course_id === (int) $course->id, 404);
 
+        $user = auth()->user();
+
         $enrollment = Enrollment::query()
             ->where('user_id', auth()->id())
             ->where('course_id', $course->id)
             ->whereNotIn('access_status', ['suspended', 'revoked'])
             ->first();
 
-        $hasAccess = $lesson->is_free || $enrollment !== null;
+        $canModerateCourse = $user !== null && (
+            $user->canAccessAdminPanel()
+            || ($user->isTutor() && (int) $course->instructor_id === (int) $user->id)
+        );
+
+        $hasAccess = $lesson->is_free || $enrollment !== null || $canModerateCourse;
 
         abort_unless($hasAccess, 403);
 
@@ -178,6 +226,22 @@ class CourseCatalogueController extends Controller
             auth()->user()
         );
 
+        $lessonNotes = LessonNote::query()
+            ->where('user_id', auth()->id())
+            ->where('course_lesson_id', $lesson->id)
+            ->orderByRaw('timestamp_seconds IS NULL DESC')
+            ->orderBy('timestamp_seconds')
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn (LessonNote $note) => [
+                'id' => (int) $note->id,
+                'content' => $note->content,
+                'timestamp' => $note->timestamp,
+                'timestamp_seconds' => $note->timestamp_seconds !== null ? (int) $note->timestamp_seconds : null,
+                'updated_at' => optional($note->updated_at)->toIso8601String(),
+            ])
+            ->values();
+
         return Inertia::render('Lms/CoursePlayer', [
             'course' => [
                 'id' => $course->id,
@@ -221,6 +285,7 @@ class CourseCatalogueController extends Controller
             ] : null,
             'progressPercent' => $progressPercent,
             'lessonDiscussions' => $discussionPayload,
+            'lessonNotes' => $lessonNotes,
         ]);
     }
 

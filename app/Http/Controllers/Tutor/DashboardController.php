@@ -16,12 +16,10 @@ class DashboardController extends Controller
         $tutor = $request->user();
 
         // Core stats
-        $totalCourses   = Course::where('instructor_id', $tutor->id)->count();
-        $activeCourses  = Course::where('instructor_id', $tutor->id)->where('status', 'published')->count();
+        $totalCourses = Course::where('instructor_id', $tutor->id)->count();
+        $activeCourses = Course::where('instructor_id', $tutor->id)->where('status', 'published')->count();
         $pendingCourses = Course::where('instructor_id', $tutor->id)->where('status', 'pending_review')->count();
-        $totalStudents  = Enrollment::whereHas('course', fn ($q) => $q->where('instructor_id', $tutor->id))
-            ->distinct('user_id')
-            ->count('user_id');
+        $totalStudents = Enrollment::countDistinctUsersForInstructor($tutor->id);
 
         // Recent enrollments (last 6)
         $recentEnrollments = Enrollment::with(['user:id,name,email', 'course:id,title,cover_image'])
@@ -30,12 +28,12 @@ class DashboardController extends Controller
             ->take(6)
             ->get()
             ->map(fn ($e) => [
-                'id'          => $e->id,
-                'student'     => $e->user?->name,
-                'course'      => $e->course?->title,
+                'id' => $e->id,
+                'student' => $e->user?->name,
+                'course' => $e->course?->title,
                 'cover_image' => $e->course?->cover_image,
                 'enrolled_at' => $e->created_at?->diffForHumans(),
-                'status'      => $e->status,
+                'status' => $e->status,
             ]);
 
         // My courses overview (last 5)
@@ -46,25 +44,25 @@ class DashboardController extends Controller
             ->take(5)
             ->get()
             ->map(fn ($c) => [
-                'id'               => $c->id,
-                'title'            => $c->title,
-                'status'           => $c->status,
-                'cover_image'      => $c->cover_image,
-                'enrollments_count'=> $c->enrollments_count,
-                'level'            => $c->level,
-                'category'         => $c->category ? ['name' => $c->category->name, 'color' => $c->category->color] : null,
-                'price'            => $c->price,
+                'id' => $c->id,
+                'title' => $c->title,
+                'status' => $c->status,
+                'cover_image' => $c->cover_image,
+                'enrollments_count' => $c->enrollments_count,
+                'level' => $c->level,
+                'category' => $c->category ? ['name' => $c->category->name, 'color' => $c->category->color] : null,
+                'price' => $c->price,
             ]);
 
         return Inertia::render('Tutor/Dashboard', [
             'stats' => [
-                'total_students'  => $totalStudents,
-                'active_courses'  => $activeCourses,
+                'total_students' => $totalStudents,
+                'active_courses' => $activeCourses,
                 'pending_courses' => $pendingCourses,
-                'total_courses'   => $totalCourses,
+                'total_courses' => $totalCourses,
             ],
             'recentEnrollments' => $recentEnrollments,
-            'myCourses'         => $myCourses,
+            'myCourses' => $myCourses,
         ]);
     }
 }

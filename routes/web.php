@@ -7,8 +7,6 @@ use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegi
 use App\Http\Controllers\Admin\AiForgeSwagController as AdminAiForgeSwagController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
-use App\Http\Controllers\Admin\CourseController as AdminCourseController;
-use App\Http\Controllers\Admin\CoursePricingController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
@@ -19,7 +17,6 @@ use App\Http\Controllers\Admin\InterviewController as AdminInterviewController;
 use App\Http\Controllers\Admin\LearningResourceController as AdminLearningResourceController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
-use App\Http\Controllers\Admin\QuizAttemptController as AdminQuizAttemptController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SuccessStoryController;
 use App\Http\Controllers\Admin\UserController;
@@ -28,14 +25,13 @@ use App\Http\Controllers\AiForgeCartController;
 use App\Http\Controllers\AiForgeController;
 use App\Http\Controllers\AiForgeSwagController;
 use App\Http\Controllers\ApplicationController;
-use App\Http\Controllers\CourseLessonVideoController;
-use App\Http\Controllers\CourseManualEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GalleryItemController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\LearningResourceController;
+use App\Http\Controllers\LessonContentMediaController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProgramController;
@@ -103,6 +99,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'ensure.phone'])
     ->name('dashboard');
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/lesson-content/media', [LessonContentMediaController::class, 'store'])
+        ->name('lesson-content.upload-media');
+});
+
 // Interviews (Authenticated)
 Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->name('interviews.')->group(function () {
     Route::get('/{interview}', [InterviewController::class, 'show'])->name('show');
@@ -128,22 +129,6 @@ Route::prefix('admin')
 
         // Programs CRUD
         Route::resource('programs', AdminProgramController::class)->except(['show']);
-
-        // LMS — Courses
-        Route::get('/courses', [AdminCourseController::class, 'index'])->name('courses.index');
-        Route::get('/courses/{course}', [AdminCourseController::class, 'show'])->name('courses.show');
-        Route::get('/courses/{course}/edit', [AdminCourseController::class, 'edit'])->name('courses.edit');
-        Route::put('/courses/{course}', [AdminCourseController::class, 'update'])->name('courses.update');
-        Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])->name('courses.destroy');
-        Route::get('/courses/{course}/pricing', [CoursePricingController::class, 'show'])->name('courses.pricing');
-        Route::put('/courses/{course}/pricing', [CoursePricingController::class, 'update'])->name('courses.pricing.update');
-        Route::post('/courses/{course}/approve', [AdminCourseController::class, 'approve'])->name('courses.approve');
-        Route::post('/courses/{course}/reject', [AdminCourseController::class, 'reject'])->name('courses.reject');
-        Route::post('/courses/{course}/archive', [AdminCourseController::class, 'archive'])->name('courses.archive');
-        Route::post('/courses/{course}/enroll-student', [CourseManualEnrollmentController::class, 'store'])->name('courses.enroll-student');
-        Route::post('/courses/{course}/sections/{section}/lessons/{lesson}/video', [CourseLessonVideoController::class, 'store'])->name('courses.sections.lessons.video.store');
-        Route::get('/quizzes/{quiz}/attempts', [AdminQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
-        Route::get('/quizzes/{quiz}/attempts/{attempt}', [AdminQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
 
         // Course Categories
         Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('course-categories.index');

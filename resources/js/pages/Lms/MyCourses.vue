@@ -26,6 +26,7 @@ interface Course {
   duration: string | null;
   instructor: Instructor | null;
   category: CourseCategory | null;
+  first_quiz_id?: number | null;
 }
 
 interface Enrollment {
@@ -125,43 +126,44 @@ function enrolledDate(dateStr: string) {
   <AppLayout :breadcrumbs="[{ title: 'My Courses', href: '/dashboard/my-courses' }]">
     <Head title="My Courses" />
 
+    <div class="lms-page">
     <!-- Page header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-[#000928] dark:text-white">My Courses</h1>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Track and continue your enrolled courses</p>
+      <h1 class="lms-title">My Courses</h1>
+      <p class="lms-subtitle">Track and continue your enrolled courses</p>
     </div>
 
     <!-- Stats row -->
     <div class="mb-6 grid grid-cols-3 gap-4">
-      <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="lms-panel p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#381998]/10">
             <BookMarked class="h-5 w-5 text-[#381998]" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-[#000928] dark:text-white">{{ stats.total }}</p>
+            <p class="lms-title">{{ stats.total }}</p>
             <p class="text-xs text-gray-500">Total Enrolled</p>
           </div>
         </div>
       </div>
-      <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="lms-panel p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#42b6c5]/10">
             <PlayCircle class="h-5 w-5 text-[#42b6c5]" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-[#000928] dark:text-white">{{ stats.active }}</p>
+            <p class="lms-title">{{ stats.active }}</p>
             <p class="text-xs text-gray-500">In Progress</p>
           </div>
         </div>
       </div>
-      <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+      <div class="lms-panel p-4">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
             <CheckCircle2 class="h-5 w-5 text-green-600" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-[#000928] dark:text-white">{{ stats.completed }}</p>
+            <p class="lms-title">{{ stats.completed }}</p>
             <p class="text-xs text-gray-500">Completed</p>
           </div>
         </div>
@@ -238,7 +240,7 @@ function enrolledDate(dateStr: string) {
         class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:bg-gray-800 dark:border-gray-700"
       >
         <!-- Thumbnail -->
-        <div class="relative h-40 overflow-hidden bg-gradient-to-br from-[#381998] to-[#42b6c5]">
+        <div class="relative h-40 overflow-hidden bg-linear-to-br from-[#381998] to-[#42b6c5]">
           <img
             v-if="enrollment.course && coverUrl(enrollment.course.cover_image)"
             :src="coverUrl(enrollment.course.cover_image)!"
@@ -313,19 +315,28 @@ function enrolledDate(dateStr: string) {
 
           <!-- CTA -->
           <div class="mt-auto">
-            <Link
-              :href="`/dashboard/my-courses/${enrollment.id}`"
-              :class="[
-                'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
-                enrollment.access_status === 'completed'
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-[#000928] text-white hover:bg-[#381998]'
-              ]"
-            >
-              <PlayCircle v-if="enrollment.access_status !== 'completed'" class="h-4 w-4" />
-              <Award v-else class="h-4 w-4" />
-              {{ enrollment.access_status === 'completed' ? 'View Certificate' : 'Continue Learning' }}
-            </Link>
+            <div class="grid grid-cols-1 gap-2" :class="{ 'sm:grid-cols-2': enrollment.course?.first_quiz_id }">
+              <Link
+                :href="enrollment.course ? `/dashboard/courses/${enrollment.course.id}` : '/dashboard/my-courses'"
+                :class="[
+                  'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                  enrollment.access_status === 'completed'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-[#000928] text-white hover:bg-[#381998]'
+                ]"
+              >
+                <PlayCircle v-if="enrollment.access_status !== 'completed'" class="h-4 w-4" />
+                <Award v-else class="h-4 w-4" />
+                {{ enrollment.access_status === 'completed' ? 'View Certificate' : 'Continue Learning' }}
+              </Link>
+              <Link
+                v-if="enrollment.course?.first_quiz_id"
+                :href="`/dashboard/quizzes/${enrollment.course.first_quiz_id}`"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#42b6c5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#35919e]"
+              >
+                Take Quiz
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -343,17 +354,16 @@ function enrolledDate(dateStr: string) {
               ? 'bg-[#42b6c5] text-white shadow'
               : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
           ]"
-          v-html="link.label"
-        />
+        ><span v-html="link.label" /></Link>
         <span
           v-else
           :class="[
             'flex h-9 min-w-[36px] items-center justify-center rounded-lg px-3 text-sm font-medium',
             link.active ? 'bg-[#42b6c5] text-white' : 'cursor-not-allowed text-gray-300'
           ]"
-          v-html="link.label"
-        />
+        ><span v-html="link.label" /></span>
       </template>
+    </div>
     </div>
   </AppLayout>
 </template>

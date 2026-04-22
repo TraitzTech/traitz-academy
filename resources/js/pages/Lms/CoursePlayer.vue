@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { CheckCircle2, Circle, Download, FileText, MessageCircle, PlayCircle, ThumbsUp, Trash2 } from 'lucide-vue-next'
+import { CheckCircle2, Circle, Download, FileText, MessageCircle, NotebookPen, PlayCircle, ThumbsUp, Trash2 } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, withDefaults } from 'vue'
+import { YoutubeIframe } from '@vue-youtube/component'
 
-import { loadYouTubeIframeApi, type YTPlayerInstance } from '@/lib/youtubeIframeApi'
-import PublicLayout from '@/layouts/PublicLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { lessonBodyHtml } from '@/utils/lessonContentHtml'
 import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc, vimeoVideoIdFromUrl, youtubeVideoIdFromUrl } from '@/utils/videoEmbed'
 
@@ -88,6 +88,14 @@ interface LessonDiscussionsPayload {
   can_moderate: boolean
 }
 
+interface LessonNotePayload {
+  id: number
+  content: string
+  timestamp: string | null
+  timestamp_seconds: number | null
+  updated_at: string | null
+}
+
 const props = withDefaults(
   defineProps<{
     course: CoursePayload
@@ -96,17 +104,34 @@ const props = withDefaults(
     videoProgress: VideoProgressPayload | null
     progressPercent: number
     lessonDiscussions: LessonDiscussionsPayload
+    lessonNotes: LessonNotePayload[]
   }>(),
   {
     lessonDiscussions: () => ({ questions: [], can_moderate: false }),
+    lessonNotes: () => [],
   }
 )
+
+defineOptions({ layout: AppLayout })
 
 const progressPercent = ref(props.progressPercent)
 const completedSet = ref(new Set<number>(props.completedLessonIds))
 const videoEl = ref<HTMLVideoElement | null>(null)
-const ytHostRef = ref<HTMLElement | null>(null)
 const ytContainerRef = ref<HTMLElement | null>(null)
+interface YTPlayerInstance {
+  playVideo?: () => void
+  pauseVideo?: () => void
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void
+  mute?: () => void
+  unMute?: () => void
+  isMuted?: () => boolean
+  setVolume?: (volume: number) => void
+  getVolume?: () => number
+  getDuration?: () => number
+  getCurrentTime?: () => number
+  getPlayerState?: () => number
+  setPlaybackRate?: (rate: number) => void
+}
 const ytPlayerRef = ref<YTPlayerInstance | null>(null)
 let ytPollHandle: ReturnType<typeof setInterval> | null = null
 
@@ -115,6 +140,7 @@ const ytCurrentTime = ref(0)
 const ytDuration = ref(0)
 const ytVolume = ref(100)
 const ytPlaying = ref(false)
+const ytMuted = ref(false)
 
 const youtubeId = computed(() => youtubeVideoIdFromUrl(props.lesson.video_url))
 const vimeoId = computed(() => vimeoVideoIdFromUrl(props.lesson.video_url))
@@ -127,7 +153,7 @@ const nativeVideoSrc = computed(() => {
   return `/storage/${u}`
 })
 
-const ytContainerDomId = computed(() => `lms-yt-${props.course.id}-${props.lesson.id}`)
+const canTakeTimestampNote = computed(() => Boolean(youtubeId.value || nativeVideoSrc.value))
 
 const textLessonHtml = computed(() =>
   lessonBodyHtml(props.lesson.content, 'No lesson content has been provided yet.')
@@ -155,6 +181,21 @@ const lastPostedSecond = ref(props.videoProgress?.watched_seconds ?? 0)
 const questionBody = ref('')
 const replyBodies = ref<Record<number, string>>({})
 const discussionForm = useForm({ body: '', parent_id: null as number | null })
+const notesPanelOpen = ref(false)
+const lessonNoteDraft = ref('')
+const notesSaving = ref(false)
+const noteMessage = ref('')
+const notesPanelSectionRef = ref<HTMLElement | null>(null)
+let notesSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+const lessonNotes = ref<LessonNotePayload[]>([])
+
+const generalLessonNote = computed(() => lessonNotes.value.find((note) => note.timestamp_seconds === null) ?? null)
+const timestampNotes = computed(() =>
+  lessonNotes.value
+    .filter((note) => note.timestamp_seconds !== null)
+    .sort((a, b) => (a.timestamp_seconds ?? 0) - (b.timestamp_seconds ?? 0))
+)
 
 function discussionsBasePath(): string {
   return `/dashboard/courses/${props.course.id}/lessons/${props.lesson.id}/discussions`
@@ -207,6 +248,64 @@ function acceptAnswer(discussionId: number) {
     {},
     { preserveScroll: true }
   )
+}
+
+function notesBasePath(): string {
+  return `/dashboard/courses/${props.course.id}/lessons/${props.lesson.id}/notes`
+}
+
+function resetNotesStateFromProps() {
+  lessonNotes.value = [...props.lessonNotes]
+  lessonNoteDraft.value = generalLessonNote.value?.content ?? ''
+  noteMessage.value = ''
+  notesSaving.value = false
+}
+
+function queueLessonNoteAutosave() {
+  noteMessage.value = ''
+  if (notesSaveTimer) window.clearTimeout(notesSaveTimer)
+  notesSaveTimer = window.setTimeout(() => {
+    void saveGeneralLessonNote()
+  }, 900)
+}
+
+async function saveGeneralLessonNote() {
+  notesSaving.value = true
+  try {
+    const response = await fetch(notesBasePath(), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ content: lessonNoteDraft.value }),
+    })
+
+    if (!response.ok) {
+      noteMessage.value = 'Unable to save note right now.'
+      return
+    }
+
+    const payload = await response.json()
+    const incoming = payload.note as LessonNotePayload | null
+    const withoutGeneral = lessonNotes.value.filter((note) => note.timestamp_seconds !== null)
+    lessonNotes.value = incoming ? [incoming, ...withoutGeneral] : withoutGeneral
+    noteMessage.value = incoming ? 'Saved' : 'Cleared'
+  } catch {
+    noteMessage.value = 'Unable to save note right now.'
+  } finally {
+    notesSaving.value = false
+  }
+}
+
+async function openNotesPanel() {
+  notesPanelOpen.value = true
+  await nextTick()
+  notesPanelSectionRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
 }
 const postingProgress = ref(false)
 let throttleTimer: number | null = null
@@ -326,6 +425,92 @@ function seekYoutube(seconds: number) {
   }
 }
 
+function currentPlaybackSeconds(): number | null {
+  if (youtubeId.value && ytPlayerRef.value?.getCurrentTime) {
+    return Math.floor(ytPlayerRef.value.getCurrentTime())
+  }
+
+  if (videoEl.value) {
+    return Math.floor(videoEl.value.currentTime || 0)
+  }
+
+  return null
+}
+
+function pauseCurrentVideo() {
+  if (youtubeId.value) {
+    ytPlayerRef.value?.pauseVideo?.()
+    ytPlaying.value = false
+    return
+  }
+
+  videoEl.value?.pause()
+}
+
+function seekCurrentVideo(seconds: number) {
+  if (youtubeId.value) {
+    seekYoutube(seconds)
+    ytPlayerRef.value?.playVideo?.()
+    ytPlaying.value = true
+    return
+  }
+
+  if (videoEl.value) {
+    videoEl.value.currentTime = Math.max(0, seconds)
+    void videoEl.value.play().catch(() => {})
+  }
+}
+
+async function takeTimestampNote() {
+  if (!canTakeTimestampNote.value) {
+    noteMessage.value = 'Timestamp capture is currently available for YouTube and uploaded videos.'
+    openNotesPanel()
+    return
+  }
+
+  const seconds = currentPlaybackSeconds()
+  if (seconds === null) return
+
+  pauseCurrentVideo()
+  openNotesPanel()
+
+  const stamp = formatDuration(seconds)
+  lessonNoteDraft.value = lessonNoteDraft.value.trim() === '' ? `[${stamp}] ` : `${lessonNoteDraft.value}\n[${stamp}] `
+
+  try {
+    const response = await fetch(`${notesBasePath()}/timestamp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({
+        content: `[${stamp}] ${props.lesson.title}`,
+        timestamp_seconds: seconds,
+      }),
+    })
+
+    if (!response.ok) {
+      noteMessage.value = 'Could not save timestamp note.'
+      return
+    }
+
+    const payload = await response.json()
+    if (payload.note) {
+      lessonNotes.value = [...lessonNotes.value.filter((note) => note.id !== payload.note.id), payload.note]
+      noteMessage.value = 'Timestamp note saved.'
+    }
+  } catch {
+    noteMessage.value = 'Could not save timestamp note.'
+  }
+}
+
+function jumpToTimestamp(note: LessonNotePayload) {
+  if (note.timestamp_seconds === null) return
+  seekCurrentVideo(note.timestamp_seconds)
+}
+
 function onYoutubeSeekInput(event: Event) {
   const value = Number((event.target as HTMLInputElement).value)
   seekYoutube(value)
@@ -344,6 +529,18 @@ function onYoutubeVolumeInput(event: Event) {
   setYoutubeVolume(value)
 }
 
+function toggleYoutubeMute() {
+  const p = ytPlayerRef.value
+  if (!p) return
+  if (ytMuted.value) {
+    p.unMute?.()
+    ytMuted.value = false
+    return
+  }
+  p.mute?.()
+  ytMuted.value = true
+}
+
 async function requestYoutubeFullscreen() {
   const el = ytContainerRef.value
   if (!el) return
@@ -354,29 +551,17 @@ async function requestYoutubeFullscreen() {
   await el.requestFullscreen()
 }
 
-function destroyYoutubePlayer() {
+function resetYoutubePlayerState() {
   if (ytPollHandle) {
     clearInterval(ytPollHandle)
     ytPollHandle = null
   }
-  try {
-    ytPlayerRef.value?.destroy()
-  } catch {
-    /* ignore */
-  }
   ytPlayerRef.value = null
-}
-
-function hardenYouTubeIframeSurface() {
-  // Prevent direct clicks on YouTube iframe UI (logo/overlay links).
-  // Playback remains controllable through our custom controls and API.
-  const host = ytHostRef.value
-  if (!host) return
-  const iframe = host.querySelector('iframe')
-  if (!iframe) return
-  iframe.setAttribute('tabindex', '-1')
-  iframe.setAttribute('title', 'Course lesson video')
-  ;(iframe as HTMLIFrameElement).style.pointerEvents = 'none'
+  ytCurrentTime.value = 0
+  ytDuration.value = 0
+  ytVolume.value = 100
+  ytPlaying.value = false
+  ytMuted.value = false
 }
 
 async function handleYoutubeEnded(target: YTPlayerInstance) {
@@ -388,54 +573,8 @@ async function handleYoutubeEnded(target: YTPlayerInstance) {
   completedSet.value.add(props.lesson.id)
 }
 
-async function initYoutubePlayer() {
-  if (!youtubeId.value) return
-  destroyYoutubePlayer()
-  await loadYouTubeIframeApi()
-  await nextTick()
-
-  const w = window as unknown as {
-    YT: { Player: new (id: string, config: Record<string, unknown>) => YTPlayerInstance }
-  }
-
-  const width = ytHostRef.value?.clientWidth ?? 640
-  const height = Math.round((width * 9) / 16)
-
-  ytPlayerRef.value = new w.YT.Player(ytContainerDomId.value, {
-    width,
-    height,
-    videoId: youtubeId.value,
-    playerVars: {
-      controls: 0,
-      modestbranding: 1,
-      rel: 0,
-      iv_load_policy: 3,
-      disablekb: 1,
-      fs: 0,
-      playsinline: 1,
-      enablejsapi: 1,
-      origin: window.location.origin,
-    },
-    events: {
-      onReady: (e: { target: YTPlayerInstance }) => {
-        const resume = props.videoProgress?.watched_seconds
-        if (resume && resume > 2) {
-          e.target.seekTo(resume, true)
-        }
-        e.target.setPlaybackRate(playbackRate.value)
-        ytDuration.value = e.target.getDuration?.() ?? 0
-        ytVolume.value = e.target.getVolume?.() ?? 100
-        hardenYouTubeIframeSurface()
-      },
-      onStateChange: (e: { data?: number; target: YTPlayerInstance }) => {
-        // YT state 0 = ended
-        if (e.data === 0) {
-          void handleYoutubeEnded(e.target)
-        }
-      },
-    },
-  })
-
+function startYoutubePolling() {
+  if (ytPollHandle) clearInterval(ytPollHandle)
   ytPollHandle = window.setInterval(() => {
     const p = ytPlayerRef.value
     if (!p?.getCurrentTime || !p.getDuration) return
@@ -447,8 +586,28 @@ async function initYoutubePlayer() {
     if (dur > 0) {
       queueSaveVideoProgress(cur, dur)
     }
-    hardenYouTubeIframeSurface()
-  }, 1200)
+    ytMuted.value = p.isMuted?.() ?? ytMuted.value
+  }, 1000)
+}
+
+function onYoutubeReady(event: { target: YTPlayerInstance }) {
+  ytPlayerRef.value = event.target
+  const resume = props.videoProgress?.watched_seconds
+  if (resume && resume > 2) {
+    event.target.seekTo(resume, true)
+  }
+  event.target.setPlaybackRate?.(playbackRate.value)
+  ytDuration.value = event.target.getDuration?.() ?? 0
+  ytVolume.value = event.target.getVolume?.() ?? 100
+  ytMuted.value = event.target.isMuted?.() ?? false
+  startYoutubePolling()
+}
+
+function onYoutubeStateChange(event: { data?: number; target: YTPlayerInstance }) {
+  ytPlaying.value = event.data === 1
+  if (event.data === 0) {
+    void handleYoutubeEnded(event.target)
+  }
 }
 
 async function markCurrentLessonComplete() {
@@ -469,23 +628,24 @@ async function markCurrentLessonComplete() {
 
 onBeforeUnmount(() => {
   if (throttleTimer) window.clearTimeout(throttleTimer)
-  destroyYoutubePlayer()
+  if (notesSaveTimer) window.clearTimeout(notesSaveTimer)
+  resetYoutubePlayerState()
 })
 
 watch(
   () => props.lesson.id,
   async () => {
+    resetNotesStateFromProps()
     lastPostedSecond.value = props.videoProgress?.watched_seconds ?? 0
     playbackRate.value = 1
     ytCurrentTime.value = 0
     ytDuration.value = 0
     ytVolume.value = 100
     ytPlaying.value = false
-    destroyYoutubePlayer()
+    ytMuted.value = false
+    resetYoutubePlayerState()
     await nextTick()
-    if (youtubeId.value) {
-      await initYoutubePlayer()
-    } else if (nativeVideoSrc.value) {
+    if (nativeVideoSrc.value) {
       await nextTick()
       onNativeVideoLoaded()
     }
@@ -496,10 +656,16 @@ watch(playbackRate, () => {
   applyPlaybackRate()
 })
 
+watch(
+  () => props.lessonNotes,
+  () => {
+    resetNotesStateFromProps()
+  }
+)
+
 onMounted(async () => {
-  if (youtubeId.value) {
-    await initYoutubePlayer()
-  } else if (nativeVideoSrc.value) {
+  resetNotesStateFromProps()
+  if (nativeVideoSrc.value) {
     await nextTick()
     onNativeVideoLoaded()
   }
@@ -507,7 +673,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <PublicLayout>
+  <div>
     <Head :title="`${lesson.title} — ${course.title}`" />
 
     <div class="lms-page">
@@ -553,27 +719,56 @@ onMounted(async () => {
               <h1 class="text-2xl font-bold text-[#000928]">{{ lesson.title }}</h1>
               <p v-if="lesson.duration" class="mt-1 text-sm text-gray-500">{{ lesson.duration }}</p>
             </div>
-            <button
-              v-if="lesson.type !== 'quiz' && lesson.type !== 'text'"
-              type="button"
-              class="rounded-xl border border-[#42b6c5] bg-[#42b6c5]/10 px-4 py-2 text-sm font-semibold text-[#2a8a96] hover:bg-[#42b6c5]/20"
-              @click="markCurrentLessonComplete"
-            >
-              Mark complete
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                @click="openNotesPanel"
+              >
+                <NotebookPen class="h-4 w-4" />
+                My notes
+              </button>
+              <button
+                v-if="lesson.type !== 'quiz' && lesson.type !== 'text'"
+                type="button"
+                class="rounded-xl border border-[#42b6c5] bg-[#42b6c5]/10 px-4 py-2 text-sm font-semibold text-[#2a8a96] hover:bg-[#42b6c5]/20"
+                @click="markCurrentLessonComplete"
+              >
+                Mark complete
+              </button>
+            </div>
           </div>
 
           <p v-if="lesson.description" class="mb-5 text-gray-600">{{ lesson.description }}</p>
 
           <div v-if="lesson.type === 'video'" class="space-y-4">
-            <!-- YouTube: IFrame API player (progress + playback rate) -->
+            <div class="flex items-center justify-end">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-lg border border-[#381998]/30 bg-[#381998]/5 px-3 py-1.5 text-xs font-semibold text-[#381998] hover:bg-[#381998]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="!canTakeTimestampNote"
+                @click="takeTimestampNote"
+              >
+                <NotebookPen class="h-3.5 w-3.5" />
+                Take note at current time
+              </button>
+            </div>
+            <!-- YouTube: custom iframe + custom controls -->
             <template v-if="youtubeId">
               <div ref="ytContainerRef" class="overflow-hidden rounded-xl border border-gray-200 bg-black shadow-sm">
-                <div class="aspect-video min-h-[200px] w-full">
-                  <div
-                    :id="ytContainerDomId"
-                    ref="ytHostRef"
-                    class="h-full w-full"
+                <div class="yt-crop-shell aspect-video min-h-[200px] w-full overflow-hidden">
+                  <YoutubeIframe
+                    :video-id="youtubeId"
+                    class="yt-crop-inner h-full w-full"
+                    :player-vars="{
+                      controls: 0,
+                      rel: 0,
+                      playsinline: 1,
+                      disablekb: 1,
+                      iv_load_policy: 3,
+                    }"
+                    @ready="onYoutubeReady"
+                    @state-change="onYoutubeStateChange"
                   />
                 </div>
               </div>
@@ -598,6 +793,9 @@ onMounted(async () => {
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div class="flex items-center gap-2">
+                    <button type="button" class="lms-btn-outline !px-3 !py-1.5" @click="toggleYoutubeMute">
+                      {{ ytMuted ? 'Unmute' : 'Mute' }}
+                    </button>
                     <span class="text-xs font-medium text-gray-600">Volume</span>
                     <input
                       type="range"
@@ -608,20 +806,6 @@ onMounted(async () => {
                       @input="onYoutubeVolumeInput"
                     />
                   </div>
-                  <label class="flex items-center gap-2">
-                    <span class="text-xs font-medium text-gray-600">Playback speed</span>
-                    <select
-                      v-model.number="playbackRate"
-                      class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-[#000928] shadow-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20"
-                    >
-                      <option v-for="r in PLAYBACK_RATES" :key="r" :value="r">
-                        {{ r === 1 ? '1× (normal)' : `${r}×` }}
-                      </option>
-                    </select>
-                  </label>
-                  <button type="button" class="lms-btn-outline !px-3 !py-1.5" @click="requestYoutubeFullscreen">
-                    Fullscreen
-                  </button>
                 </div>
                 <p class="text-xs text-gray-500">Lesson completes automatically at {{ VIDEO_COMPLETE_PERCENT }}% watched.</p>
               </div>
@@ -705,29 +889,85 @@ onMounted(async () => {
             </div>
           </article>
 
-          <div v-else-if="lesson.attachments?.length" class="space-y-3">
-            <h3 class="text-sm font-semibold text-[#000928]">Lesson files</h3>
-            <div class="space-y-2">
-              <a
-                v-for="file in lesson.attachments"
-                :key="file.id"
-                :href="attachmentUrl(file.file_url)"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-sm hover:bg-gray-50"
-              >
-                <div class="min-w-0">
-                  <p class="line-clamp-1 font-medium text-gray-800">{{ file.name }}</p>
-                  <p class="text-xs text-gray-500">{{ file.formatted_file_size }}</p>
-                </div>
-                <Download class="h-4 w-4 shrink-0 text-gray-500" />
-              </a>
-            </div>
-          </div>
-
           <div v-else class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-6 text-sm text-gray-500">
             This lesson type is not directly viewable here.
           </div>
+
+          <section ref="notesPanelSectionRef" class="mt-8 rounded-xl border border-gray-100 bg-gray-50/90 px-4 py-5 sm:px-6">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 text-left"
+              @click="notesPanelOpen = !notesPanelOpen"
+            >
+              <div>
+                <h3 class="text-sm font-semibold text-[#000928]">My lesson notes</h3>
+                <p class="mt-1 text-xs text-gray-500">Autosaves as you type. Timestamp notes jump video playback.</p>
+              </div>
+              <span class="text-xs font-semibold text-[#42b6c5]">
+                {{ notesPanelOpen ? 'Hide' : 'Open' }}
+              </span>
+            </button>
+
+            <div v-if="notesPanelOpen" class="mt-4 space-y-4">
+              <div>
+                <textarea
+                  v-model="lessonNoteDraft"
+                  rows="5"
+                  maxlength="10000"
+                  placeholder="Write your notes for this lesson..."
+                  class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20"
+                  @input="queueLessonNoteAutosave"
+                />
+                <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>{{ notesSaving ? 'Saving…' : noteMessage || 'Saved automatically' }}</span>
+                  <span>{{ lessonNoteDraft.length }}/10000</span>
+                </div>
+              </div>
+
+              <div v-if="timestampNotes.length" class="rounded-lg border border-gray-200 bg-white p-3">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Timestamp notes</p>
+                <ul class="space-y-2">
+                  <li v-for="note in timestampNotes" :key="note.id">
+                    <button
+                      type="button"
+                      class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:border-[#42b6c5]/50 hover:bg-gray-50"
+                      @click="jumpToTimestamp(note)"
+                    >
+                      <span class="font-semibold text-[#381998]">{{ note.timestamp }}</span>
+                      <span class="mx-2 text-gray-300">•</span>
+                      <span class="text-gray-700">{{ note.content }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section
+            v-if="lesson.attachments?.length"
+            class="mt-8 rounded-xl border border-gray-100 bg-gray-50/90 px-4 py-5 sm:px-6"
+          >
+            <h3 class="mb-3 text-sm font-semibold text-[#000928]">Resources</h3>
+            <p class="mb-4 text-xs text-gray-500">
+              Download supplementary materials for this lesson (PDFs, slides, worksheets, templates).
+            </p>
+            <ul class="space-y-2">
+              <li v-for="file in lesson.attachments" :key="file.id">
+                <a
+                  :href="attachmentUrl(file.file_url)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm transition-colors hover:border-[#42b6c5]/40 hover:bg-gray-50"
+                >
+                  <div class="min-w-0">
+                    <p class="line-clamp-2 font-medium text-gray-800">{{ file.name }}</p>
+                    <p class="text-xs text-gray-500">{{ file.formatted_file_size }}</p>
+                  </div>
+                  <Download class="h-4 w-4 shrink-0 text-[#42b6c5]" aria-hidden="true" />
+                </a>
+              </li>
+            </ul>
+          </section>
 
           <section class="mt-8 border-t border-gray-100 pt-8">
             <div class="mb-4 flex items-center gap-2">
@@ -872,5 +1112,14 @@ onMounted(async () => {
       </div>
     </section>
     </div>
-  </PublicLayout>
+  </div>
 </template>
+
+<style scoped>
+.yt-crop-shell :deep(iframe) {
+  width: 110% !important;
+  height: 110% !important;
+  margin: -5% !important;
+  pointer-events: none;
+}
+</style>

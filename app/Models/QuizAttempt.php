@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuizAttempt extends Model
 {
@@ -26,12 +27,12 @@ class QuizAttempt extends Model
     protected function casts(): array
     {
         return [
-            'answers'          => 'array',
+            'answers' => 'array',
             'score_percentage' => 'decimal:2',
-            'passed'           => 'boolean',
-            'started_at'       => 'datetime',
-            'submitted_at'     => 'datetime',
-            'graded_at'        => 'datetime',
+            'passed' => 'boolean',
+            'started_at' => 'datetime',
+            'submitted_at' => 'datetime',
+            'graded_at' => 'datetime',
         ];
     }
 
@@ -48,5 +49,15 @@ class QuizAttempt extends Model
     public function scopeFailed($query)
     {
         return $query->where('passed', false);
+    }
+
+    public function quiz(): BelongsTo
+    {
+        return $this->belongsTo(Quiz::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

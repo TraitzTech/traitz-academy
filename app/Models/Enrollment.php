@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Enrollment extends Model
 {
@@ -20,14 +21,20 @@ class Enrollment extends Model
         'progress',
         'enrolled_at',
         'completed_at',
+        'consecutive_failed_payments',
+        'instalment_next_due_at',
+        'last_instalment_reminder_sent_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'progress'     => 'integer',
-            'enrolled_at'  => 'datetime',
+            'progress' => 'integer',
+            'enrolled_at' => 'datetime',
             'completed_at' => 'datetime',
+            'consecutive_failed_payments' => 'integer',
+            'instalment_next_due_at' => 'datetime',
+            'last_instalment_reminder_sent_at' => 'datetime',
         ];
     }
 
@@ -69,5 +76,33 @@ class Enrollment extends Model
     public function scopeSuspended($query)
     {
         return $query->where('access_status', 'suspended');
+    }
+
+    /**
+     * Unique learners (non-revoked) across all courses owned by this instructor.
+     */
+    public static function countDistinctUsersForInstructor(int $instructorId): int
+    {
+        $row = DB::table('enrollments')
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->where('courses.instructor_id', $instructorId)
+            ->where('enrollments.access_status', '!=', 'revoked')
+            ->selectRaw('count(distinct enrollments.user_id) as aggregate')
+            ->first();
+
+        return (int) ($row->aggregate ?? 0);
+    }
+
+    /**
+     * Unique users with at least one non-revoked LMS enrollment (platform-wide).
+     */
+    public static function countDistinctNonRevokedUsers(): int
+    {
+        $row = DB::table('enrollments')
+            ->where('access_status', '!=', 'revoked')
+            ->selectRaw('count(distinct user_id) as aggregate')
+            ->first();
+
+        return (int) ($row->aggregate ?? 0);
     }
 }

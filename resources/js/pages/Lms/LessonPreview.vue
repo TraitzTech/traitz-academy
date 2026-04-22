@@ -1,7 +1,20 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
+import { Download } from 'lucide-vue-next'
+import { computed } from 'vue'
 
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { lessonBodyHtml } from '@/utils/lessonContentHtml'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
+
+interface LessonAttachment {
+  id: number
+  name: string
+  file_url: string
+  file_type: string | null
+  file_size: number | null
+  formatted_file_size: string
+}
 
 const props = defineProps<{
   course: { id: number; title: string; slug: string }
@@ -13,35 +26,21 @@ const props = defineProps<{
     content: string | null
     video_url: string | null
     duration: string | null
+    attachments: LessonAttachment[]
   }
 }>()
 
-function embedUrl(url: string | null): string | null {
-  if (!url) return null
-  const u = url.trim()
-  if (u.includes('youtube.com/watch') || u.includes('youtu.be/')) {
-    try {
-      const parsed = new URL(u.startsWith('http') ? u : `https://${u}`)
-      let id = parsed.searchParams.get('v')
-      if (!id && parsed.hostname.includes('youtu.be')) {
-        id = parsed.pathname.replace('/', '')
-      }
-      if (id) return `https://www.youtube.com/embed/${id}`
-    } catch {
-      return null
-    }
-  }
-  if (u.includes('vimeo.com')) {
-    const m = u.match(/vimeo\.com\/(\d+)/)
-    if (m) return `https://player.vimeo.com/video/${m[1]}`
-  }
-  return null
-}
+const previewTextHtml = computed(() => lessonBodyHtml(props.lesson.content, 'No content yet.'))
 
 function videoSrc(url: string | null): string | null {
   if (!url) return null
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return `/storage/${url}`
+}
+
+function attachmentUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `/storage/${path}`
 }
 </script>
 
@@ -49,6 +48,7 @@ function videoSrc(url: string | null): string | null {
   <PublicLayout>
     <Head :title="`${lesson.title} — Preview`" />
 
+    <div class="lms-page">
     <div class="border-b border-gray-100 bg-gray-50/80">
       <div class="mx-auto max-w-4xl px-4 py-3 text-sm">
         <nav class="flex flex-wrap items-center gap-2 text-gray-500">
@@ -69,16 +69,17 @@ function videoSrc(url: string | null): string | null {
         <h1 class="text-2xl font-bold text-[#000928] sm:text-3xl">{{ lesson.title }}</h1>
         <p v-if="lesson.duration" class="mt-2 text-sm text-gray-500">Duration: {{ lesson.duration }}</p>
 
-        <div class="mt-8 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div class="mt-8 lms-panel">
           <p v-if="lesson.description" class="mb-6 text-gray-600">{{ lesson.description }}</p>
 
           <!-- Video -->
           <div v-if="lesson.type === 'video'" class="space-y-4">
-            <div v-if="embedUrl(lesson.video_url)" class="aspect-video overflow-hidden rounded-xl bg-black">
+            <div v-if="streamingEmbedSrc(lesson.video_url)" class="aspect-video overflow-hidden rounded-xl bg-black">
               <iframe
-                :src="embedUrl(lesson.video_url) ?? undefined"
+                :src="streamingEmbedSrc(lesson.video_url) ?? undefined"
                 class="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                referrerpolicy="strict-origin-when-cross-origin"
+                :allow="STREAMING_IFRAME_ALLOW"
                 allowfullscreen
               />
             </div>
@@ -92,25 +93,52 @@ function videoSrc(url: string | null): string | null {
           </div>
 
           <!-- Text -->
-          <div v-else-if="lesson.type === 'text'" class="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-            {{ lesson.content || 'No content yet.' }}
-          </div>
+          <div
+            v-else-if="lesson.type === 'text'"
+            class="prose prose-lg prose-slate w-full max-w-3xl leading-relaxed text-gray-800 prose-headings:font-semibold prose-headings:text-[#000928] prose-p:leading-relaxed prose-li:my-1 prose-ul:my-4 prose-ol:my-4 prose-a:text-[#381998] prose-img:max-w-full prose-img:rounded-lg prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-[#0d1117] prose-pre:px-4 prose-pre:py-3 prose-pre:text-gray-100 prose-code:before:content-none prose-code:after:content-none [&_pre_code]:bg-transparent [&_pre_code]:p-0 dark:prose-invert"
+            v-html="previewTextHtml"
+          />
 
           <!-- Quiz placeholder -->
           <div v-else class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
             Quiz previews are available after enrolment.
+          </div>
+
+          <div
+            v-if="lesson.attachments?.length"
+            class="mt-8 rounded-xl border border-gray-100 bg-white px-4 py-5 shadow-sm sm:px-6"
+          >
+            <h2 class="mb-2 text-sm font-semibold text-[#000928]">Resources</h2>
+            <p class="mb-4 text-xs text-gray-500">
+              Download files shared for this preview lesson.
+            </p>
+            <ul class="space-y-2">
+              <li v-for="file in lesson.attachments" :key="file.id">
+                <a
+                  :href="attachmentUrl(file.file_url)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm transition-colors hover:border-[#42b6c5]/40 hover:bg-gray-50"
+                >
+                  <span class="min-w-0 flex-1 font-medium text-gray-800">{{ file.name }}</span>
+                  <span class="shrink-0 text-xs text-gray-500">{{ file.formatted_file_size }}</span>
+                  <Download class="h-4 w-4 shrink-0 text-[#42b6c5]" aria-hidden="true" />
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
         <div class="mt-8 text-center">
           <Link
             :href="`/online-courses/${course.id}`"
-            class="inline-flex items-center rounded-xl bg-[#000928] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#381998]"
+            class="inline-flex items-center lms-btn-primary"
           >
             Back to course
           </Link>
         </div>
       </div>
     </section>
+    </div>
   </PublicLayout>
 </template>

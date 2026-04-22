@@ -99,6 +99,88 @@
       </div>
     </div>
 
+    <!-- LMS (online courses) -->
+    <div class="mb-6 lg:mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">LMS learners</p>
+            <p class="mt-1 text-3xl font-bold text-[#000928] dark:text-gray-100">{{ stats.lms_distinct_learners ?? 0 }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Unique users with at least one non-revoked enrollment</p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white p-5 shadow dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">LMS enrollments</p>
+            <p class="mt-1 text-3xl font-bold text-[#000928] dark:text-gray-100">{{ stats.lms_total_enrollments ?? 0 }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Active enrollment rows (excludes revoked)</p>
+          </div>
+          <a
+            href="/admin/enrollments"
+            class="shrink-0 rounded-lg bg-[#42b6c5] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#35919e]"
+          >
+            View all
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-6 lg:mb-8 rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">LMS Reports</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="/admin/lms/platform-summary" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-[#42b6c5] hover:text-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+          Platform summary
+        </a>
+        <a href="/admin/lms/course-reports" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-[#42b6c5] hover:text-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+          Per-course report
+        </a>
+        <a href="/admin/lms/user-reports" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-[#42b6c5] hover:text-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+          Per-user report
+        </a>
+        <a href="/admin/lms/discussions" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-[#42b6c5] hover:text-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+          Discussions
+        </a>
+      </div>
+    </div>
+
+    <div
+      v-if="recentLmsEnrollments && recentLmsEnrollments.length > 0"
+      class="mb-6 lg:mb-8 rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800"
+    >
+      <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700 lg:px-6">
+        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Recent course enrollments</h3>
+        <a href="/admin/enrollments" class="text-xs font-semibold text-[#42b6c5] hover:text-[#35919e]">View all</a>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div
+          v-for="row in recentLmsEnrollments"
+          :key="row.id"
+          class="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-6"
+        >
+          <div class="min-w-0">
+            <p class="truncate font-medium text-gray-900 dark:text-gray-100">{{ row.student_name }}</p>
+            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ row.course_title }} · {{ row.tutor_name }}</p>
+          </div>
+          <div class="flex shrink-0 items-center gap-3">
+            <span
+              :class="[
+                'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                row.access_status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                row.access_status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                row.access_status === 'suspended' ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300' :
+                'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
+              ]"
+            >
+              {{ row.access_status }}
+            </span>
+            <span class="text-xs text-gray-400">{{ row.student_email }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Recent Applications -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-gray-200 dark:border-gray-700">
@@ -304,13 +386,15 @@
 <script setup>
 import { router } from '@inertiajs/vue3'
 import { ref } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
+
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 defineProps({
   stats: { type: Object, required: true },
   recentApplications: { type: Array, required: true },
   pendingCourses: { type: Array, default: () => [] },
+  recentLmsEnrollments: { type: Array, default: () => [] },
 })
 
 defineOptions({ layout: AppLayout })

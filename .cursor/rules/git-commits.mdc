@@ -1,0 +1,27 @@
+---
+description: How to split and write git commits in this repo
+alwaysApply: true
+---
+
+# Git commits
+
+When the user has uncommitted work or asks for commits, **split changes into small, reviewable commits** in dependency order. Do **not** dump unrelated changes into one commit unless they explicitly ask for a single commit.
+
+## Order (apply when work spans these areas)
+
+1. **Database** — migrations only; message like `feat(db): …` or `chore(db): …`.
+2. **Domain / models** — Eloquent models and relationships that migrations enable.
+3. **Backend feature slices** — one logical area per commit (e.g. payments API, enrollment, course player API, quiz attempts, admin/tutor controllers). Prefer **backend-before-frontend** when the UI depends on new routes or props.
+4. **Frontend** — Vue/Inertia pages and layouts grouped by feature (mirror the backend slice where possible).
+5. **Build artifacts** — if `public/build/**` must be committed, use a dedicated commit: `chore(build): refresh Vite manifest and assets` (or omit from VCS if the project normally ignores built assets—match existing practice).
+6. **Tests** — co-locate with the feature commit when small; separate `test: …` commit only when the test diff is large or spans many features.
+
+## Messages
+
+- Use imperative mood (`feat(lms): add course player progress endpoint`).
+- Scope when helpful: `lms`, `admin`, `tutor`, `payments`, `quiz`, `video`, etc.
+- Do not mix refactors with behavior changes in the same commit when avoidable.
+
+## Hygiene
+
+- Run formatters/tests the project expects before pushing (e.g. Pint, `php artisan test`, frontend lint) when making commits for the user.

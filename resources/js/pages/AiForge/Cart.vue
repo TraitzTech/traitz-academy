@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import PublicLayout from '@/layouts/PublicLayout.vue'
-import { useCart } from '@/composables/useCart'
 import { computed } from 'vue'
+
+import { useCart } from '@/composables/useCart'
+import PublicLayout from '@/layouts/PublicLayout.vue'
 
 interface CartItem {
     cart_key: string

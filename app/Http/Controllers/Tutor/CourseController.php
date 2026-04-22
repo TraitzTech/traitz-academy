@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tutor;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseCategory;
+use App\Models\CourseLesson;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,33 +18,68 @@ class CourseController extends Controller
     public function index(Request $request): Response
     {
         $tutorId = auth()->id();
-        $search  = $request->input('search');
-        $status  = $request->input('status');
+        $search = $request->input('search');
+        $status = $request->input('status');
+        $category = $request->input('category');
 
         $courses = Course::query()
             ->where('instructor_id', $tutorId)
             ->with('category:id,name,slug')
-            ->withCount('enrollments')
+            ->withCount(['enrollments', 'sections'])
             ->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%"))
             ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($category, fn ($q) => $q->whereHas('category', fn ($c) => $c->where('slug', $category)))
             ->latest()
-            ->paginate(12)
+            ->paginate(15)
             ->withQueryString();
 
         $base = Course::where('instructor_id', $tutorId);
 
         return Inertia::render('Tutor/Courses/Index', [
             'courses' => $courses,
-            'filters' => ['search' => $search, 'status' => $status],
-            'stats'   => [
-                'total'    => (clone $base)->count(),
-                'active'   => (clone $base)->where('status', 'published')->count(),
-                'pending'  => (clone $base)->where('status', 'pending_review')->count(),
-                'draft'    => (clone $base)->where('status', 'draft')->count(),
-                'students' => \App\Models\Enrollment::whereHas(
-                    'course', fn ($q) => $q->where('instructor_id', $tutorId)
-                )->distinct('user_id')->count('user_id'),
+            'categories' => CourseCategory::active()->ordered()->get(['id', 'name', 'slug']),
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'category' => $category,
             ],
+            'stats' => [
+                'total' => (clone $base)->count(),
+                'active' => (clone $base)->where('status', 'published')->count(),
+                'pending' => (clone $base)->where('status', 'pending_review')->count(),
+                'draft' => (clone $base)->where('status', 'draft')->count(),
+                'students' => \App\Models\Enrollment::countDistinctUsersForInstructor($tutorId),
+            ],
+        ]);
+    }
+
+    public function show(Course $course): Response
+    {
+        $this->authorise($course);
+
+        $course->load([
+            'instructor:id,name',
+            'category:id,name,slug,icon,color',
+            'sections' => fn ($q) => $q->orderBy('sort_order')->with([
+                'lessons' => fn ($lq) => $lq->orderBy('sort_order')->select([
+                    'id', 'course_id', 'course_section_id', 'title', 'type',
+                    'duration', 'is_free', 'description', 'sort_order',
+                ]),
+            ]),
+        ]);
+
+        $previewLessons = CourseLesson::query()
+            ->where('course_id', $course->id)
+            ->where('is_free', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'course_section_id', 'title', 'type']);
+
+        return Inertia::render('Tutor/Courses/Show', [
+            'course' => $course,
+            'previewLessons' => $previewLessons,
+            'publicCatalogueUrl' => $course->status === 'published'
+                ? route('lms.catalogue.show', $course)
+                : null,
         ]);
     }
 
@@ -57,10 +93,11 @@ class CourseController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'             => ['required', 'string', 'max:255'],
-            'category_id'       => ['nullable', 'exists:course_categories,id'],
-            'level'             => ['required', 'in:beginner,intermediate,advanced'],
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'exists:course_categories,id'],
+            'level' => ['required', 'in:beginner,intermediate,advanced'],
             'short_description' => ['required', 'string', 'max:500'],
+            'description' => ['nullable', 'string'],
         ]);
 
         $slug = $this->uniqueSlug($validated['title']);
@@ -68,8 +105,8 @@ class CourseController extends Controller
         $course = Course::create([
             ...$validated,
             'instructor_id' => auth()->id(),
-            'slug'          => $slug,
-            'status'        => 'draft',
+            'slug' => $slug,
+            'status' => 'draft',
         ]);
 
         return redirect()->route('tutor.courses.edit', $course)
@@ -83,13 +120,14 @@ class CourseController extends Controller
         $course->load([
             'category:id,name,slug',
             'sections' => fn ($q) => $q->ordered()->with([
-                'lessons' => fn ($q) => $q->ordered(),
+                'lessons' => fn ($q) => $q->ordered()->with('attachments'),
             ]),
         ]);
 
         return Inertia::render('Tutor/Courses/Edit', [
-            'course'     => $course,
+            'course' => $course,
             'categories' => CourseCategory::active()->ordered()->get(['id', 'name', 'slug']),
+            'can_manually_enroll' => auth()->user()?->canManuallyEnrollStudentsInCourse($course) ?? false,
         ]);
     }
 
@@ -97,16 +135,36 @@ class CourseController extends Controller
     {
         $this->authorise($course);
 
-        $validated = $request->validate([
-            'title'             => ['required', 'string', 'max:255'],
-            'category_id'       => ['nullable', 'exists:course_categories,id'],
-            'level'             => ['required', 'in:beginner,intermediate,advanced'],
-            'short_description' => ['required', 'string', 'max:500'],
-            'description'       => ['nullable', 'string'],
-            'price'             => ['required', 'numeric', 'min:0'],
-            'sale_price'        => ['nullable', 'numeric', 'min:0', 'lt:price'],
-            'duration'          => ['nullable', 'string', 'max:100'],
+        $saleRaw = $request->input('sale_price');
+        $request->merge([
+            'sale_price' => ($saleRaw === '' || $saleRaw === null) ? null : $saleRaw,
         ]);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'exists:course_categories,id'],
+            'level' => ['required', 'in:beginner,intermediate,advanced'],
+            'short_description' => ['required', 'string', 'max:500'],
+            'description' => ['nullable', 'string'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'sale_price' => ['nullable', 'numeric', 'min:0'],
+            'max_installments' => ['required', 'integer', 'min:1', 'max:12'],
+            'duration' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $sale = $validated['sale_price'] !== null && $validated['sale_price'] !== ''
+            ? (float) $validated['sale_price']
+            : null;
+
+        if ($sale !== null && $sale >= (float) $validated['price']) {
+            return back()->withErrors(['sale_price' => 'Sale price must be less than the regular price.']);
+        }
+
+        if ((float) $validated['price'] <= 0) {
+            $validated['max_installments'] = 1;
+        }
+
+        $validated['sale_price'] = $sale;
 
         // Regenerate slug if title changed
         if ($validated['title'] !== $course->title) {
@@ -183,7 +241,7 @@ class CourseController extends Controller
     {
         $base = Str::slug($title);
         $slug = $base;
-        $i    = 1;
+        $i = 1;
 
         while (
             Course::where('slug', $slug)

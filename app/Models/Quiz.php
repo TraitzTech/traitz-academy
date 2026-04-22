@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quiz extends Model
 {
@@ -25,9 +27,9 @@ class Quiz extends Model
     {
         return [
             'pass_mark_percentage' => 'decimal:2',
-            'max_attempts'         => 'integer',
-            'is_required'          => 'boolean',
-            'reveal_answers'       => 'boolean',
+            'max_attempts' => 'integer',
+            'is_required' => 'boolean',
+            'reveal_answers' => 'boolean',
         ];
     }
 
@@ -39,5 +41,25 @@ class Quiz extends Model
     public function scopeRequired($query)
     {
         return $query->where('is_required', true);
+    }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
+
+    public function lesson(): BelongsTo
+    {
+        return $this->belongsTo(CourseLesson::class, 'lesson_id');
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(QuizQuestion::class)->orderBy('sort_order');
+    }
+
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
     }
 }

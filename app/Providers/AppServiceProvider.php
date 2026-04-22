@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Certificate;
+use App\Observers\CertificateObserver;
 use App\Support\Payments\Contracts\PaymentGateway;
 use App\Support\Payments\MesombPaymentGateway;
 use Carbon\CarbonImmutable;
@@ -26,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Certificate::observe(CertificateObserver::class);
     }
 
     protected function configureDefaults(): void

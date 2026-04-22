@@ -21,22 +21,35 @@ withDefaults(defineProps<Props>(), {
 const page = usePage();
 const toast = useToast();
 
+function showFlashToasts(): void {
+    const flash = page.props.flash as
+        | { success?: string; error?: string; info?: string; warning?: string }
+        | undefined;
+    if (!flash) {
+        return;
+    }
+    if (flash.success) {
+        toast.success(flash.success);
+    }
+    if (flash.error) {
+        toast.error(flash.error);
+    }
+    if (flash.warning) {
+        toast.warning(flash.warning);
+    }
+    if (flash.info) {
+        toast.info(flash.info);
+    }
+}
+
 watch(
-    () => (page.props.flash ?? {}) as Record<string, string>,
-    (flash) => {
-        if (flash?.success) {
-            toast.success(flash.success);
-        }
-        if (flash?.error) {
-            toast.error(flash.error);
-        }
-        if (flash?.warning) {
-            toast.warning(flash.warning);
-        }
-        if (flash?.info) {
-            toast.info(flash.info);
-        }
-    },
+    () => [
+        page.props.flash?.success,
+        page.props.flash?.error,
+        page.props.flash?.info,
+        page.props.flash?.warning,
+    ],
+    () => showFlashToasts(),
     { immediate: true },
 );
 </script>

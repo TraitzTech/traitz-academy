@@ -4,6 +4,7 @@ import { FileText, Pencil, Trash2, Upload, Video } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Section { id: number; title: string }
@@ -43,6 +44,15 @@ const sections = computed<Section[]>(() => {
 
 // Reset section when course changes
 watch(() => form.course_id, () => { form.section_id = '' })
+
+watch(
+  () => form.type,
+  (type) => {
+    if (type !== 'video') {
+      form.duration = '';
+    }
+  },
+)
 
 // ── File handling ──────────────────────────────────────────────────────────────
 const dragActive  = ref(false)
@@ -218,23 +228,26 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
               </div>
               <p v-if="form.errors.video_file" class="mt-1 text-sm text-red-600">{{ form.errors.video_file }}</p>
             </div>
-            <p class="mt-1 text-xs text-gray-400">File is uploaded to Traitz Academy's YouTube channel; only the YouTube link is saved in the lesson.</p>
+            <p class="mt-1 text-xs text-gray-400">File is uploaded and attached to this lesson for in-platform playback.</p>
           </div>
 
           <!-- Text content (only for text type) -->
-          <div v-if="form.type === 'text'">
+          <div v-if="form.type === 'text'" class="max-w-4xl">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
-            <textarea
+            <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              Rich text editor: headings, lists, code blocks, images, and links—same formatting learners see in the course player.
+            </p>
+            <RichTextEditor
               v-model="form.content"
-              rows="5"
               placeholder="Write the lesson content here…"
-              class="w-full resize-y px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
+              upload-url="/lesson-content/media"
+              body-class="min-h-[260px] max-h-[min(70vh,720px)]"
             />
           </div>
 
-          <!-- Description + Duration row -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2 sm:col-span-1">
+          <!-- Description (full width); duration only for video lessons -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div :class="form.type === 'video' ? '' : 'sm:col-span-2'">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
               <textarea
                 v-model="form.description"
@@ -243,7 +256,7 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
                 class="w-full resize-none px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent text-sm"
               />
             </div>
-            <div>
+            <div v-if="form.type === 'video'">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration</label>
               <input
                 v-model="form.duration"
@@ -251,6 +264,7 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
                 placeholder="e.g. 12:30"
                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
               />
+              <p class="mt-1 text-xs text-gray-400">Length label for this video (optional).</p>
             </div>
           </div>
 
@@ -313,7 +327,7 @@ const textCount  = computed(() => props.recentLessons.filter(l => l.type !== 'vi
               <p class="truncate text-xs text-gray-400">
                 {{ lesson.course }}
                 <template v-if="lesson.section"> · {{ lesson.section }}</template>
-                <template v-if="lesson.duration"> · {{ lesson.duration }}</template>
+                <template v-if="lesson.type === 'video' && lesson.duration"> · {{ lesson.duration }}</template>
                 · {{ lesson.created_at }}
               </p>
             </div>

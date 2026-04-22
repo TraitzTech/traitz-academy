@@ -174,6 +174,10 @@ class LessonDiscussionController extends Controller
 
     private function assertViewerCanAccessLesson(Course $course, CourseLesson $lesson, User $user): void
     {
+        if ($this->canModerateCourse($user, $course)) {
+            return;
+        }
+
         $enrollment = Enrollment::query()
             ->where('user_id', $user->id)
             ->where('course_id', $course->id)

@@ -140,11 +140,12 @@ function coverUrl(url: string | null) {
   <AppLayout :breadcrumbs="[{ title: 'Courses', href: '/dashboard/courses' }]">
     <Head title="All Courses" />
 
+    <div class="lms-page">
     <!-- Page header -->
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-[#000928] dark:text-white">All Courses</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 class="lms-title">All Courses</h1>
+        <p class="lms-subtitle">
           Browse <span class="font-semibold text-[#381998]">{{ courses.total }}</span> available courses across
           <span class="font-semibold text-[#381998]">{{ categories.length }}</span> categories
         </p>
@@ -207,7 +208,7 @@ function coverUrl(url: string | null) {
       >
         <div class="sticky top-6 space-y-4">
           <!-- Category -->
-          <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+          <div class="lms-panel p-4">
             <h3 class="mb-3 text-xs font-bold uppercase tracking-wide text-[#000928] dark:text-white">Category</h3>
             <div class="space-y-0.5">
               <button
@@ -235,7 +236,7 @@ function coverUrl(url: string | null) {
           </div>
 
           <!-- Level -->
-          <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:bg-gray-800 dark:border-gray-700">
+          <div class="lms-panel p-4">
             <h3 class="mb-3 text-xs font-bold uppercase tracking-wide text-[#000928] dark:text-white">Level</h3>
             <div class="space-y-0.5">
               <button
@@ -348,7 +349,7 @@ function coverUrl(url: string | null) {
                   <span class="text-base font-bold text-[#000928] dark:text-white">
                     {{ formatPrice(course.price, course.sale_price) }}
                   </span>
-                  <span v-if="course.sale_price && parseFloat(course.price) > 0" class="ml-2 text-xs text-gray-400 line-through">
+                  <span v-if="parseFloat(course.sale_price) > 0 && parseFloat(course.sale_price) < parseFloat(course.price)" class="ml-2 text-xs text-gray-400 line-through">
                     {{ parseFloat(course.price).toLocaleString() }} XAF
                   </span>
                 </div>
@@ -375,19 +376,18 @@ function coverUrl(url: string | null) {
                   ? 'bg-[#42b6c5] text-white shadow'
                   : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
               ]"
-              v-html="link.label"
-            />
+            ><span v-html="link.label" /></Link>
             <span
               v-else
               :class="[
                 'flex h-9 min-w-[36px] items-center justify-center rounded-lg px-3 text-sm font-medium',
                 link.active ? 'bg-[#42b6c5] text-white' : 'cursor-not-allowed text-gray-300'
               ]"
-              v-html="link.label"
-            />
+            ><span v-html="link.label" /></span>
           </template>
         </div>
       </div>
+    </div>
     </div>
   </AppLayout>
 </template>

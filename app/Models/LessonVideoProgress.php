@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class LessonVideoProgress extends Model
 {
+    /** Percentage of duration that counts as “watched” for completion (SRS). */
+    public const COMPLETION_PERCENT_THRESHOLD = 90.0;
+
     /** @use HasFactory<\Database\Factories\LessonVideoProgressFactory> */
     use HasFactory;
 
@@ -24,16 +27,15 @@ class LessonVideoProgress extends Model
     protected function casts(): array
     {
         return [
-            'watched_seconds'  => 'integer',
+            'watched_seconds' => 'integer',
             'duration_seconds' => 'integer',
-            'percentage'       => 'decimal:2',
-            'last_watched_at'  => 'datetime',
+            'percentage' => 'decimal:2',
+            'last_watched_at' => 'datetime',
         ];
     }
 
-    // considered watched if 80% or more has been viewed
     public function isWatched(): bool
     {
-        return $this->percentage >= 80.00;
+        return (float) $this->percentage >= self::COMPLETION_PERCENT_THRESHOLD;
     }
 }

@@ -29,6 +29,7 @@ import {
     Users,
     GraduationCap,
     FileText,
+    Video,
     Home,
     Star,
     Wallet,
@@ -211,6 +212,51 @@ const lmsGroup = computed<NavGroup>(() => ({
             href: '/admin/course-categories',
             icon: Folder,
         },
+        {
+            title: 'Enrollments',
+            href: '/admin/enrollments',
+            icon: Users,
+        },
+        {
+            title: 'Platform Summary',
+            href: '/admin/lms/platform-summary',
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Per-course Reports',
+            href: '/admin/lms/course-reports',
+            icon: BookMarked,
+        },
+        {
+            title: 'Per-user Reports',
+            href: '/admin/lms/user-reports',
+            icon: UserCheck,
+        },
+        {
+            title: 'Live Classes',
+            href: '/admin/lms/live-classes',
+            icon: Video,
+        },
+        {
+            title: 'Discussions',
+            href: '/admin/lms/discussions',
+            icon: MessageCircle,
+        },
+        {
+            title: 'Assignments',
+            href: '/admin/lms/assignments',
+            icon: ClipboardList,
+        },
+        {
+            title: 'Schedule',
+            href: '/admin/lms/schedules',
+            icon: Calendar,
+        },
+        {
+            title: 'Notifications',
+            href: '/admin/lms/notifications',
+            icon: Mail,
+        },
     ],
 }));
 
@@ -279,9 +325,34 @@ const userGroups: NavGroup[] = [
                 icon: BookMarked,
             },
             {
+                title: 'Discussions',
+                href: '/dashboard/discussions',
+                icon: MessageCircle,
+            },
+            {
+                title: 'Assignments',
+                href: '/dashboard/assignments',
+                icon: ClipboardList,
+            },
+            {
+                title: 'Schedule',
+                href: '/dashboard/schedules',
+                icon: Calendar,
+            },
+            {
                 title: 'My Certificates',
                 href: '/dashboard/certificates',
                 icon: Award,
+            },
+            {
+                title: 'Live Classes',
+                href: '/dashboard/live-classes',
+                icon: Video,
+            },
+            {
+                title: 'Recorded Live Classes',
+                href: '/dashboard/live-classes/recordings',
+                icon: Library,
             },
             {
                 title: 'My Notes',
@@ -298,37 +369,77 @@ const tutorStandaloneItems: NavItem[] = [
         title: 'Dashboard',
         href: '/tutor/dashboard',
         icon: LayoutGrid,
+        activeMatch: 'prefix',
     },
 ];
 
 const tutorGroups: NavGroup[] = [
     {
-        label: 'Teaching',
+        label: 'Course Management',
         items: [
             {
                 title: 'My Courses',
                 href: '/tutor/courses',
                 icon: BookOpen,
+                activeMatch: 'prefix',
             },
             {
                 title: 'Create Course',
                 href: '/tutor/courses/create',
                 icon: PlusCircle,
+                activeMatch: 'prefix',
             },
             {
                 title: 'Upload Lesson',
                 href: '/tutor/lessons/upload',
                 icon: Upload,
+                activeMatch: 'prefix',
             },
+        ],
+    },
+    {
+        label: 'Learners',
+        items: [
             {
                 title: 'My Students',
                 href: '/tutor/students',
                 icon: Users,
+                activeMatch: 'prefix',
+            },
+        ],
+    },
+    {
+        label: 'Live & Community',
+        items: [
+            {
+                title: 'Live Classes',
+                href: '/tutor/live-classes',
+                icon: Video,
+                activeMatch: 'prefix',
             },
             {
                 title: 'Discussions',
                 href: '/tutor/discussions',
                 icon: MessageCircle,
+                activeMatch: 'prefix',
+            },
+            {
+                title: 'Assignments',
+                href: '/tutor/assignments',
+                icon: ClipboardList,
+                activeMatch: 'prefix',
+            },
+            {
+                title: 'Schedule',
+                href: '/tutor/schedules',
+                icon: Calendar,
+                activeMatch: 'prefix',
+            },
+            {
+                title: 'Notifications',
+                href: '/tutor/notifications',
+                icon: Mail,
+                activeMatch: 'prefix',
             },
         ],
     },
@@ -339,6 +450,7 @@ const tutorGroups: NavGroup[] = [
                 title: 'Earnings',
                 href: '/tutor/earnings',
                 icon: BarChart3,
+                activeMatch: 'prefix',
             },
         ],
     },

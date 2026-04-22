@@ -19,10 +19,14 @@ class LessonAttachment extends Model
         'sort_order',
     ];
 
+    protected $appends = [
+        'formatted_file_size',
+    ];
+
     protected function casts(): array
     {
         return [
-            'file_size'  => 'integer',
+            'file_size' => 'integer',
             'sort_order' => 'integer',
         ];
     }
@@ -39,8 +43,8 @@ class LessonAttachment extends Model
         }
 
         $units = ['B', 'KB', 'MB', 'GB'];
-        $size  = $this->file_size;
-        $unit  = 0;
+        $size = $this->file_size;
+        $unit = 0;
 
         while ($size >= 1024 && $unit < count($units) - 1) {
             $size /= 1024;

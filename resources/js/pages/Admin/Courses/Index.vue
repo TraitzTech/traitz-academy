@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
+import { debounce } from 'lodash-es'
 import { BookOpen, CheckSquare, Clock, Edit2, Eye, Trash2, Users } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
-import { debounce } from 'lodash-es'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import AppLayout from '@/layouts/AppLayout.vue'

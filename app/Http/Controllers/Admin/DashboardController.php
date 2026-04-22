@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Program;
@@ -39,13 +40,15 @@ class DashboardController extends Controller
         }
 
         $stats = [
-            'total_programs'      => Program::count(),
-            'total_events'        => Event::count(),
-            'pending_applications'=> Application::where('status', 'pending')->count(),
-            'total_users'         => User::whereNotIn('role', $adminRoles)->count(),
-            'total_collected'     => (float) $totalCollectedQuery->sum('amount'),
-            'collected_label'     => $authUser->isProgramCoordinator() ? 'My Collected' : 'Total Collected',
-            'pending_courses'     => Course::where('status', 'pending_review')->count(),
+            'total_programs' => Program::count(),
+            'total_events' => Event::count(),
+            'pending_applications' => Application::where('status', 'pending')->count(),
+            'total_users' => User::whereNotIn('role', $adminRoles)->count(),
+            'total_collected' => (float) $totalCollectedQuery->sum('amount'),
+            'collected_label' => $authUser->isProgramCoordinator() ? 'My Collected' : 'Total Collected',
+            'pending_courses' => Course::where('status', 'pending_review')->count(),
+            'lms_distinct_learners' => Enrollment::countDistinctNonRevokedUsers(),
+            'lms_total_enrollments' => Enrollment::query()->where('access_status', '!=', 'revoked')->count(),
         ];
 
         $recentApplications = Application::with('program')
@@ -59,10 +62,26 @@ class DashboardController extends Controller
             ->latest()
             ->get();
 
+        $recentLmsEnrollments = Enrollment::query()
+            ->with(['user:id,name,email', 'course:id,title,instructor_id', 'course.instructor:id,name'])
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn (Enrollment $e) => [
+                'id' => $e->id,
+                'student_name' => $e->user?->name,
+                'student_email' => $e->user?->email,
+                'course_title' => $e->course?->title,
+                'tutor_name' => $e->course?->instructor?->name,
+                'access_status' => $e->access_status,
+                'created_at' => $e->created_at?->toIso8601String(),
+            ]);
+
         return Inertia::render('Admin/Dashboard', [
-            'stats'              => $stats,
+            'stats' => $stats,
             'recentApplications' => $recentApplications,
-            'pendingCourses'     => $pendingCourses,
+            'pendingCourses' => $pendingCourses,
+            'recentLmsEnrollments' => $recentLmsEnrollments,
         ]);
     }
 }

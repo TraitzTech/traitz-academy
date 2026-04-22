@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { BookOpen, Clock, Search, SlidersHorizontal, Star, Users, X } from 'lucide-vue-next';
 import { debounce } from 'lodash-es';
+import { BookOpen, Clock, Search, SlidersHorizontal, Star, Users, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -72,7 +72,7 @@ const selectedCategory = ref(props.filters.category ?? '');
 const selectedLevel = ref(props.filters.level ?? '');
 const selectedSort = ref(props.filters.sort ?? '');
 const freeOnly = ref(props.filters.free === true || props.filters.free === '1' || props.filters.free === 1);
-const filtersOpen = ref(false);
+const showFilters = ref(false);
 
 const levelLabels: Record<string, string> = {
   beginner: 'Beginner',
@@ -81,23 +81,29 @@ const levelLabels: Record<string, string> = {
 };
 
 const levelColors: Record<string, string> = {
-  beginner: 'bg-green-100 text-green-700',
-  intermediate: 'bg-yellow-100 text-yellow-700',
-  advanced: 'bg-red-100 text-red-700',
+  beginner: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
+  intermediate: 'bg-amber-50 text-amber-900 ring-1 ring-amber-200',
+  advanced: 'bg-rose-50 text-rose-900 ring-1 ring-rose-200',
 };
 
 const sortOptions = [
-  { value: '', label: 'Featured' },
-  { value: 'popular', label: 'Most Popular' },
-  { value: 'rating', label: 'Highest Rated' },
+  { value: '', label: 'Featured first' },
+  { value: 'popular', label: 'Most popular' },
+  { value: 'rating', label: 'Highest rated' },
   { value: 'newest', label: 'Newest' },
-  { value: 'price_asc', label: 'Price: Low to High' },
-  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
 ];
 
-const activeFiltersCount = computed(
-  () => [selectedCategory.value, selectedLevel.value, selectedSort.value, freeOnly.value].filter(Boolean).length,
-);
+const activeFiltersCount = computed(() => {
+  let n = 0;
+  if (search.value.trim()) n++;
+  if (selectedCategory.value) n++;
+  if (selectedLevel.value) n++;
+  if (selectedSort.value) n++;
+  if (freeOnly.value) n++;
+  return n;
+});
 
 const applyFilters = debounce(() => {
   router.get(
@@ -142,196 +148,177 @@ function coverUrl(url: string | null) {
   <PublicLayout>
     <Head title="Online Courses — Traitz Academy" />
 
-    <!-- Hero -->
-    <section class="relative overflow-hidden bg-gradient-to-br from-[#000928] via-[#1a0a52] to-[#381998] py-20 text-white">
-      <div class="absolute inset-0 opacity-10">
-        <svg class="absolute inset-0 h-full w-full" viewBox="0 0 1200 1200">
-          <defs>
-            <pattern id="dots" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-              <circle cx="50" cy="50" r="2" fill="currentColor" />
-            </pattern>
-          </defs>
-          <rect width="1200" height="1200" fill="url(#dots)" />
-        </svg>
-      </div>
-      <div class="absolute right-0 top-0 h-96 w-96 rounded-full bg-[#42b6c5] opacity-10 blur-3xl" />
-      <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-        <div class="inline-flex items-center gap-2 rounded-full border border-[#42b6c5]/30 bg-[#42b6c5]/10 px-4 py-1.5 mb-6">
-          <BookOpen class="h-4 w-4 text-[#42b6c5]" />
-          <span class="text-sm font-semibold text-[#42b6c5]">Online Courses</span>
-        </div>
-        <h1 class="text-5xl md:text-6xl font-bold mb-4 leading-tight">
-          Learn at Your
-          <span class="bg-gradient-to-r from-[#42b6c5] to-white bg-clip-text text-transparent"> Own Pace</span>
-        </h1>
-        <p class="mx-auto max-w-2xl text-lg text-gray-300">
-          Browse our growing library of courses taught by industry professionals. Earn certificates, track your progress, and level up your skills.
+    <!-- Hero — aligned with Programs/Index -->
+    <section class="bg-gradient-to-r from-[#000928] to-[#381998] py-16 text-white">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <h1 class="mb-4 text-4xl font-bold md:text-5xl">Online Courses</h1>
+        <p class="max-w-3xl text-xl text-gray-300">
+          Learn at your own pace with expert-led courses. Browse by topic, level, and format — earn certificates and track your progress.
         </p>
-
-        <!-- Stats row -->
-        <div class="mt-10 flex flex-wrap justify-center gap-8 text-sm">
-          <div class="flex items-center gap-2">
-            <BookOpen class="h-4 w-4 text-[#42b6c5]" />
-            <span class="text-gray-300"><span class="font-bold text-white">{{ courses.total }}</span> Courses</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <Users class="h-4 w-4 text-[#42b6c5]" />
-            <span class="text-gray-300"><span class="font-bold text-white">{{ categories.length }}</span> Categories</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <Star class="h-4 w-4 text-[#42b6c5]" />
-            <span class="text-gray-300">Certificate on completion</span>
-          </div>
-        </div>
       </div>
     </section>
 
-    <!-- Filters + Grid -->
-    <section class="bg-gray-50 min-h-screen py-12">
+    <!-- Sticky search & filters — Programs-style -->
+    <section class="sticky top-0 z-30 border-b border-gray-200 bg-white py-8 shadow-sm">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        <!-- Search + filter bar -->
-        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <!-- Search -->
-          <div class="relative flex-1 max-w-md">
-            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <div class="mb-6 flex flex-col gap-4 md:flex-row">
+          <div class="relative flex-1">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+              <Search class="h-5 w-5 text-gray-400" />
+            </div>
             <input
               v-model="search"
               type="text"
-              placeholder="Search courses..."
-              class="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-800 shadow-sm placeholder:text-gray-400 focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20"
+              placeholder="Search courses by title, topic, or skill…"
+              class="w-full rounded-xl border-2 border-gray-200 py-3 pl-12 pr-10 text-gray-800 transition-all placeholder:text-gray-400 focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20"
             />
-            <button v-if="search" @click="search = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button
+              v-if="search"
+              type="button"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Clear search"
+              @click="search = ''"
+            >
               <X class="h-4 w-4" />
             </button>
           </div>
 
-          <div class="flex items-center gap-3">
-            <!-- Sort -->
-            <select
-              v-model="selectedSort"
-              class="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 shadow-sm focus:border-[#42b6c5] focus:outline-none"
+          <button
+            type="button"
+            :class="[
+              'flex items-center gap-2 rounded-xl border-2 px-6 py-3 font-semibold transition-all',
+              showFilters || activeFiltersCount > 0
+                ? 'border-[#42b6c5] bg-[#42b6c5] text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-[#42b6c5]',
+            ]"
+            @click="showFilters = !showFilters"
+          >
+            <SlidersHorizontal class="h-5 w-5 shrink-0" />
+            Filters
+            <span
+              v-if="activeFiltersCount > 0"
+              class="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-[#42b6c5]"
             >
-              <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
+              {{ activeFiltersCount }}
+            </span>
+          </button>
+        </div>
 
-            <!-- Filter toggle (mobile) -->
-            <button
-              @click="filtersOpen = !filtersOpen"
-              class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:border-[#42b6c5] hover:text-[#42b6c5] transition-colors lg:hidden"
-            >
-              <SlidersHorizontal class="h-4 w-4" />
-              Filters
-              <span v-if="activeFiltersCount" class="flex h-5 w-5 items-center justify-center rounded-full bg-[#42b6c5] text-xs font-bold text-white">{{ activeFiltersCount }}</span>
-            </button>
-
-            <!-- Clear filters -->
-            <button
-              v-if="activeFiltersCount > 0 || search"
-              type="button"
-              @click="clearFilters"
-              class="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
-            >
-              <X class="h-3.5 w-3.5" /> Clear
+        <!-- Expandable: level, sort, free -->
+        <div v-if="showFilters" class="mt-4 border-t border-gray-200 pt-6">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Level</label>
+              <select
+                v-model="selectedLevel"
+                class="w-full rounded-lg border-2 border-gray-200 px-4 py-2 text-gray-800 transition-all focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20"
+              >
+                <option value="">Any level</option>
+                <option v-for="(label, value) in levelLabels" :key="value" :value="value">{{ label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Sort by</label>
+              <select
+                v-model="selectedSort"
+                class="w-full rounded-lg border-2 border-gray-200 px-4 py-2 text-gray-800 transition-all focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20"
+              >
+                <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <label class="flex w-full cursor-pointer items-center gap-3 rounded-lg border-2 border-gray-200 px-4 py-3 transition-colors hover:border-[#42b6c5]/50">
+                <input v-model="freeOnly" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-[#42b6c5] focus:ring-[#42b6c5]" />
+                <span class="text-sm font-medium text-gray-700">Free courses only</span>
+              </label>
+            </div>
+          </div>
+          <div class="mt-4 flex justify-end">
+            <button type="button" class="text-sm font-medium text-[#42b6c5] transition-colors hover:text-[#35919e]" @click="clearFilters">
+              Clear all filters
             </button>
           </div>
         </div>
 
-        <div class="flex gap-8">
-          <!-- Sidebar filters (desktop always visible, mobile collapsible) -->
-          <aside
-            :class="[
-              'shrink-0 lg:block',
-              filtersOpen ? 'block w-full lg:w-60' : 'hidden lg:block lg:w-60'
-            ]"
-          >
-            <div class="sticky top-24 space-y-6">
-              <!-- Category filter -->
-              <div class="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-                <h3 class="mb-3 text-sm font-bold text-[#000928] uppercase tracking-wide">Category</h3>
-                <div class="space-y-1">
-                  <button
-                    type="button"
-                    @click="selectedCategory = ''"
-                    :class="[
-                      'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-                      !selectedCategory ? 'bg-[#42b6c5]/10 font-semibold text-[#42b6c5]' : 'text-gray-600 hover:bg-gray-50'
-                    ]"
-                  >
-                    All Categories
-                  </button>
-                  <button
-                    type="button"
-                    v-for="cat in categories"
-                    :key="cat.id"
-                    @click="selectedCategory = cat.slug"
-                    :class="[
-                      'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-                      selectedCategory === cat.slug ? 'bg-[#42b6c5]/10 font-semibold text-[#42b6c5]' : 'text-gray-600 hover:bg-gray-50'
-                    ]"
-                  >
-                    <span v-if="cat.icon" class="text-base">{{ cat.icon }}</span>
-                    {{ cat.name }}
-                  </button>
-                </div>
-              </div>
+        <div v-if="activeFiltersCount > 0 && !showFilters" class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+          <span>
+            Showing <span class="font-semibold text-gray-900">{{ courses.data.length }}</span> on this page ·
+            <span class="font-semibold text-gray-900">{{ courses.total }}</span> total matches
+          </span>
+          <span class="text-gray-300">|</span>
+          <button type="button" class="text-[#42b6c5] hover:underline" @click="clearFilters">Clear filters</button>
+        </div>
+      </div>
+    </section>
 
-              <!-- Free only -->
-              <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                <label class="flex cursor-pointer items-center gap-3">
-                  <input v-model="freeOnly" type="checkbox" class="rounded border-gray-300 text-[#42b6c5] focus:ring-[#42b6c5]" />
-                  <span class="text-sm font-medium text-gray-700">Free courses only</span>
-                </label>
-              </div>
-
-              <!-- Level filter -->
-              <div class="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-                <h3 class="mb-3 text-sm font-bold text-[#000928] uppercase tracking-wide">Level</h3>
-                <div class="space-y-1">
-                  <button
-                    type="button"
-                    @click="selectedLevel = ''"
-                    :class="[
-                      'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors',
-                      !selectedLevel ? 'bg-[#42b6c5]/10 font-semibold text-[#42b6c5]' : 'text-gray-600 hover:bg-gray-50'
-                    ]"
-                  >
-                    All Levels
-                  </button>
-                  <button
-                    type="button"
-                    v-for="(label, value) in levelLabels"
-                    :key="value"
-                    @click="selectedLevel = value"
-                    :class="[
-                      'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors',
-                      selectedLevel === value ? 'bg-[#42b6c5]/10 font-semibold text-[#42b6c5]' : 'text-gray-600 hover:bg-gray-50'
-                    ]"
-                  >
-                    {{ label }}
-                  </button>
-                </div>
-              </div>
+    <!-- Sidebar categories + course cards -->
+    <section class="bg-gray-50 py-12 lg:py-16">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+          <!-- Categories sidebar -->
+          <aside class="w-full shrink-0 lg:sticky lg:top-28 lg:w-64">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 class="mb-4 text-xs font-bold uppercase tracking-wide text-[#000928]">
+                Categories
+              </h2>
+              <nav class="space-y-1" aria-label="Course categories">
+                <button
+                  type="button"
+                  :class="[
+                    'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
+                    !selectedCategory
+                      ? 'bg-[#42b6c5]/15 font-semibold text-[#0d5c66]'
+                      : 'text-gray-600 hover:bg-gray-50',
+                  ]"
+                  @click="selectedCategory = ''"
+                >
+                  <BookOpen class="h-4 w-4 shrink-0 opacity-70" />
+                  All categories
+                </button>
+                <button
+                  v-for="cat in categories"
+                  :key="cat.id"
+                  type="button"
+                  :class="[
+                    'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
+                    selectedCategory === cat.slug
+                      ? 'bg-[#42b6c5]/15 font-semibold text-[#0d5c66]'
+                      : 'text-gray-600 hover:bg-gray-50',
+                  ]"
+                  @click="selectedCategory = cat.slug"
+                >
+                  <span v-if="cat.icon" class="shrink-0 text-base leading-none">{{ cat.icon }}</span>
+                  <span class="min-w-0">{{ cat.name }}</span>
+                </button>
+              </nav>
             </div>
           </aside>
 
-          <!-- Course grid -->
-          <div class="flex-1 min-w-0">
-            <!-- Results summary -->
-            <div class="mb-5 flex items-center justify-between">
-              <p class="text-sm text-gray-500">
-                Showing <span class="font-semibold text-[#000928]">{{ courses.data.length }}</span> of
-                <span class="font-semibold text-[#000928]">{{ courses.total }}</span> courses
+          <!-- Main: results + grid -->
+          <div class="min-w-0 flex-1">
+            <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+              <p class="text-gray-600">
+                <span class="font-semibold text-gray-900">{{ courses.total }}</span>
+                {{ courses.total === 1 ? 'course' : 'courses' }}
+                <span v-if="courses.last_page > 1" class="text-gray-400">
+                  · Page {{ courses.current_page }} of {{ courses.last_page }}
+                </span>
               </p>
             </div>
 
-            <!-- Empty state -->
-            <div v-if="courses.data.length === 0" class="rounded-2xl border-2 border-dashed border-gray-200 bg-white py-20 text-center">
-              <BookOpen class="mx-auto mb-4 h-12 w-12 text-gray-300" />
-              <h3 class="text-lg font-bold text-gray-700 mb-1">No courses found</h3>
-              <p class="text-sm text-gray-500 mb-6">Try adjusting your search or filters.</p>
-              <button @click="clearFilters" class="inline-flex items-center gap-2 rounded-xl bg-[#42b6c5] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#35919e] transition-colors">
-                <X class="h-4 w-4" /> Clear Filters
+            <!-- Empty -->
+            <div v-if="courses.data.length === 0" class="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center">
+              <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
+                <BookOpen class="h-10 w-10 text-gray-400" />
+              </div>
+              <h3 class="mb-2 text-lg font-semibold text-gray-900">No courses found</h3>
+              <p class="mb-6 text-sm text-gray-600">Try another category or adjust your search.</p>
+              <button
+                type="button"
+                class="rounded-lg bg-[#42b6c5] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#35919e]"
+                @click="clearFilters"
+              >
+                Clear all filters
               </button>
             </div>
 
@@ -340,78 +327,80 @@ function coverUrl(url: string | null) {
               <div
                 v-for="course in courses.data"
                 :key="course.id"
-                class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                class="flex transform flex-col overflow-hidden rounded-lg bg-white shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
               >
-                <!-- Thumbnail -->
-                <div class="relative h-44 overflow-hidden bg-gradient-to-br from-[#381998] to-[#42b6c5]">
+                <div class="relative h-48 overflow-hidden bg-gradient-to-br from-[#381998] to-[#42b6c5]">
                   <img
                     v-if="coverUrl(course.cover_image)"
                     :src="coverUrl(course.cover_image) ?? undefined"
                     :alt="course.title"
-                    class="h-full w-full object-cover opacity-80 transition-transform duration-300 group-hover:scale-105"
+                    class="h-full w-full object-cover opacity-90"
                   />
                   <div v-else class="flex h-full items-center justify-center">
-                    <BookOpen class="h-14 w-14 text-white/40" />
+                    <BookOpen class="h-16 w-16 text-white/35" />
                   </div>
-
-                  <!-- Featured badge -->
-                  <div v-if="course.is_featured" class="absolute left-3 top-3 rounded-full bg-[#42b6c5] px-2.5 py-0.5 text-xs font-bold text-white shadow">
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div v-if="course.is_featured" class="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 shadow">
                     Featured
-                  </div>
-
-                  <!-- Category badge -->
-                  <div v-if="course.category" class="absolute right-3 top-3 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-0.5 text-xs font-semibold text-white">
-                    {{ course.category.name }}
                   </div>
                 </div>
 
-                <!-- Content -->
-                <div class="flex flex-1 flex-col p-5">
-                  <!-- Level -->
-                  <span :class="['mb-2 inline-block self-start rounded-full px-2.5 py-0.5 text-xs font-semibold', levelColors[course.level]]">
-                    {{ levelLabels[course.level] }}
+                <div class="flex flex-grow flex-col p-6">
+              <div class="mb-2 inline-flex items-center gap-2">
+                <span
+                  v-if="course.category"
+                  class="inline-block w-fit rounded-full bg-[#42b6c5]/10 px-3 py-1 text-sm font-semibold text-[#42b6c5]"
+                >
+                  {{ course.category.name }}
+                </span>
+                <span :class="['inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold', levelColors[course.level]]">
+                  {{ levelLabels[course.level] }}
+                </span>
+              </div>
+
+              <h3 class="mb-2 line-clamp-2 text-xl font-bold text-[#000928]">{{ course.title }}</h3>
+              <p class="mb-4 line-clamp-3 flex-grow text-gray-600">{{ course.short_description }}</p>
+
+              <div v-if="course.instructor" class="mb-4 text-sm text-gray-500">
+                <span class="font-medium text-gray-700">{{ course.instructor.name }}</span>
+                <span class="text-gray-400"> · Instructor</span>
+              </div>
+
+              <div class="mb-6 space-y-2 text-sm text-gray-600">
+                <div v-if="course.duration" class="flex justify-between gap-4">
+                  <span class="font-semibold text-gray-700">Duration</span>
+                  <span>{{ course.duration }}</span>
+                </div>
+                <div class="flex justify-between gap-4">
+                  <span class="font-semibold text-gray-700">Enrolled</span>
+                  <span>{{ course.enrolled_count.toLocaleString() }} learners</span>
+                </div>
+                <div v-if="parseFloat(course.rating) > 0" class="flex justify-between gap-4">
+                  <span class="font-semibold text-gray-700">Rating</span>
+                  <span class="inline-flex items-center gap-1">
+                    <Star class="h-4 w-4 fill-amber-400 text-amber-400" />
+                    {{ parseFloat(course.rating).toFixed(1) }}
+                    <span class="text-gray-400">({{ course.review_count }})</span>
                   </span>
+                </div>
+                <div class="flex justify-between gap-4 border-t border-gray-100 pt-2">
+                  <span class="font-semibold text-gray-700">Price</span>
+                  <span class="text-lg font-bold text-[#42b6c5]">{{ formatPrice(course.price, course.sale_price) }}</span>
+                </div>
+                <p
+                  v-if="parseFloat(course.sale_price || '0') > 0 && parseFloat(course.sale_price!) < parseFloat(course.price)"
+                  class="text-right text-xs text-gray-400 line-through"
+                >
+                  {{ parseFloat(course.price).toLocaleString() }} XAF
+                </p>
+              </div>
 
-                  <h3 class="mb-1.5 text-base font-bold leading-snug text-[#000928] line-clamp-2 group-hover:text-[#381998] transition-colors">
-                    {{ course.title }}
-                  </h3>
-                  <p class="mb-3 text-xs text-gray-500 line-clamp-2">{{ course.short_description }}</p>
-
-                  <!-- Instructor -->
-                  <p v-if="course.instructor" class="mb-3 text-xs text-gray-400">
-                    by <span class="font-medium text-gray-600">{{ course.instructor.name }}</span>
-                  </p>
-
-                  <!-- Meta row -->
-                  <div class="mb-4 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                    <span v-if="course.duration" class="flex items-center gap-1">
-                      <Clock class="h-3.5 w-3.5" /> {{ course.duration }}
-                    </span>
-                    <span class="flex items-center gap-1">
-                      <Users class="h-3.5 w-3.5" /> {{ course.enrolled_count.toLocaleString() }} enrolled
-                    </span>
-                    <span v-if="parseFloat(course.rating) > 0" class="flex items-center gap-1">
-                      <Star class="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                      {{ parseFloat(course.rating).toFixed(1) }}
-                      <span class="text-gray-400">({{ course.review_count }})</span>
-                    </span>
-                  </div>
-
-                  <!-- Price + CTA -->
-                  <div class="mt-auto flex items-center justify-between">
-                    <div>
-                      <span class="text-lg font-bold text-[#000928]">
-                        {{ formatPrice(course.price, course.sale_price) }}
-                      </span>
-                      <span v-if="course.sale_price && parseFloat(course.price) > 0" class="ml-2 text-sm text-gray-400 line-through">
-                        {{ parseFloat(course.price).toLocaleString() }} XAF
-                      </span>
-                    </div>
+                  <div class="mt-auto">
                     <Link
                       :href="`/online-courses/${course.id}`"
-                      class="rounded-xl bg-[#000928] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#381998]"
+                      class="block w-full rounded-lg bg-[#000928] px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-[#381998]"
                     >
-                      View Course
+                      View course
                     </Link>
                   </div>
                 </div>
@@ -419,23 +408,23 @@ function coverUrl(url: string | null) {
             </div>
 
             <!-- Pagination -->
-            <div v-if="courses.last_page > 1" class="mt-10 flex items-center justify-center gap-2">
+            <div v-if="courses.last_page > 1" class="mt-10 flex flex-wrap items-center justify-center gap-2">
               <template v-for="link in courses.links" :key="link.label">
                 <Link
                   v-if="link.url"
                   :href="link.url"
                   :class="[
-                    'flex h-9 min-w-[36px] items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors',
+                    'flex h-10 min-w-[40px] items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors',
                     link.active
-                      ? 'bg-[#42b6c5] text-white shadow'
-                      : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5]'
+                      ? 'bg-[#381998] text-white shadow'
+                      : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5]',
                   ]"
                 ><span v-html="link.label" /></Link>
                 <span
                   v-else
                   :class="[
-                    'flex h-9 min-w-[36px] items-center justify-center rounded-lg px-3 text-sm font-medium',
-                    link.active ? 'bg-[#42b6c5] text-white' : 'cursor-not-allowed text-gray-300'
+                    'flex h-10 min-w-[40px] items-center justify-center rounded-lg px-3 text-sm font-medium',
+                    link.active ? 'bg-[#381998] text-white' : 'cursor-not-allowed text-gray-300',
                   ]"
                   v-html="link.label"
                 />

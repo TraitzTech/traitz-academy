@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseCategory;
+use App\Models\User;
+use App\Notifications\Lms\NewCoursePublishedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -26,14 +28,14 @@ class CourseController extends Controller
             ->withQueryString();
 
         return Inertia::render('Admin/Courses/Index', [
-            'courses'    => $courses,
+            'courses' => $courses,
             'categories' => CourseCategory::active()->ordered()->get(['id', 'name', 'slug']),
-            'filters'    => $request->only(['search', 'status', 'category']),
-            'stats'      => [
-                'total'     => Course::count(),
+            'filters' => $request->only(['search', 'status', 'category']),
+            'stats' => [
+                'total' => Course::count(),
                 'published' => Course::where('status', 'published')->count(),
-                'pending'   => Course::where('status', 'pending_review')->count(),
-                'students'  => \App\Models\Enrollment::distinct('user_id')->count('user_id'),
+                'pending' => Course::where('status', 'pending_review')->count(),
+                'students' => \App\Models\Enrollment::distinct('user_id')->count('user_id'),
             ],
         ]);
     }
@@ -44,7 +46,7 @@ class CourseController extends Controller
             'instructor:id,name,email',
             'category:id,name,slug,icon,color',
             'sections' => fn ($q) => $q->orderBy('sort_order')->with([
-                'lessons' => fn ($q) => $q->orderBy('sort_order'),
+                'lessons' => fn ($q) => $q->orderBy('sort_order')->with('quiz:id,lesson_id'),
             ]),
         ]);
 
@@ -52,6 +54,7 @@ class CourseController extends Controller
 
         return Inertia::render('Admin/Courses/Show', [
             'course' => $course,
+            'can_manually_enroll' => auth()->user()?->canManuallyEnrollStudentsInCourse($course) ?? false,
         ]);
     }
 
@@ -65,25 +68,27 @@ class CourseController extends Controller
 
     public function update(Request $request, Course $course): RedirectResponse
     {
+        // Inertia / JSON may send "" for empty optional fields; normalize so nullable + exists rules work.
+        $categoryId = $request->input('category_id');
+        $request->merge([
+            'category_id' => ($categoryId === '' || $categoryId === null) ? null : $categoryId,
+        ]);
+
         $validated = $request->validate([
-            'title'             => ['required', 'string', 'max:255'],
-            'category_id'       => ['nullable', 'exists:course_categories,id'],
-            'level'             => ['required', 'in:beginner,intermediate,advanced'],
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['nullable', 'integer', 'exists:course_categories,id'],
+            'level' => ['required', 'in:beginner,intermediate,advanced'],
             'short_description' => ['required', 'string', 'max:500'],
-            'description'       => ['nullable', 'string'],
-            'price'             => ['required', 'numeric', 'min:0'],
-            'sale_price'        => ['nullable', 'numeric', 'min:0', 'lt:price'],
-            'duration'          => ['nullable', 'string', 'max:100'],
-            'status'            => ['required', 'in:draft,pending_review,published,archived'],
-            'is_featured'       => ['boolean'],
+            'description' => ['nullable', 'string'],
+            'duration' => ['nullable', 'string', 'max:100'],
+            'status' => ['required', 'in:draft,pending_review,published,archived'],
         ]);
 
-        $course->update([
-            ...$validated,
-            'is_featured' => $request->boolean('is_featured'),
-        ]);
+        $course->update($validated);
 
-        return redirect()->route('admin.courses.index')->with('success', 'Course updated successfully.');
+        return redirect()
+            ->route('admin.courses.edit', $course)
+            ->with('success', 'Course updated successfully.');
     }
 
     public function approve(Course $course): RedirectResponse
@@ -93,9 +98,15 @@ class CourseController extends Controller
         }
 
         $course->update([
-            'status'       => 'published',
+            'status' => 'published',
             'published_at' => now(),
         ]);
+
+        User::query()->orderBy('id')->chunkById(200, function ($users) use ($course) {
+            foreach ($users as $user) {
+                $user->notify(new NewCoursePublishedNotification($course));
+            }
+        });
 
         return back()->with('success', "Course \"{$course->title}\" approved and published.");
     }

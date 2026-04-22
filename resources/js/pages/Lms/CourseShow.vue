@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import {
   BookOpen,
   Check,
@@ -14,18 +14,10 @@ import {
   User,
   Users,
 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 import PublicLayout from '@/layouts/PublicLayout.vue'
-
-interface InstalmentPlan {
-  id: number
-  name: string
-  number_of_instalments: number
-  amount_per_instalment: string
-  interval_in_days: number
-  is_active: boolean
-}
+import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
 
 interface LessonRow {
   id: number
@@ -53,6 +45,7 @@ interface Course {
   level: string
   price: string
   sale_price: string | null
+  max_installments?: number
   duration: string | null
   enrolled_count: number
   rating: string
@@ -60,8 +53,6 @@ interface Course {
   is_featured: boolean
   instructor: { id: number; name: string } | null
   category: { id: number; name: string; slug: string; icon: string | null; color: string | null } | null
-  instalmentPlans?: InstalmentPlan[]
-  instalment_plans?: InstalmentPlan[]
   sections: SectionRow[]
 }
 
@@ -72,9 +63,25 @@ interface PreviewLesson {
   type: string
 }
 
+interface CourseNote {
+  id: number
+  content: string
+  timestamp: string | null
+  timestamp_seconds: number | null
+  updated_at: string | null
+  lesson: {
+    id: number
+    title: string
+    section_title: string | null
+  }
+}
+
 const props = defineProps<{
   course: Course
   previewLessons: PreviewLesson[]
+  isEnrolled: boolean
+  requiresCheckout: boolean
+  courseNotes: CourseNote[]
 }>()
 
 const page = usePage()
@@ -83,7 +90,8 @@ const isLoggedIn = computed(() => !!(page.props.auth as { user?: unknown })?.use
 const expanded = ref<Set<number>>(new Set(props.course.sections.map((s) => s.id)))
 
 function toggleSection(id: number) {
-  expanded.value.has(id) ? expanded.value.delete(id) : expanded.value.add(id)
+  if (expanded.value.has(id)) expanded.value.delete(id)
+  else expanded.value.add(id)
 }
 
 const levelLabels: Record<string, string> = {
@@ -106,22 +114,49 @@ const priceInfo = computed(() => {
   const p = parseFloat(props.course.price)
   const sp = props.course.sale_price ? parseFloat(props.course.sale_price) : null
   if (p <= 0) return { label: 'Free', amount: 0, strike: null as string | null }
-  if (sp != null && sp < p) return { label: `${formatMoney(sp)} XAF`, amount: sp, strike: `${formatMoney(p)} XAF` }
+  if (sp != null && sp > 0 && sp < p) return { label: `${formatMoney(sp)} XAF`, amount: sp, strike: `${formatMoney(p)} XAF` }
   return { label: `${formatMoney(p)} XAF`, amount: p, strike: null as string | null }
 })
 
-function planTotal(plan: InstalmentPlan) {
-  return plan.number_of_instalments * parseFloat(plan.amount_per_instalment)
+const enrolling = ref(false)
+const activeTab = ref<'overview' | 'notes'>('overview')
+const courseNotesSectionRef = ref<HTMLElement | null>(null)
+
+function enroll() {
+  enrolling.value = true
+  router.post(
+    `/online-courses/${props.course.id}/enroll`,
+    {},
+    {
+      preserveScroll: true,
+      onFinish: () => {
+        enrolling.value = false
+      },
+    },
+  )
 }
 
-const enrolHref = computed(() => (isLoggedIn.value ? '/dashboard/courses' : '/login'))
+const maxInstallments = computed(() => Math.max(1, props.course.max_installments ?? 1))
 
-const instalmentPlans = computed(() => props.course.instalment_plans ?? props.course.instalmentPlans ?? [])
+const perInstallmentApprox = computed(() => {
+  if (priceInfo.value.amount <= 0) return 0
+  return Math.round((priceInfo.value.amount / maxInstallments.value) * 100) / 100
+})
+const totalLessons = computed(() => props.course.sections.reduce((count, section) => count + section.lessons.length, 0))
 
 const typeLabels: Record<string, string> = {
   video: 'Video',
   text: 'Text',
   quiz: 'Quiz',
+}
+
+async function openCourseNotesTab() {
+  activeTab.value = 'notes'
+  await nextTick()
+  courseNotesSectionRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
 }
 </script>
 
@@ -129,6 +164,7 @@ const typeLabels: Record<string, string> = {
   <PublicLayout>
     <Head :title="`${course.title} — Online Courses`" />
 
+    <div class="lms-page">
     <!-- Breadcrumb -->
     <div class="border-b border-gray-100 bg-gray-50/80">
       <div class="mx-auto max-w-7xl px-4 py-3 text-sm sm:px-6 lg:px-8">
@@ -202,20 +238,46 @@ const typeLabels: Record<string, string> = {
         <div class="grid gap-8 lg:grid-cols-3">
           <!-- Main -->
           <div class="space-y-8 lg:col-span-2">
-            <div v-if="course.description" class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div
+              v-if="isEnrolled"
+              class="inline-flex rounded-xl border border-gray-200 bg-white p-1 text-sm shadow-sm"
+            >
+              <button
+                type="button"
+                class="rounded-lg px-4 py-2 font-semibold transition-colors"
+                :class="activeTab === 'overview' ? 'bg-[#381998] text-white' : 'text-gray-600 hover:bg-gray-100'"
+                @click="activeTab = 'overview'"
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                class="rounded-lg px-4 py-2 font-semibold transition-colors"
+                :class="activeTab === 'notes' ? 'bg-[#381998] text-white' : 'text-gray-600 hover:bg-gray-100'"
+                @click="openCourseNotesTab"
+              >
+                Notes
+              </button>
+            </div>
+
+            <template v-if="!isEnrolled || activeTab === 'overview'">
+            <div v-if="course.description?.trim()" class="lms-panel">
               <h2 class="mb-3 flex items-center gap-2 text-lg font-bold text-[#000928]">
                 <BookOpen class="h-5 w-5 text-[#42b6c5]" /> About this course
               </h2>
-              <div class="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">{{ course.description }}</div>
+              <div
+                class="prose prose-sm max-w-none text-gray-600 prose-headings:text-[#000928] prose-a:text-[#42b6c5] dark:prose-invert dark:text-gray-300 dark:prose-headings:text-gray-100"
+                v-html="courseDescriptionHtml(course.description)"
+              />
             </div>
 
             <!-- Curriculum -->
-            <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div class="lms-panel">
               <h2 class="mb-4 flex items-center gap-2 text-lg font-bold text-[#000928]">
                 <Layers class="h-5 w-5 text-[#42b6c5]" /> Course content
               </h2>
               <p class="mb-4 text-sm text-gray-500">
-                {{ course.sections.reduce((n: number, s: SectionRow) => n + s.lessons.length, 0) }} lessons in {{ course.sections.length }} sections
+                {{ totalLessons }} lessons in {{ course.sections.length }} sections
               </p>
 
               <div v-if="course.sections.length === 0" class="rounded-xl border border-dashed border-gray-200 py-12 text-center text-sm text-gray-400">
@@ -255,26 +317,72 @@ const typeLabels: Record<string, string> = {
                         </p>
                       </div>
                       <Link
-                        v-if="lesson.is_free"
+                        v-if="isEnrolled"
+                        :href="`/dashboard/courses/${course.id}/lessons/${lesson.id}`"
+                        class="shrink-0 rounded-lg bg-[#381998]/10 px-3 py-1 text-xs font-semibold text-[#381998] transition-colors hover:bg-[#381998]/20"
+                      >
+                        Open
+                      </Link>
+                      <Link
+                        v-else-if="lesson.is_free"
                         :href="`/online-courses/${course.id}/lessons/${lesson.id}/preview`"
                         class="shrink-0 rounded-lg bg-[#42b6c5]/10 px-3 py-1 text-xs font-semibold text-[#2a8a96] transition-colors hover:bg-[#42b6c5]/20"
                       >
                         Preview
                       </Link>
                       <span v-else class="inline-flex shrink-0 items-center gap-1 text-xs text-gray-400">
-                        <Lock class="h-3.5 w-3.5" /> Enrolled
+                        <Lock class="h-3.5 w-3.5" /> Locked
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+            </template>
+
+            <div
+              ref="courseNotesSectionRef"
+              v-else
+              class="lms-panel"
+            >
+              <h2 class="mb-2 text-lg font-bold text-[#000928]">Course notes</h2>
+              <p class="mb-5 text-sm text-gray-500">
+                All notes you wrote across lessons, listed in curriculum order.
+              </p>
+
+              <div v-if="!courseNotes.length" class="rounded-xl border border-dashed border-gray-200 px-4 py-10 text-center text-sm text-gray-500">
+                No notes yet. Open any lesson and start writing notes.
+              </div>
+
+              <ul v-else class="space-y-3">
+                <li
+                  v-for="note in courseNotes"
+                  :key="note.id"
+                  class="rounded-xl border border-gray-200 bg-white p-4 shadow-xs"
+                >
+                  <div class="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <span class="rounded-md bg-gray-100 px-2 py-0.5 font-semibold text-gray-700">{{ note.lesson.title }}</span>
+                    <span v-if="note.timestamp" class="rounded-md bg-[#381998]/10 px-2 py-0.5 font-semibold text-[#381998]">
+                      {{ note.timestamp }}
+                    </span>
+                    <span v-if="note.updated_at">{{ new Date(note.updated_at).toLocaleString() }}</span>
+                  </div>
+                  <p class="whitespace-pre-wrap text-sm text-gray-700">{{ note.content }}</p>
+                  <Link
+                    :href="`/dashboard/courses/${course.id}/lessons/${note.lesson.id}`"
+                    class="mt-3 inline-flex text-xs font-semibold text-[#42b6c5] hover:text-[#35919e]"
+                  >
+                    Open lesson
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <!-- Sidebar: pricing -->
           <div class="space-y-6">
-            <div class="sticky top-24 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">Enrolment</h3>
+            <div class="sticky top-24 lms-panel">
+              <h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">Enrollment</h3>
               <div class="mb-4">
                 <template v-if="priceInfo.amount <= 0">
                   <p class="text-3xl font-bold text-green-600">Free</p>
@@ -286,36 +394,49 @@ const typeLabels: Record<string, string> = {
               </div>
 
               <Link
-                :href="enrolHref"
+                v-if="!isLoggedIn"
+                href="/login"
                 class="mb-4 flex w-full items-center justify-center rounded-xl bg-[#000928] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#381998]"
               >
-                {{ isLoggedIn ? 'Browse dashboard' : 'Sign in to enrol' }}
+                Sign in to enroll
               </Link>
-              <p class="text-center text-xs text-gray-400">Full access after purchase or enrolment.</p>
+              <Link
+                v-else-if="isEnrolled"
+                href="/dashboard/my-courses"
+                class="mb-4 flex w-full items-center justify-center rounded-xl border border-[#42b6c5] bg-[#42b6c5]/10 py-3 text-sm font-semibold text-[#2a8a96] transition-colors hover:bg-[#42b6c5]/20"
+              >
+                Go to My Courses
+              </Link>
+              <Link
+                v-else-if="requiresCheckout"
+                :href="`/dashboard/courses/${course.id}/checkout`"
+                class="mb-4 flex w-full items-center justify-center rounded-xl bg-[#000928] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#381998]"
+              >
+                Pay &amp; enroll
+              </Link>
+              <button
+                v-else
+                type="button"
+                :disabled="enrolling"
+                class="mb-4 flex w-full items-center justify-center rounded-xl bg-[#000928] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#381998] disabled:opacity-60"
+                @click="enroll"
+              >
+                {{ enrolling ? 'Enrolling…' : 'Enroll in this course' }}
+              </button>
+              <p class="text-center text-xs text-gray-400">Full access after you enroll.</p>
             </div>
 
-            <!-- Installment plans -->
             <div
-              v-if="instalmentPlans.length > 0 && priceInfo.amount > 0"
-              class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+              v-if="priceInfo.amount > 0 && maxInstallments > 1"
+              class="lms-panel"
             >
-              <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">Pay in installments</h3>
-              <ul class="space-y-3">
-                <li
-                  v-for="plan in instalmentPlans"
-                  :key="plan.id"
-                  class="rounded-xl border border-gray-100 bg-gray-50/80 p-4"
-                >
-                  <p class="font-semibold text-[#000928]">{{ plan.name }}</p>
-                  <p class="mt-1 text-sm text-gray-600">
-                    {{ plan.number_of_instalments }} × {{ formatMoney(plan.amount_per_instalment) }} XAF
-                    <span class="text-gray-400">· every {{ plan.interval_in_days }} days</span>
-                  </p>
-                  <p class="mt-2 text-xs text-gray-500">
-                    Total ≈ {{ formatMoney(planTotal(plan)) }} XAF
-                  </p>
-                </li>
-              </ul>
+              <h3 class="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">Payment options</h3>
+              <p class="text-sm text-gray-600">
+                Flexible payment: up to {{ maxInstallments }} installment(s)
+              </p>
+              <p class="mt-1 text-sm text-gray-500">
+                ≈ {{ formatMoney(perInstallmentApprox) }} XAF per installment
+              </p>
             </div>
 
             <!-- Free previews list -->
@@ -339,5 +460,6 @@ const typeLabels: Record<string, string> = {
         </div>
       </div>
     </section>
+    </div>
   </PublicLayout>
 </template>

@@ -1,17 +1,29 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
-  ArrowLeft, BookOpen, ChevronDown, ChevronUp, Edit2, FileText,
-  GripVertical, ImageIcon, Layers, PlusCircle, Send, Trash2, UserPlus, Video,
+  ArrowLeft, BookOpen, ChevronDown, Edit2, FileText,
+  GripVertical, ImageIcon, Layers, Paperclip, PlusCircle, Send, Trash2, Upload, UserPlus, Video,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue';
+import draggable from 'vuedraggable';
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
+import RichTextEditor from '@/components/RichTextEditor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Category { id: number; name: string; slug: string }
+
+interface LessonAttachment {
+  id: number;
+  name: string;
+  file_url: string;
+  file_type: string | null;
+  file_size: number | null;
+  formatted_file_size: string;
+}
 
 interface Lesson {
   id: number;
@@ -26,6 +38,7 @@ interface Lesson {
   duration: string | null;
   is_free: boolean;
   sort_order: number;
+  attachments?: LessonAttachment[];
 }
 
 interface Section {
@@ -62,6 +75,7 @@ const props = defineProps<{
 // ─── Tab ──────────────────────────────────────────────────────────────────────
 
 const activeTab = ref<'details' | 'curriculum' | 'publish'>('details');
+const highlightedLessonId = ref<number | null>(null);
 
 // ─── Details form ─────────────────────────────────────────────────────────────
 
@@ -71,6 +85,9 @@ const detailsForm = useForm({
   level:             props.course.level,
   short_description: props.course.short_description,
   description:       props.course.description ?? '',
+  price:             props.course.price ?? '',
+  sale_price:        props.course.sale_price ?? '',
+  max_installments:  Math.max(1, props.course.max_installments ?? 1),
   duration:          props.course.duration ?? '',
 });
 
@@ -129,6 +146,27 @@ const expandedSections = ref<Set<number>>(new Set(props.course.sections.map((s) 
 const addSectionOpen   = ref(false);
 const editingSectionId = ref<number | null>(null);
 
+/** Local copy for drag-and-drop; kept in sync with `course.sections` from the server. */
+function cloneSections(sections: Section[]): Section[] {
+  return sections.map((s) => ({
+    ...s,
+    lessons: s.lessons.map((l) => ({
+      ...l,
+      attachments: [...(l.attachments ?? [])],
+    })),
+  }));
+}
+
+const sectionList = shallowRef<Section[]>(cloneSections(props.course.sections));
+
+watch(
+  () => props.course.sections,
+  (sections) => {
+    sectionList.value = cloneSections(sections);
+  },
+  { deep: true },
+);
+
 const sectionForm = useForm({ title: '', description: '' });
 
 function addSection() {
@@ -165,18 +203,22 @@ function toggleSection(id: number) {
   }
 }
 
-function moveSectionUp(index: number) {
-  if (index === 0) return;
-  const order = props.course.sections.map((s) => s.id);
-  [order[index - 1], order[index]] = [order[index], order[index - 1]];
+function onSectionsDragEnd() {
+  const order = sectionList.value.map((s) => s.id);
+  const prev = props.course.sections.map((s) => s.id);
+  if (order.length === prev.length && order.every((id, i) => id === prev[i])) return;
   router.post(`/tutor/courses/${props.course.id}/sections/reorder`, { order }, { preserveScroll: true });
 }
 
-function moveSectionDown(index: number) {
-  if (index === props.course.sections.length - 1) return;
-  const order = props.course.sections.map((s) => s.id);
-  [order[index], order[index + 1]] = [order[index + 1], order[index]];
-  router.post(`/tutor/courses/${props.course.id}/sections/reorder`, { order }, { preserveScroll: true });
+function onLessonsDragEnd(section: Section) {
+  const order = section.lessons.map((l) => l.id);
+  const prev = props.course.sections.find((s) => s.id === section.id)?.lessons.map((l) => l.id) ?? [];
+  if (order.length === prev.length && order.every((id, i) => id === prev[i])) return;
+  router.post(
+    `/tutor/courses/${props.course.id}/sections/${section.id}/lessons/reorder`,
+    { order },
+    { preserveScroll: true },
+  );
 }
 
 // ─── Lesson management ────────────────────────────────────────────────────────
@@ -185,10 +227,37 @@ const addLessonSectionId   = ref<number | null>(null);
 const editingLessonId      = ref<number | null>(null);
 const editingLessonSection = ref<number | null>(null);
 
+/** Optional video file chosen before “Add lesson” — uploaded automatically once the lesson exists. */
+const pendingNewLessonVideoFile = ref<File | null>(null);
+const newLessonVideoInputRef    = ref<HTMLInputElement | null>(null);
+
 const lessonForm = useForm({
   title: '', type: 'video' as 'video' | 'text' | 'quiz',
   description: '', content: '', duration: '', is_free: false,
 });
+
+function clearPendingNewLessonVideo() {
+  pendingNewLessonVideoFile.value = null;
+  if (newLessonVideoInputRef.value) {
+    newLessonVideoInputRef.value.value = '';
+  }
+}
+
+function onPendingNewLessonVideoSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  pendingNewLessonVideoFile.value = file;
+}
+
+watch(
+  () => lessonForm.type,
+  (type) => {
+    if (type !== 'video') {
+      lessonForm.duration = '';
+      clearPendingNewLessonVideo();
+    }
+  },
+);
 
 const lessonTypeIcons:  Record<string, any>    = { video: Video, text: FileText, quiz: BookOpen };
 const lessonTypeLabels: Record<string, string> = { video: 'Video', text: 'Text', quiz: 'Quiz' };
@@ -197,7 +266,10 @@ function openAddLesson(sectionId: number) {
   addLessonSectionId.value   = sectionId;
   editingLessonId.value      = null;
   editingLessonSection.value = null;
+  clearPendingNewLessonVideo();
   lessonForm.reset();
+  lessonForm.content = '';
+  lessonForm.clearErrors();
 }
 
 function openEditLesson(section: Section, lesson: Lesson) {
@@ -213,9 +285,45 @@ function openEditLesson(section: Section, lesson: Lesson) {
 }
 
 function addLesson(sectionId: number) {
+  const wasVideo = lessonForm.type === 'video';
+  const fileToUpload = pendingNewLessonVideoFile.value;
+
   lessonForm.post(`/tutor/courses/${props.course.id}/sections/${sectionId}/lessons`, {
     preserveScroll: true,
-    onSuccess: () => { lessonForm.reset(); addLessonSectionId.value = null; },
+    onSuccess: (page) => {
+      clearPendingNewLessonVideo();
+      lessonForm.reset();
+
+      if (!wasVideo || !fileToUpload) {
+        addLessonSectionId.value = null;
+        return;
+      }
+
+      const course = page.props.course as Course;
+      const section = course.sections.find((s) => s.id === sectionId);
+      if (!section?.lessons.length) {
+        addLessonSectionId.value = null;
+        return;
+      }
+
+      const newLesson = section.lessons.reduce((best, l) => (l.id > best.id ? l : best));
+
+      videoUploadForm.clearErrors();
+      videoUploadForm.video_file = fileToUpload;
+      videoUploadForm.post(
+        `/tutor/courses/${props.course.id}/sections/${sectionId}/lessons/${newLesson.id}/video`,
+        {
+          forceFormData: true,
+          preserveScroll: true,
+          onSuccess: () => {
+            videoUploadForm.reset();
+          },
+          onFinish: () => {
+            addLessonSectionId.value = null;
+          },
+        },
+      );
+    },
   });
 }
 
@@ -235,18 +343,34 @@ function deleteLesson(sectionId: number, lessonId: number) {
   router.delete(`/tutor/courses/${props.course.id}/sections/${sectionId}/lessons/${lessonId}`, { preserveScroll: true });
 }
 
-function moveLessonUp(section: Section, index: number) {
-  if (index === 0) return;
-  const order = section.lessons.map((l) => l.id);
-  [order[index - 1], order[index]] = [order[index], order[index - 1]];
-  router.post(`/tutor/courses/${props.course.id}/sections/${section.id}/lessons/reorder`, { order }, { preserveScroll: true });
+function resourcePublicUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `/storage/${path}`;
 }
 
-function moveLessonDown(section: Section, index: number) {
-  if (index === section.lessons.length - 1) return;
-  const order = section.lessons.map((l) => l.id);
-  [order[index], order[index + 1]] = [order[index + 1], order[index]];
-  router.post(`/tutor/courses/${props.course.id}/sections/${section.id}/lessons/reorder`, { order }, { preserveScroll: true });
+function uploadLessonResource(section: Section, lesson: Lesson, event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  router.post(
+    `/tutor/courses/${props.course.id}/sections/${section.id}/lessons/${lesson.id}/attachments`,
+    { file, name: file.name },
+    {
+      forceFormData: true,
+      preserveScroll: true,
+      onFinish: () => {
+        input.value = '';
+      },
+    },
+  );
+}
+
+function deleteLessonAttachment(section: Section, lesson: Lesson, attachmentId: number) {
+  if (!confirm('Remove this file?')) return;
+  router.delete(
+    `/tutor/courses/${props.course.id}/sections/${section.id}/lessons/${lesson.id}/attachments/${attachmentId}`,
+    { preserveScroll: true },
+  );
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -270,9 +394,30 @@ const videoUploadForm = useForm({
   video_file: null as File | null,
 });
 
+function shouldConfirmVideoReplacement(sectionId: number, lessonId: number): boolean {
+  const section = props.course.sections.find((s) => s.id === sectionId);
+  if (!section) return false;
+
+  const lesson = section.lessons.find((l) => l.id === lessonId);
+  if (!lesson) return false;
+
+  return Boolean(lesson.video_url || lesson.youtube_video_id);
+}
+
 function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number) {
-  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
   if (!file) return;
+
+  if (shouldConfirmVideoReplacement(sectionId, lessonId)) {
+    const shouldReplace = window.confirm(
+      'Replace this video? The current YouTube video will be deleted and replaced with the new upload.'
+    );
+    if (!shouldReplace) {
+      input.value = '';
+      return;
+    }
+  }
 
   videoUploadForm.video_file = file;
   uploadLessonVideo(sectionId, lessonId);
@@ -293,12 +438,30 @@ function uploadLessonVideo(sectionId: number, lessonId: number) {
   );
 }
 
-function formatXaf(value: string | null | undefined): string {
-  if (value === null || value === undefined || value === '') return '—';
-  const n = Number(value);
-  if (Number.isNaN(n)) return String(value);
-  return `${n.toLocaleString()} XAF`;
+function lessonEmbedUrl(url: string | null | undefined): string | null {
+  return streamingEmbedSrc(url ?? null);
 }
+
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const lesson = Number(params.get('lesson'));
+  const section = Number(params.get('section'));
+
+  if (Number.isFinite(lesson) && lesson > 0) {
+    highlightedLessonId.value = lesson;
+    activeTab.value = 'curriculum';
+  }
+
+  if (Number.isFinite(section) && section > 0) {
+    expandedSections.value.add(section);
+  }
+
+  if (highlightedLessonId.value !== null) {
+    await nextTick();
+    const el = document.getElementById(`lesson-row-${highlightedLessonId.value}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
 </script>
 
 <template>
@@ -384,23 +547,48 @@ function formatXaf(value: string | null | undefined): string {
         <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/40">
           <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Pricing &amp; installments</p>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Pricing and installments are set by administrators (Admin → Courses → Pricing).
-            If you need changes, contact your platform administrator.
+            Set your public course price, optional sale price, and the maximum installment count.
           </p>
-          <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+          <div class="mt-3 grid gap-4 sm:grid-cols-3">
             <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Price</dt>
-              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ formatXaf(course.price) }}</dd>
+              <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Price (XAF)</label>
+              <input
+                v-model="detailsForm.price"
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <p v-if="detailsForm.errors.price" class="mt-1 text-xs text-red-500">{{ detailsForm.errors.price }}</p>
             </div>
             <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale price</dt>
-              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ formatXaf(course.sale_price) }}</dd>
+              <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Sale price (XAF)</label>
+              <input
+                v-model="detailsForm.sale_price"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Optional"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <p v-if="detailsForm.errors.sale_price" class="mt-1 text-xs text-red-500">{{ detailsForm.errors.sale_price }}</p>
             </div>
             <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Max installments</dt>
-              <dd class="mt-0.5 font-medium text-gray-900 dark:text-gray-100">{{ Math.max(1, course.max_installments ?? 1) }}</dd>
+              <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Max installments</label>
+              <input
+                v-model.number="detailsForm.max_installments"
+                type="number"
+                min="1"
+                max="12"
+                :disabled="Number(detailsForm.price || 0) <= 0"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <p v-if="detailsForm.errors.max_installments" class="mt-1 text-xs text-red-500">{{ detailsForm.errors.max_installments }}</p>
             </div>
-          </dl>
+          </div>
+          <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            Free courses automatically use 1 installment.
+          </p>
         </div>
 
         <div>
@@ -420,11 +608,17 @@ function formatXaf(value: string | null | undefined): string {
           </div>
         </div>
 
-        <div>
-          <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Full Description</label>
-          <textarea v-model="detailsForm.description" rows="8"
+        <div class="max-w-4xl">
+          <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Full description</label>
+          <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+            Rich text: headings, lists, images, and links — shown on the public course page.
+          </p>
+          <RichTextEditor
+            v-model="detailsForm.description"
             placeholder="Detailed course overview, prerequisites, what students will achieve…"
-            class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/20 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+            upload-url="/lesson-content/media"
+            body-class="min-h-[220px] max-h-[min(60vh,560px)]"
+          />
         </div>
 
         <div class="flex justify-end pt-2">
@@ -437,39 +631,44 @@ function formatXaf(value: string | null | undefined): string {
     </div>
 
     <!-- ═══════════════════ TAB 2: CURRICULUM ═══════════════════ -->
-    <div v-show="activeTab === 'curriculum'" class="max-w-3xl">
-      <div class="space-y-3">
-        <div v-for="(section, sIndex) in course.sections" :key="section.id"
+    <div v-show="activeTab === 'curriculum'" class="mx-auto w-full max-w-5xl space-y-6">
+      <draggable
+        v-model="sectionList"
+        item-key="id"
+        handle=".section-drag-handle"
+        :animation="200"
+        class="space-y-5"
+        @end="onSectionsDragEnd"
+      >
+        <template #item="{ element: section }">
+        <div
           class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:bg-gray-800 dark:border-gray-700">
 
           <!-- Section header row -->
-          <div class="flex items-center gap-3 px-4 py-3">
-            <!-- Up/down arrows -->
-            <div class="flex flex-col gap-0.5 shrink-0">
-              <button @click="moveSectionUp(sIndex)" :disabled="sIndex === 0"
-                class="rounded p-0.5 text-gray-400 hover:text-[#381998] disabled:opacity-20 transition-colors">
-                <ChevronUp class="h-4 w-4" />
-              </button>
-              <button @click="moveSectionDown(sIndex)" :disabled="sIndex === course.sections.length - 1"
-                class="rounded p-0.5 text-gray-400 hover:text-[#381998] disabled:opacity-20 transition-colors">
-                <ChevronDown class="h-4 w-4" />
-              </button>
-            </div>
-            <GripVertical class="h-4 w-4 shrink-0 text-gray-300" />
+          <div class="flex items-center gap-3 px-5 py-3.5 sm:px-6">
+            <button
+              type="button"
+              class="section-drag-handle shrink-0 cursor-grab touch-none rounded p-1 text-gray-400 hover:text-[#381998] active:cursor-grabbing"
+              aria-label="Drag to reorder section"
+            >
+              <GripVertical class="h-4 w-4" />
+            </button>
 
             <!-- Inline edit mode -->
             <template v-if="editingSectionId === section.id">
-              <div class="flex flex-1 items-center gap-2">
+              <div class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                 <input v-model="sectionForm.title" type="text" placeholder="Section title"
-                  class="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                <button @click="saveSection(section.id)" :disabled="sectionForm.processing"
-                  class="rounded-lg bg-[#381998] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
-                  Save
-                </button>
-                <button @click="editingSectionId = null; sectionForm.reset()"
-                  class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:border-gray-400">
-                  Cancel
-                </button>
+                  class="w-full min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                <div class="flex shrink-0 justify-end gap-2 sm:justify-start">
+                  <button @click="saveSection(section.id)" :disabled="sectionForm.processing"
+                    class="rounded-xl bg-[#381998] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
+                    Save
+                  </button>
+                  <button @click="editingSectionId = null; sectionForm.reset()"
+                    class="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300">
+                    Cancel
+                  </button>
+                </div>
               </div>
             </template>
 
@@ -498,59 +697,76 @@ function formatXaf(value: string | null | undefined): string {
           <!-- Lessons list (collapsible) -->
           <div v-if="expandedSections.has(section.id)" class="border-t border-gray-100 dark:border-gray-700">
 
-            <!-- Each lesson row -->
-            <div v-for="(lesson, lIndex) in section.lessons" :key="lesson.id"
+            <draggable
+              v-model="section.lessons"
+              item-key="id"
+              handle=".lesson-drag-handle"
+              :animation="200"
+              @end="onLessonsDragEnd(section)"
+            >
+            <template #item="{ element: lesson }">
+            <div
               class="border-b border-gray-50 dark:border-gray-700/50 last:border-b-0">
 
               <!-- Edit form for this lesson (inline) -->
               <div v-if="editingLessonId === lesson.id && editingLessonSection === section.id"
-                class="p-4 bg-gray-50 dark:bg-gray-900/40">
-                <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">Edit Lesson</p>
-                <div class="space-y-3">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Title *</label>
+                class="border-t border-gray-100 bg-gray-50 px-5 py-5 sm:px-6 dark:border-gray-700 dark:bg-gray-900/40">
+                <p class="mb-4 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Edit lesson</p>
+                <div class="mx-auto w-full max-w-4xl space-y-5">
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
+                    <div class="sm:col-span-8">
+                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Title <span class="text-red-500">*</span></label>
                       <input v-model="lessonForm.title" type="text" placeholder="Lesson title"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
                       <p v-if="lessonForm.errors.title" class="mt-0.5 text-xs text-red-500">{{ lessonForm.errors.title }}</p>
                     </div>
-                    <div>
-                      <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Type *</label>
+                    <div class="sm:col-span-4">
+                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Type <span class="text-red-500">*</span></label>
                       <select v-model="lessonForm.type"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                         <option value="video">Video</option>
                         <option value="text">Text / Article</option>
                         <option value="quiz">Quiz</option>
                       </select>
                     </div>
                   </div>
-                  <div v-if="lessonForm.type === 'video'">
-                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Duration (e.g. 5:30)</label>
-                    <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                    <p class="mt-0.5 text-xs text-gray-400">Save this lesson, then upload the video file from the lesson row.</p>
+                  <div v-if="lessonForm.type === 'video'" class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
+                    <div class="sm:col-span-4">
+                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
+                      <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
+                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Save this lesson, then upload the video file from the lesson row.</p>
+                    </div>
                   </div>
-                  <div v-if="lessonForm.type === 'text'">
-                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Content</label>
-                    <textarea v-model="lessonForm.content" rows="5" placeholder="Lesson content…"
-                      class="w-full resize-y rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                  <div v-if="lessonForm.type === 'text'" class="w-full rounded-xl border border-[#42b6c5]/25 bg-[#42b6c5]/[0.04] p-4 sm:p-5 dark:border-[#42b6c5]/35 dark:bg-[#42b6c5]/10">
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-100">Lesson content</label>
+                    <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      Headings, lists, code blocks, images (upload or URL), and links — same formatting learners see in the player.
+                    </p>
+                    <RichTextEditor
+                      :key="`lesson-body-edit-${lesson.id}-${lessonForm.type}`"
+                      v-model="lessonForm.content"
+                      placeholder="Write the lesson content…"
+                      upload-url="/lesson-content/media"
+                      body-class="min-h-[280px] max-h-[min(70vh,720px)]"
+                    />
                   </div>
                   <div>
-                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Description</label>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Short description <span class="font-normal text-gray-400">(optional)</span></label>
                     <input v-model="lessonForm.description" type="text" placeholder="Short description (optional)"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
                   </div>
-                  <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300" />
+                  <label class="flex cursor-pointer items-center gap-2.5 text-sm text-gray-700 dark:text-gray-200">
+                    <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300 text-[#381998] focus:ring-[#381998]" />
                     Free preview (accessible without enrolment)
                   </label>
-                  <div class="flex items-center gap-2 pt-1">
+                  <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
                     <button type="button" @click="saveLesson(section.id, lesson.id)" :disabled="lessonForm.processing"
-                      class="rounded-xl bg-[#381998] px-4 py-2 text-xs font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
+                      class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
                       {{ lessonForm.processing ? 'Saving…' : 'Save Lesson' }}
                     </button>
                     <button type="button" @click="editingLessonId = null; editingLessonSection = null; lessonForm.reset()"
-                      class="rounded-xl border border-gray-200 px-4 py-2 text-xs text-gray-600 hover:border-gray-400">
+                      class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600">
                       Cancel
                     </button>
                   </div>
@@ -558,23 +774,27 @@ function formatXaf(value: string | null | undefined): string {
               </div>
 
               <!-- Lesson display row -->
-              <div v-else class="flex items-center gap-3 px-6 py-2.5">
-                <div class="flex flex-col gap-0.5 shrink-0">
-                  <button @click="moveLessonUp(section, lIndex)" :disabled="lIndex === 0"
-                    class="rounded p-0.5 text-gray-300 hover:text-[#381998] disabled:opacity-20 transition-colors">
-                    <ChevronUp class="h-3.5 w-3.5" />
-                  </button>
-                  <button @click="moveLessonDown(section, lIndex)" :disabled="lIndex === section.lessons.length - 1"
-                    class="rounded p-0.5 text-gray-300 hover:text-[#381998] disabled:opacity-20 transition-colors">
-                    <ChevronDown class="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              <div
+                v-else
+                :id="`lesson-row-${lesson.id}`"
+                :class="[
+                  'flex items-center gap-3 px-5 py-2.5 sm:px-6 transition-colors',
+                  highlightedLessonId === lesson.id ? 'bg-[#381998]/8 ring-1 ring-[#381998]/25' : '',
+                ]"
+              >
+                <button
+                  type="button"
+                  class="lesson-drag-handle shrink-0 cursor-grab touch-none rounded p-1 text-gray-400 hover:text-[#381998] active:cursor-grabbing"
+                  aria-label="Drag to reorder lesson"
+                >
+                  <GripVertical class="h-4 w-4" />
+                </button>
                 <component :is="lessonTypeIcons[lesson.type]" class="h-4 w-4 shrink-0 text-gray-400" />
                 <div class="flex-1 min-w-0">
                   <p class="truncate text-sm text-gray-800 dark:text-gray-200">{{ lesson.title }}</p>
                   <div class="flex items-center gap-2 text-xs text-gray-400">
                     <span>{{ lessonTypeLabels[lesson.type] }}</span>
-                    <span v-if="lesson.duration">· {{ lesson.duration }}</span>
+                    <span v-if="lesson.type === 'video' && lesson.duration">· {{ lesson.duration }}</span>
                     <span v-if="lesson.is_free" class="rounded-full bg-green-100 px-1.5 py-0.5 text-green-600 font-medium">Free preview</span>
                   </div>
                 </div>
@@ -583,7 +803,7 @@ function formatXaf(value: string | null | undefined): string {
                     v-if="lesson.type === 'video'"
                     class="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-semibold text-[#42b6c5] hover:bg-[#42b6c5]/10"
                   >
-                    Upload Video
+                    {{ lesson.video_url ? 'Replace Video' : 'Upload Video' }}
                     <input
                       type="file"
                       class="hidden"
@@ -610,10 +830,10 @@ function formatXaf(value: string | null | undefined): string {
               </div>
               <div
                 v-if="lesson.type === 'video'"
-                class="flex items-center justify-between gap-3 border-t border-gray-50 px-6 py-2 text-xs dark:border-gray-700/50"
+                class="flex items-center justify-between gap-3 border-t border-gray-50 px-5 py-2 text-xs sm:px-6 dark:border-gray-700/50"
               >
                 <div class="flex items-center gap-2">
-                  <span class="text-gray-400">YouTube:</span>
+                  <span class="text-gray-400">Video:</span>
                   <span
                     :class="[
                       'rounded-full px-2 py-0.5 font-medium',
@@ -628,70 +848,181 @@ function formatXaf(value: string | null | undefined): string {
                   >
                     {{ lesson.youtube_status || 'not uploaded' }}
                   </span>
-                  <a
-                    v-if="lesson.video_url"
-                    :href="lesson.video_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-[#42b6c5] hover:underline"
-                  >
-                    open video
-                  </a>
                 </div>
                 <span v-if="lesson.youtube_error" class="max-w-[45ch] truncate text-red-500" :title="lesson.youtube_error">
                   {{ lesson.youtube_error }}
                 </span>
               </div>
+              <div
+                v-if="lesson.type === 'video' && lessonEmbedUrl(lesson.video_url)"
+                class="border-t border-gray-50 px-5 pb-3 pt-2 sm:px-6 dark:border-gray-700/50"
+              >
+                <div class="aspect-video overflow-hidden rounded-lg bg-black">
+                  <iframe
+                    :src="lessonEmbedUrl(lesson.video_url) ?? undefined"
+                    class="h-full w-full"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    :allow="STREAMING_IFRAME_ALLOW"
+                    allowfullscreen
+                  />
+                </div>
+              </div>
+              <div
+                class="border-t border-gray-50 px-5 py-3 sm:px-6 dark:border-gray-700/50"
+              >
+                <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Paperclip class="h-3.5 w-3.5 shrink-0" />
+                  Lesson resources
+                </p>
+                <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                  Supplementary downloads (PDFs, slides, worksheets) — shown to learners in the Resources panel.
+                </p>
+                <ul v-if="(lesson.attachments ?? []).length" class="mb-3 space-y-2">
+                  <li
+                    v-for="att in lesson.attachments"
+                    :key="att.id"
+                    class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900/40"
+                  >
+                    <a
+                      :href="resourcePublicUrl(att.file_url)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="min-w-0 flex-1 truncate font-medium text-[#381998] hover:underline"
+                    >
+                      {{ att.name }}
+                    </a>
+                    <span class="shrink-0 text-xs text-gray-400">{{ att.formatted_file_size }}</span>
+                    <button
+                      type="button"
+                      class="shrink-0 rounded p-1 text-gray-400 hover:text-red-500"
+                      aria-label="Remove file"
+                      @click="deleteLessonAttachment(section, lesson, att.id)"
+                    >
+                      <Trash2 class="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                </ul>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:border-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+                    <Upload class="h-3.5 w-3.5 shrink-0" />
+                    <span>Add file</span>
+                    <input
+                      type="file"
+                      class="hidden"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.txt,image/*"
+                      @change="uploadLessonResource(section, lesson, $event)"
+                    />
+                  </label>
+                  <span class="text-xs text-gray-400">Max 20&nbsp;MB per file.</span>
+                </div>
+              </div>
             </div>
+            </template>
+            </draggable>
 
             <!-- Add lesson inline form -->
-            <div v-if="addLessonSectionId === section.id" class="p-4 bg-gray-50 dark:bg-gray-900/40">
-              <p class="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">New Lesson</p>
-              <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Title *</label>
+            <div v-if="addLessonSectionId === section.id"
+              class="border-t border-gray-100 bg-gray-50 px-5 py-5 sm:px-6 dark:border-gray-700 dark:bg-gray-900/40">
+              <p class="mb-4 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">New lesson</p>
+              <p
+                v-if="lessonForm.type === 'text'"
+                class="mb-5 rounded-xl border border-dashed border-[#42b6c5]/35 bg-[#42b6c5]/[0.06] px-4 py-3 text-xs leading-relaxed text-gray-600 dark:border-[#42b6c5]/30 dark:bg-[#42b6c5]/10 dark:text-gray-300"
+              >
+                For formatted articles: set <strong class="font-semibold">Type</strong> to <strong class="font-semibold">Text / Article</strong>
+                — the rich editor appears below.
+              </p>
+              <div class="mx-auto w-full max-w-4xl space-y-5">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
+                  <div class="sm:col-span-8">
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Title <span class="text-red-500">*</span></label>
                     <input v-model="lessonForm.title" type="text" placeholder="Lesson title"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
                     <p v-if="lessonForm.errors.title" class="mt-0.5 text-xs text-red-500">{{ lessonForm.errors.title }}</p>
                   </div>
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Type *</label>
+                  <div class="sm:col-span-4">
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Type <span class="text-red-500">*</span></label>
                     <select v-model="lessonForm.type"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                       <option value="video">Video</option>
                       <option value="text">Text / Article</option>
                       <option value="quiz">Quiz</option>
                     </select>
                   </div>
                 </div>
-                <div v-if="lessonForm.type === 'video'">
-                  <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Duration (e.g. 5:30)</label>
-                  <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                  <p class="mt-0.5 text-xs text-gray-400">After adding this lesson, upload the video file from the lesson row.</p>
+                <div v-if="lessonForm.type === 'video'" class="space-y-4">
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
+                    <div class="sm:col-span-4">
+                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
+                      <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
+                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Shown next to the lesson title (optional).</p>
+                    </div>
+                  </div>
+                  <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-600 dark:bg-gray-900/50">
+                    <div class="mb-2 flex items-center gap-2">
+                      <Upload class="h-4 w-4 shrink-0 text-[#42b6c5]" />
+                      <label class="text-sm font-semibold text-gray-800 dark:text-gray-100">Video file</label>
+                    </div>
+                    <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      Choose a file now and it will upload to YouTube right after you click <strong class="font-medium text-gray-700 dark:text-gray-300">Add lesson</strong>.
+                      You can also skip this and upload later from the lesson row.
+                    </p>
+                    <input
+                      ref="newLessonVideoInputRef"
+                      type="file"
+                      accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm"
+                      class="block w-full cursor-pointer text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#42b6c5]/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#381998] hover:file:bg-[#42b6c5]/25 dark:text-gray-300 dark:file:bg-[#42b6c5]/20"
+                      @change="onPendingNewLessonVideoSelected"
+                    />
+                    <p v-if="pendingNewLessonVideoFile" class="mt-2 text-xs font-medium text-gray-700 dark:text-gray-200">
+                      Selected: {{ pendingNewLessonVideoFile.name }}
+                    </p>
+                    <p v-if="videoUploadForm.errors.video_file" class="mt-2 text-xs text-red-500">{{ videoUploadForm.errors.video_file }}</p>
+                  </div>
                 </div>
-                <div v-if="lessonForm.type === 'text'">
-                  <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Content</label>
-                  <textarea v-model="lessonForm.content" rows="5" placeholder="Lesson content…"
-                    class="w-full resize-y rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                <div v-if="lessonForm.type === 'text'" class="w-full rounded-xl border border-[#42b6c5]/25 bg-[#42b6c5]/[0.04] p-4 sm:p-5 dark:border-[#42b6c5]/35 dark:bg-[#42b6c5]/10">
+                  <label class="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-100">Lesson content</label>
+                  <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                    Headings, lists, code blocks, images, and links — same as the edit form above.
+                  </p>
+                  <RichTextEditor
+                    :key="`lesson-body-add-${section.id}-${lessonForm.type}`"
+                    v-model="lessonForm.content"
+                    placeholder="Write the lesson content…"
+                    upload-url="/lesson-content/media"
+                    body-class="min-h-[280px] max-h-[min(70vh,720px)]"
+                  />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Description</label>
+                  <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Short description <span class="font-normal text-gray-400">(optional)</span></label>
                   <input v-model="lessonForm.description" type="text" placeholder="Short description (optional)"
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+                    class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
                 </div>
-                <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300" />
+                <label class="flex cursor-pointer items-center gap-2.5 text-sm text-gray-700 dark:text-gray-200">
+                  <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300 text-[#381998] focus:ring-[#381998]" />
                   Free preview (accessible without enrolment)
                 </label>
-                <div class="flex items-center gap-2 pt-1">
-                  <button type="button" @click="addLesson(section.id)" :disabled="lessonForm.processing"
-                    class="rounded-xl bg-[#381998] px-4 py-2 text-xs font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
-                    {{ lessonForm.processing ? 'Adding…' : 'Add Lesson' }}
+                <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
+                  <button
+                    type="button"
+                    @click="addLesson(section.id)"
+                    :disabled="lessonForm.processing || videoUploadForm.processing"
+                    class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50"
+                  >
+                    {{
+                      lessonForm.processing
+                        ? 'Adding…'
+                        : videoUploadForm.processing
+                          ? 'Uploading video…'
+                          : 'Add lesson'
+                    }}
                   </button>
-                  <button type="button" @click="addLessonSectionId = null; lessonForm.reset()"
-                    class="rounded-xl border border-gray-200 px-4 py-2 text-xs text-gray-600 hover:border-gray-400">
+                  <button
+                    type="button"
+                    :disabled="lessonForm.processing || videoUploadForm.processing"
+                    @click="addLessonSectionId = null; lessonForm.reset(); clearPendingNewLessonVideo()"
+                    class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -699,40 +1030,42 @@ function formatXaf(value: string | null | undefined): string {
             </div>
 
             <!-- + Add Lesson trigger -->
-            <div v-else class="px-6 py-3">
+            <div v-else class="border-t border-gray-50 px-5 py-3.5 sm:px-6 dark:border-gray-700/50">
               <button @click="openAddLesson(section.id)"
-                class="flex items-center gap-1.5 text-xs font-medium text-[#381998] hover:text-[#000928] transition-colors">
-                <PlusCircle class="h-3.5 w-3.5" /> Add Lesson
+                class="flex items-center gap-2 text-sm font-medium text-[#381998] hover:text-[#000928] transition-colors">
+                <PlusCircle class="h-4 w-4 shrink-0" /> Add lesson
               </button>
             </div>
           </div>
         </div>
-      </div>
+        </template>
+      </draggable>
 
       <!-- Add section inline form -->
       <div v-if="addSectionOpen"
-        class="mt-4 rounded-2xl border border-[#381998]/30 bg-white p-5 shadow-sm dark:bg-gray-800">
-        <p class="mb-4 text-sm font-bold text-[#000928] dark:text-white">New Section</p>
-        <form @submit.prevent="addSection" class="space-y-3">
+        class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-7">
+        <p class="mb-1 text-base font-bold text-[#000928] dark:text-white">New section</p>
+        <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">Sections group your lessons. You can reorder them anytime.</p>
+        <form @submit.prevent="addSection" class="mx-auto max-w-4xl space-y-5">
           <div>
-            <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Title *</label>
-            <input v-model="sectionForm.title" type="text" placeholder="e.g. Introduction to the Course"
-              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white"
+            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Title <span class="text-red-500">*</span></label>
+            <input v-model="sectionForm.title" type="text" placeholder="e.g. Introduction to the course"
+              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white"
               :class="{ 'border-red-400': sectionForm.errors.title }" />
             <p v-if="sectionForm.errors.title" class="mt-1 text-xs text-red-500">{{ sectionForm.errors.title }}</p>
           </div>
           <div>
-            <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-300">Description</label>
-            <input v-model="sectionForm.description" type="text" placeholder="Optional section description"
-              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
+            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Description <span class="font-normal text-gray-400">(optional)</span></label>
+            <input v-model="sectionForm.description" type="text" placeholder="Optional — shown to you when organizing"
+              class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
           </div>
-          <div class="flex items-center gap-2 pt-1">
+          <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-5 dark:border-gray-700">
             <button type="submit" :disabled="sectionForm.processing"
-              class="rounded-xl bg-[#381998] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
-              {{ sectionForm.processing ? 'Adding…' : 'Add Section' }}
+              class="rounded-xl bg-[#381998] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
+              {{ sectionForm.processing ? 'Adding…' : 'Add section' }}
             </button>
             <button type="button" @click="addSectionOpen = false; sectionForm.reset()"
-              class="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:border-gray-400">
+              class="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300">
               Cancel
             </button>
           </div>
@@ -741,8 +1074,8 @@ function formatXaf(value: string | null | undefined): string {
 
       <!-- + Add Section trigger -->
       <button v-else @click="addSectionOpen = true"
-        class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 py-4 text-sm font-medium text-gray-500 transition-colors hover:border-[#381998] hover:text-[#381998] dark:border-gray-700 dark:hover:border-[#381998]">
-        <PlusCircle class="h-4 w-4" /> Add Section
+        class="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 py-4 text-sm font-medium text-gray-500 transition-colors hover:border-[#381998] hover:text-[#381998] dark:border-gray-700 dark:hover:border-[#381998]">
+        <PlusCircle class="h-4 w-4 shrink-0" /> Add section
       </button>
     </div>
 

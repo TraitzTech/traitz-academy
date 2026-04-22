@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Course extends Model
 {
@@ -24,6 +25,7 @@ class Course extends Model
         'status',
         'price',
         'sale_price',
+        'max_installments',
         'duration',
         'is_featured',
         'enrolled_count',
@@ -35,10 +37,11 @@ class Course extends Model
     protected function casts(): array
     {
         return [
-            'is_featured'  => 'boolean',
-            'price'        => 'decimal:2',
-            'sale_price'   => 'decimal:2',
-            'rating'       => 'decimal:2',
+            'is_featured' => 'boolean',
+            'price' => 'decimal:2',
+            'sale_price' => 'decimal:2',
+            'max_installments' => 'integer',
+            'rating' => 'decimal:2',
             'published_at' => 'datetime',
         ];
     }
@@ -73,14 +76,66 @@ class Course extends Model
         return $this->hasMany(CourseInstalmentPlan::class);
     }
 
-    public function isFree(): bool
+    public function quizzes(): HasMany
     {
-        return $this->price == 0;
+        return $this->hasMany(Quiz::class);
     }
 
+    public function coursePayments(): HasMany
+    {
+        return $this->hasMany(CoursePayment::class);
+    }
+
+    public function liveClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(LiveClass::class, 'live_class_courses');
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(LmsSchedule::class);
+    }
+
+    public function isFree(): bool
+    {
+        return $this->effectivePrice() <= 0;
+    }
+
+    /**
+     * Amount charged for enrollment/checkout. Null sale_price uses base price;
+     * sale_price of 0 is treated as "no sale" (falls back to base price), not free.
+     */
     public function effectivePrice(): float
     {
-        return $this->sale_price ?? $this->price;
+        $price = (float) $this->price;
+
+        if ($this->sale_price === null) {
+            return max(0.0, round($price, 2));
+        }
+
+        $sale = (float) $this->sale_price;
+
+        if ($sale <= 0) {
+            return max(0.0, round($price, 2));
+        }
+
+        return max(0.0, round(min($price, $sale), 2));
+    }
+
+    /**
+     * Same idea as program fees: total course price split across up to {@see max_installments} payments.
+     */
+    public function installmentAmount(): float
+    {
+        $total = $this->effectivePrice();
+        $max = max(1, (int) ($this->max_installments ?? 1));
+
+        return $total > 0 ? round($total / $max, 2) : 0.0;
     }
 
     public function isPublished(): bool

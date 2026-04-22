@@ -1,0 +1,219 @@
+<?php
+
+namespace App\Http\Controllers\Tutor;
+
+use App\Http\Controllers\Controller;
+use App\Jobs\UploadLiveClassRecordingToYouTube;
+use App\Models\Course;
+use App\Models\LiveClass;
+use App\Models\LiveClassRecording;
+use App\Models\User;
+use App\Notifications\Lms\LiveClassScheduledNotification;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class LiveClassController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $classes = LiveClass::query()
+            ->where('tutor_id', $request->user()->id)
+            ->with(['courses:id,title'])
+            ->latest('start_time')
+            ->get();
+
+        return Inertia::render('Tutor/LiveClasses/Index', [
+            'classes' => $classes,
+        ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        $courses = Course::query()
+            ->where('instructor_id', $request->user()->id)
+            ->orderBy('title')
+            ->get(['id', 'title']);
+
+        $studentIds = $courses->flatMap(function (Course $course) {
+            return $course->enrollments()
+                ->whereIn('access_status', ['active', 'completed'])
+                ->pluck('user_id');
+        })->unique();
+
+        return Inertia::render('Tutor/LiveClasses/Create', [
+            'courses' => $courses,
+            'students' => User::query()->whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'email']),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'start_time' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:5', 'max:600'],
+            'access_type' => ['required', 'in:course,custom'],
+            'course_ids' => ['array'],
+            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'student_ids' => ['array'],
+            'student_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $liveClass = LiveClass::query()->create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'tutor_id' => (int) $request->user()->id,
+            'created_by' => (int) $request->user()->id,
+            'start_time' => $validated['start_time'],
+            'duration' => $validated['duration'],
+            'room_name' => 'class_'.Str::random(10),
+            'access_type' => $validated['access_type'],
+        ]);
+
+        $this->syncAudience($request, $liveClass, $validated);
+        $this->notifyAudience($liveClass);
+
+        return redirect()->route('tutor.live-classes.index')->with('success', 'Live class scheduled.');
+    }
+
+    public function show(Request $request, LiveClass $liveClass): Response
+    {
+        $this->authorizeTutor($request, $liveClass);
+
+        $liveClass->load([
+            'courses:id,title',
+            'students:id,name,email',
+            'recordings',
+            'attendance.student:id,name,email',
+        ]);
+
+        return Inertia::render('Tutor/LiveClasses/Show', [
+            'liveClass' => $liveClass,
+        ]);
+    }
+
+    public function edit(Request $request, LiveClass $liveClass): Response
+    {
+        $this->authorizeTutor($request, $liveClass);
+
+        $courses = Course::query()
+            ->where('instructor_id', $request->user()->id)
+            ->orderBy('title')
+            ->get(['id', 'title']);
+
+        $liveClass->load(['courses:id,title', 'students:id,name,email']);
+
+        $studentIds = $courses->flatMap(function (Course $course) {
+            return $course->enrollments()
+                ->whereIn('access_status', ['active', 'completed'])
+                ->pluck('user_id');
+        })->unique();
+
+        return Inertia::render('Tutor/LiveClasses/Edit', [
+            'liveClass' => $liveClass,
+            'courses' => $courses,
+            'students' => User::query()->whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'email']),
+        ]);
+    }
+
+    public function update(Request $request, LiveClass $liveClass): RedirectResponse
+    {
+        $this->authorizeTutor($request, $liveClass);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'start_time' => ['required', 'date'],
+            'duration' => ['required', 'integer', 'min:5', 'max:600'],
+            'access_type' => ['required', 'in:course,custom'],
+            'course_ids' => ['array'],
+            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'student_ids' => ['array'],
+            'student_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $liveClass->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'start_time' => $validated['start_time'],
+            'duration' => $validated['duration'],
+            'access_type' => $validated['access_type'],
+        ]);
+
+        $this->syncAudience($request, $liveClass, $validated);
+
+        return back()->with('success', 'Live class updated.');
+    }
+
+    public function destroy(Request $request, LiveClass $liveClass): RedirectResponse
+    {
+        $this->authorizeTutor($request, $liveClass);
+        $liveClass->delete();
+
+        return back()->with('success', 'Live class deleted.');
+    }
+
+    public function addRecording(Request $request, LiveClass $liveClass): RedirectResponse
+    {
+        $this->authorizeTutor($request, $liveClass);
+
+        $validated = $request->validate([
+            'recording_file' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-matroska,video/webm', 'max:1024000'],
+        ]);
+
+        $path = $validated['recording_file']->store('live-class-recordings/'.$liveClass->id, 'public');
+        $recording = LiveClassRecording::query()->create([
+            'live_class_id' => $liveClass->id,
+            'file_path' => $path,
+            'status' => 'processing',
+        ]);
+
+        UploadLiveClassRecordingToYouTube::dispatch($recording->id);
+
+        return back()->with('success', 'Recording upload queued.');
+    }
+
+    private function authorizeTutor(Request $request, LiveClass $liveClass): void
+    {
+        abort_unless((int) $liveClass->tutor_id === (int) $request->user()->id, 403);
+    }
+
+    private function syncAudience(Request $request, LiveClass $liveClass, array $validated): void
+    {
+        if ($liveClass->access_type === 'course') {
+            $allowedCourses = Course::query()
+                ->where('instructor_id', $request->user()->id)
+                ->whereIn('id', $validated['course_ids'] ?? [])
+                ->pluck('id');
+            $liveClass->courses()->sync($allowedCourses);
+            $liveClass->students()->sync([]);
+        } else {
+            $liveClass->students()->sync($validated['student_ids'] ?? []);
+            $liveClass->courses()->sync([]);
+        }
+    }
+
+    private function notifyAudience(LiveClass $liveClass): void
+    {
+        if ($liveClass->access_type === 'course') {
+            $studentIds = $liveClass->courses()
+                ->with('enrollments:user_id,course_id,access_status')
+                ->get()
+                ->flatMap(fn (Course $course) => $course->enrollments
+                    ->whereIn('access_status', ['active', 'completed'])
+                    ->pluck('user_id'))
+                ->unique()
+                ->values();
+        } else {
+            $studentIds = $liveClass->students()->pluck('users.id');
+        }
+
+        User::query()
+            ->whereIn('id', $studentIds)
+            ->each(fn (User $user) => $user->notify(new LiveClassScheduledNotification($liveClass)));
+    }
+}

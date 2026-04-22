@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, BookOpen } from 'lucide-vue-next';
 
+import RichTextEditor from '@/components/RichTextEditor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 interface Category {
@@ -19,6 +20,7 @@ const form = useForm({
   category_id:       '',
   level:             'beginner',
   short_description: '',
+  description:       '',
 });
 
 function submit() {
@@ -33,7 +35,7 @@ function submit() {
   ]">
     <Head title="Create Course" />
 
-    <div class="mx-auto max-w-2xl">
+    <div class="mx-auto max-w-4xl">
       <!-- Header -->
       <div class="mb-8 flex items-center gap-4">
         <Link
@@ -123,6 +125,23 @@ function submit() {
               <p v-if="form.errors.short_description" class="text-xs text-red-500">{{ form.errors.short_description }}</p>
               <p class="ml-auto text-xs text-gray-400">{{ form.short_description.length }}/500</p>
             </div>
+          </div>
+
+          <!-- Full description (rich text, optional) -->
+          <div>
+            <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              Full description <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              Optional longer overview with formatting — you can also add this later on the course details tab.
+            </p>
+            <RichTextEditor
+              v-model="form.description"
+              placeholder="Detailed course overview, prerequisites, outcomes…"
+              upload-url="/lesson-content/media"
+              body-class="min-h-[200px] max-h-[min(55vh,520px)]"
+            />
+            <p v-if="form.errors.description" class="mt-1 text-xs text-red-500">{{ form.errors.description }}</p>
           </div>
 
           <!-- Actions -->

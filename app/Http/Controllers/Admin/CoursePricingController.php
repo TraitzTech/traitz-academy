@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\CourseInstalmentPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,7 +16,6 @@ class CoursePricingController extends Controller
         $course->load([
             'instructor:id,name',
             'category:id,name,slug',
-            'instalmentPlans' => fn ($q) => $q->orderBy('id'),
         ]);
 
         return Inertia::render('Admin/Courses/Pricing', [
@@ -27,9 +25,15 @@ class CoursePricingController extends Controller
 
     public function update(Request $request, Course $course): RedirectResponse
     {
+        $saleRaw = $request->input('sale_price');
+        $request->merge([
+            'sale_price' => ($saleRaw === '' || $saleRaw === null) ? null : $saleRaw,
+        ]);
+
         $validated = $request->validate([
             'price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['nullable', 'numeric', 'min:0'],
+            'max_installments' => ['required', 'integer', 'min:1', 'max:12'],
             'is_featured' => ['boolean'],
         ]);
 
@@ -41,58 +45,17 @@ class CoursePricingController extends Controller
             return back()->withErrors(['sale_price' => 'Sale price must be less than the regular price.']);
         }
 
+        if ((float) $validated['price'] <= 0) {
+            $validated['max_installments'] = 1;
+        }
+
         $course->update([
             'price' => $validated['price'],
             'sale_price' => $sale,
+            'max_installments' => (int) $validated['max_installments'],
             'is_featured' => $request->boolean('is_featured'),
         ]);
 
         return back()->with('success', 'Course pricing updated.');
-    }
-
-    public function storePlan(Request $request, Course $course): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'number_of_instalments' => ['required', 'integer', 'min:2', 'max:48'],
-            'amount_per_instalment' => ['required', 'numeric', 'min:0'],
-            'interval_in_days' => ['required', 'integer', 'min:1', 'max:365'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $course->instalmentPlans()->create([
-            ...$validated,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
-
-        return back()->with('success', 'Installment plan added.');
-    }
-
-    public function updatePlan(Request $request, Course $course, CourseInstalmentPlan $plan): RedirectResponse
-    {
-        abort_unless($plan->course_id === $course->id, 404);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'number_of_instalments' => ['required', 'integer', 'min:2', 'max:48'],
-            'amount_per_instalment' => ['required', 'numeric', 'min:0'],
-            'interval_in_days' => ['required', 'integer', 'min:1', 'max:365'],
-            'is_active' => ['boolean'],
-        ]);
-
-        $plan->update([
-            ...$validated,
-            'is_active' => $request->boolean('is_active'),
-        ]);
-
-        return back()->with('success', 'Installment plan updated.');
-    }
-
-    public function destroyPlan(Course $course, CourseInstalmentPlan $plan): RedirectResponse
-    {
-        abort_unless($plan->course_id === $course->id, 404);
-        $plan->delete();
-
-        return back()->with('success', 'Installment plan removed.');
     }
 }

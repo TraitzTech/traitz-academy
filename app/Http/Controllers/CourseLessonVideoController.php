@@ -2,17 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\UploadLessonVideoToYouTube;
 use App\Models\Course;
 use App\Models\CourseLesson;
 use App\Models\CourseSection;
+use App\Support\Video\YouTubeUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 class CourseLessonVideoController extends Controller
 {
-    public function store(Request $request, Course $course, CourseSection $section, CourseLesson $lesson): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        Course $course,
+        CourseSection $section,
+        CourseLesson $lesson,
+        YouTubeUploader $uploader
+    ): RedirectResponse {
         $this->authorizeActor($course, $request->user());
         $this->authorizeSection($course, $section);
         $this->authorizeLesson($section, $lesson);
@@ -23,16 +29,57 @@ class CourseLessonVideoController extends Controller
             'video_file' => ['required', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm', 'max:512000'],
         ]);
 
-        $path = $validated['video_file']->store('lesson-video-uploads', 'local');
+        $uploadedFile = $validated['video_file'];
+        $absolutePath = $uploadedFile->getRealPath();
+        if ($absolutePath === false) {
+            return back()->withErrors(['video_file' => 'Could not read uploaded video file.']);
+        }
 
         $lesson->update([
-            'youtube_status' => 'pending',
+            'youtube_status' => 'processing',
             'youtube_error' => null,
         ]);
 
-        UploadLessonVideoToYouTube::dispatch((int) $lesson->id, $path);
+        try {
+            if ($lesson->youtube_video_id) {
+                $uploader->delete((string) $lesson->youtube_video_id);
+            }
+        } catch (Throwable $exception) {
+            $lesson->update([
+                'youtube_status' => 'failed',
+                'youtube_error' => $exception->getMessage(),
+            ]);
 
-        return back()->with('success', 'Video received and queued for YouTube upload.');
+            return back()->withErrors([
+                'video_file' => 'Could not replace previous YouTube video: '.$exception->getMessage(),
+            ]);
+        }
+
+        try {
+            $result = $uploader->upload(
+                $absolutePath,
+                $lesson->title,
+                $lesson->description
+            );
+        } catch (Throwable $exception) {
+            $lesson->update([
+                'youtube_status' => 'failed',
+                'youtube_error' => $exception->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'video_file' => 'YouTube upload failed: '.$exception->getMessage(),
+            ]);
+        }
+
+        $lesson->update([
+            'video_url' => $result['url'],
+            'youtube_video_id' => $result['video_id'],
+            'youtube_status' => 'ready',
+            'youtube_error' => null,
+        ]);
+
+        return back()->with('success', 'Video uploaded to YouTube successfully.');
     }
 
     private function authorizeActor(Course $course, $actor): void

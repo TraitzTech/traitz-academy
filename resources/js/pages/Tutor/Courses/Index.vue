@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { BookOpen, CheckSquare, Clock, Edit2, PlusCircle, Search, Trash2, Users } from 'lucide-vue-next'
 import { debounce } from 'lodash-es'
+import { BookOpen, CheckSquare, Clock, Edit2, Eye, PlusCircle, Trash2, Users } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
@@ -12,15 +12,13 @@ interface Category { id: number; name: string; slug: string }
 interface Course {
   id: number
   title: string
-  slug: string
   cover_image: string | null
   level: 'beginner' | 'intermediate' | 'advanced'
   status: 'draft' | 'pending_review' | 'published' | 'archived'
   price: string
-  duration: string | null
   enrollments_count: number
+  sections_count: number
   category: Category | null
-  created_at: string
 }
 
 interface PaginatedCourses {
@@ -28,32 +26,35 @@ interface PaginatedCourses {
   total: number
   current_page: number
   last_page: number
+  from: number
+  to: number
   links: { url: string | null; label: string; active: boolean }[]
 }
 
 const props = defineProps<{
   courses: PaginatedCourses
-  filters: { search?: string; status?: string }
+  categories: Category[]
+  filters: { search?: string; status?: string; category?: string }
   stats: { total: number; active: number; pending: number; draft: number; students: number }
 }>()
 
 defineOptions({ layout: AppLayout })
 
-// ── Filters ───────────────────────────────────────────────────────────────────
 const search = ref(props.filters.search ?? '')
 const status = ref(props.filters.status ?? '')
+const category = ref(props.filters.category ?? '')
 
 const applyFilters = debounce(() => {
   router.get('/tutor/courses', {
     search: search.value || undefined,
     status: status.value || undefined,
+    category: category.value || undefined,
   }, { preserveState: true, replace: true })
 }, 300)
 
-watch([search, status], applyFilters)
+watch([search, status, category], applyFilters)
 
-// ── Delete ────────────────────────────────────────────────────────────────────
-const deletingId   = ref<number | null>(null)
+const deletingId = ref<number | null>(null)
 const deleteTarget = ref<Course | null>(null)
 
 function confirmDelete(course: Course) {
@@ -66,25 +67,33 @@ function doDelete() {
   deletingId.value = deleteTarget.value.id
   router.delete(`/tutor/courses/${deleteTarget.value.id}`, {
     onSuccess: () => { deleteTarget.value = null },
-    onFinish:  () => { deletingId.value = null },
+    onFinish: () => { deletingId.value = null },
   })
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const statusConfig: Record<string, { label: string; badge: string }> = {
-  draft:          { label: 'Draft',          badge: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
-  pending_review: { label: 'Pending Review', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  published:      { label: 'Published',      badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-  archived:       { label: 'Archived',       badge: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+const statusLabels: Record<string, string> = {
+  draft: 'Draft',
+  pending_review: 'Pending Review',
+  published: 'Published',
+  archived: 'Archived',
+}
+
+const statusColors: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  pending_review: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  published: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  archived: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const levelLabels: Record<string, string> = {
-  beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced',
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
 }
 
-function coverUrl(url: string | null) {
-  if (!url) return null
-  return url.startsWith('http') ? url : `/storage/${url}`
+function coverSrc(path: string | null) {
+  if (!path) return null
+  return path.startsWith('http') ? path : `/storage/${path}`
 }
 
 function formatPrice(price: string) {
@@ -97,7 +106,6 @@ function formatPrice(price: string) {
   <div>
     <Head title="My Courses — Tutor" />
 
-    <!-- Page header -->
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">My Courses</h2>
@@ -111,183 +119,204 @@ function formatPrice(price: string) {
       </Link>
     </div>
 
-    <!-- ── Stat cards (adapted from prototype CourseManagementPage) ── -->
-    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-      <!-- Total -->
-      <div class="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-        <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-[#381998]/10">
-          <BookOpen class="h-5 w-5 text-[#381998]" />
+    <!-- Stat cards — aligned with admin Courses index -->
+    <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-5">
+      <div class="rounded-lg border-l-4 border-[#381998] bg-white p-4 shadow dark:bg-gray-800 lg:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 lg:text-sm">Total Courses</p>
+            <p class="mt-1 text-2xl font-bold text-[#000928] dark:text-gray-100 lg:mt-2 lg:text-3xl">{{ stats.total }}</p>
+          </div>
+          <div class="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/30 lg:p-3">
+            <BookOpen class="h-5 w-5 text-purple-600 dark:text-purple-400 lg:h-7 lg:w-7" />
+          </div>
         </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ stats.total }}</p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Total Courses</p>
       </div>
-      <!-- Published -->
-      <div class="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-        <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-          <CheckSquare class="h-5 w-5 text-green-600 dark:text-green-400" />
+      <div class="rounded-lg border-l-4 border-green-500 bg-white p-4 shadow dark:bg-gray-800 lg:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 lg:text-sm">Published</p>
+            <p class="mt-1 text-2xl font-bold text-[#000928] dark:text-gray-100 lg:mt-2 lg:text-3xl">{{ stats.active }}</p>
+          </div>
+          <div class="rounded-lg bg-green-100 p-2 dark:bg-green-900/30 lg:p-3">
+            <CheckSquare class="h-5 w-5 text-green-600 dark:text-green-400 lg:h-7 lg:w-7" />
+          </div>
         </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ stats.active }}</p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Published</p>
       </div>
-      <!-- Pending -->
-      <div class="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-        <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-          <Clock class="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+      <div class="rounded-lg border-l-4 border-amber-400 bg-white p-4 shadow dark:bg-gray-800 lg:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 lg:text-sm">Pending Review</p>
+            <p class="mt-1 text-2xl font-bold text-[#000928] dark:text-gray-100 lg:mt-2 lg:text-3xl">{{ stats.pending }}</p>
+          </div>
+          <div class="rounded-lg bg-amber-100 p-2 dark:bg-amber-900/30 lg:p-3">
+            <Clock class="h-5 w-5 text-amber-500 dark:text-amber-400 lg:h-7 lg:w-7" />
+          </div>
         </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ stats.pending }}</p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pending Review</p>
       </div>
-      <!-- Draft -->
-      <div class="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-        <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
-          <Edit2 class="h-5 w-5 text-gray-500 dark:text-gray-400" />
+      <div class="rounded-lg border-l-4 border-gray-400 bg-white p-4 shadow dark:bg-gray-800 lg:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 lg:text-sm">Drafts</p>
+            <p class="mt-1 text-2xl font-bold text-[#000928] dark:text-gray-100 lg:mt-2 lg:text-3xl">{{ stats.draft }}</p>
+          </div>
+          <div class="rounded-lg bg-gray-100 p-2 dark:bg-gray-700/50 lg:p-3">
+            <Edit2 class="h-5 w-5 text-gray-600 dark:text-gray-400 lg:h-7 lg:w-7" />
+          </div>
         </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ stats.draft }}</p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Drafts</p>
       </div>
-      <!-- Students -->
-      <div class="col-span-2 rounded-xl bg-white p-4 shadow dark:bg-gray-800 sm:col-span-4 lg:col-span-1">
-        <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-[#42b6c5]/10">
-          <Users class="h-5 w-5 text-[#42b6c5]" />
+      <div class="col-span-2 rounded-lg border-l-4 border-[#42b6c5] bg-white p-4 shadow dark:bg-gray-800 lg:col-span-1 lg:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 lg:text-sm">Total Students</p>
+            <p class="mt-1 text-2xl font-bold text-[#000928] dark:text-gray-100 lg:mt-2 lg:text-3xl">{{ stats.students }}</p>
+          </div>
+          <div class="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30 lg:p-3">
+            <Users class="h-5 w-5 text-blue-600 dark:text-blue-400 lg:h-7 lg:w-7" />
+          </div>
         </div>
-        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ stats.students }}</p>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Total Students</p>
       </div>
     </div>
 
-    <!-- ── Search & status filter ── -->
-    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div class="relative flex-1">
-        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    <!-- Filters — same pattern as admin Courses -->
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+        <button
+          v-for="[val, label] in [['','All'],['published','Published'],['draft','Draft'],['pending_review','Pending'],['archived','Archived']]"
+          :key="val"
+          type="button"
+          @click="status = val"
+          :class="[
+            'shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+            status === val
+              ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+          ]"
+        >
+          {{ label }}
+        </button>
+      </div>
+      <div class="flex flex-wrap gap-2">
         <input
           v-model="search"
           type="text"
           placeholder="Search courses…"
-          class="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-4 text-sm focus:border-[#42b6c5] focus:ring-1 focus:ring-[#42b6c5] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          class="min-w-[10rem] flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-transparent focus:ring-2 focus:ring-[#42b6c5] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 sm:w-48 sm:flex-none"
         />
+        <select
+          v-model="category"
+          class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-transparent focus:ring-2 focus:ring-[#42b6c5] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+        >
+          <option value="">All categories</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.slug">{{ cat.name }}</option>
+        </select>
       </div>
-      <select
-        v-model="status"
-        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#42b6c5] focus:ring-1 focus:ring-[#42b6c5] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-      >
-        <option value="">All Statuses</option>
-        <option value="draft">Draft</option>
-        <option value="pending_review">Pending Review</option>
-        <option value="published">Published</option>
-        <option value="archived">Archived</option>
-      </select>
     </div>
 
-    <!-- ── Empty state ── -->
-    <div
-      v-if="courses.data.length === 0"
-      class="rounded-2xl border-2 border-dashed border-gray-200 bg-white py-24 text-center dark:border-gray-700 dark:bg-gray-800"
-    >
-      <BookOpen class="mx-auto mb-4 h-14 w-14 text-gray-300" />
-      <h3 class="mb-1 text-lg font-bold text-gray-700 dark:text-gray-200">
-        {{ search || status ? 'No courses match your filters' : 'No courses yet' }}
-      </h3>
-      <p class="mb-6 text-sm text-gray-500">
-        {{ search || status ? 'Try adjusting your search or filters.' : 'Create your first course and start sharing your knowledge.' }}
-      </p>
-      <Link
-        v-if="!search && !status"
-        href="/tutor/courses/create"
-        class="inline-flex items-center gap-2 rounded-xl bg-[#381998] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#000928]"
-      >
-        <PlusCircle class="h-4 w-4" /> Create Course
-      </Link>
-    </div>
+    <!-- Course list — row layout like admin -->
+    <div class="rounded-xl bg-white shadow dark:bg-gray-800">
+      <div v-if="courses.data.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
+        <BookOpen class="mb-3 h-12 w-12 text-gray-300" />
+        <p class="font-medium text-gray-500 dark:text-gray-400">
+          {{ search || status || category ? 'No courses match your filters' : 'No courses yet' }}
+        </p>
+        <p class="mt-1 text-sm text-gray-400">
+          {{ search || status || category ? 'Try adjusting your filters.' : 'Create your first course to get started.' }}
+        </p>
+        <Link
+          v-if="!search && !status && !category"
+          href="/tutor/courses/create"
+          class="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#381998] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000928]"
+        >
+          <PlusCircle class="h-4 w-4" /> New Course
+        </Link>
+      </div>
 
-    <!-- ── Course grid ── -->
-    <div v-else class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      <div
-        v-for="course in courses.data"
-        :key="course.id"
-        class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
-      >
-        <!-- Thumbnail -->
-        <div class="relative h-40 overflow-hidden bg-linear-to-br from-[#381998] to-[#42b6c5]">
-          <img
-            v-if="coverUrl(course.cover_image)"
-            :src="coverUrl(course.cover_image) ?? undefined"
-            :alt="course.title"
-            class="h-full w-full object-cover opacity-80"
-          />
-          <div v-else class="flex h-full items-center justify-center">
-            <BookOpen class="h-12 w-12 text-white/40" />
-          </div>
-          <!-- Status badge -->
-          <span :class="['absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-bold shadow', statusConfig[course.status]?.badge]">
-            {{ statusConfig[course.status]?.label }}
-          </span>
-        </div>
-
-        <!-- Content -->
-        <div class="flex flex-1 flex-col p-4">
-          <div class="mb-1 flex items-center gap-2 text-xs text-gray-400">
-            <span v-if="course.category">{{ course.category.name }}</span>
-            <span class="text-gray-300" v-if="course.category">·</span>
-            <span>{{ levelLabels[course.level] }}</span>
+      <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div
+          v-for="course in courses.data"
+          :key="course.id"
+          class="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40"
+        >
+          <div class="h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-[#381998] to-[#42b6c5]">
+            <img
+              v-if="coverSrc(course.cover_image)"
+              :src="coverSrc(course.cover_image)!"
+              :alt="course.title"
+              class="h-full w-full object-cover"
+            />
           </div>
 
-          <h3 class="mb-3 line-clamp-2 text-sm font-bold leading-snug text-[#000928] dark:text-white">
-            {{ course.title }}
-          </h3>
-
-          <div class="mb-4 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-            <span class="flex items-center gap-1">
-              <Users class="h-3.5 w-3.5" /> {{ course.enrollments_count }} enrolled
-            </span>
-            <span v-if="course.duration" class="flex items-center gap-1">
-              <Clock class="h-3.5 w-3.5" /> {{ course.duration }}
-            </span>
-            <span class="font-semibold text-[#381998]">{{ formatPrice(course.price) }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{ course.title }}</span>
+              <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold', statusColors[course.status]]">
+                {{ statusLabels[course.status] }}
+              </span>
+            </div>
+            <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+              {{ course.enrollments_count }} students
+              · {{ course.sections_count }} sections
+              <template v-if="course.category"> · {{ course.category.name }}</template>
+              · {{ levelLabels[course.level] }}
+              · {{ formatPrice(course.price) }}
+            </p>
           </div>
 
-          <div class="mt-auto flex items-center gap-2">
+          <div class="flex shrink-0 items-center gap-2">
+            <Link
+              :href="`/tutor/courses/${course.id}`"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#381998]/10 hover:text-[#381998] dark:hover:bg-purple-900/20 dark:hover:text-purple-300"
+              title="View course"
+            >
+              <Eye class="h-4 w-4" />
+            </Link>
             <Link
               :href="`/tutor/courses/${course.id}/edit`"
-              class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#381998] py-2 text-xs font-semibold text-[#381998] transition-colors hover:bg-[#381998] hover:text-white"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/10"
+              title="Edit course"
             >
-              <Edit2 class="h-3.5 w-3.5" /> Edit
+              <Edit2 class="h-4 w-4" />
             </Link>
             <button
               v-if="course.status !== 'published'"
-              @click="confirmDelete(course)"
+              type="button"
               :disabled="deletingId === course.id"
-              class="flex items-center justify-center rounded-xl border border-red-200 p-2 text-red-400 transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:border-red-800 dark:hover:bg-red-900/20"
+              class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/10"
               title="Delete course"
+              @click="confirmDelete(course)"
             >
-              <Trash2 class="h-3.5 w-3.5" />
+              <Trash2 class="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
+
+      <div
+        v-if="courses.last_page > 1"
+        class="flex items-center justify-between border-t border-gray-100 px-5 py-3 dark:border-gray-700"
+      >
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Showing {{ courses.from }}–{{ courses.to }} of {{ courses.total }}
+        </p>
+        <div class="flex gap-1">
+          <template v-for="link in courses.links" :key="link.label">
+            <Link
+              v-if="link.url"
+              :href="link.url"
+              :class="[
+                'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors',
+                link.active
+                  ? 'bg-[#381998] text-white'
+                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
+              ]"
+              v-html="link.label"
+            />
+          </template>
+        </div>
+      </div>
     </div>
 
-    <!-- ── Pagination ── -->
-    <div v-if="courses.last_page > 1" class="mt-8 flex items-center justify-center gap-2">
-      <template v-for="link in courses.links" :key="link.label">
-        <Link
-          v-if="link.url"
-          :href="link.url"
-          :class="[
-            'flex h-9 min-w-[36px] items-center justify-center rounded-lg px-3 text-sm font-medium transition-colors',
-            link.active
-              ? 'bg-[#42b6c5] text-white shadow'
-              : 'border border-gray-200 bg-white text-gray-600 hover:border-[#42b6c5] hover:text-[#42b6c5] dark:border-gray-600 dark:bg-gray-800',
-          ]"
-        ><span v-html="link.label" /></Link>
-        <span
-          v-else
-          class="flex h-9 min-w-[36px] cursor-not-allowed items-center justify-center rounded-lg px-3 text-sm font-medium text-gray-300"
-          v-html="link.label"
-        />
-      </template>
-    </div>
-
-    <!-- ── Delete confirmation (uses project's ConfirmationModal) ── -->
     <ConfirmationModal
       :open="!!deleteTarget"
       title="Delete Course"

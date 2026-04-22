@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\UploadLessonVideoToYouTube;
 use App\Models\Course;
 use App\Models\CourseLesson;
+use App\Support\Video\YouTubeUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class LessonUploadController extends Controller
 {
@@ -52,7 +53,7 @@ class LessonUploadController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, YouTubeUploader $uploader): RedirectResponse
     {
         $validated = $request->validate([
             'course_id' => ['required', 'exists:courses,id'],
@@ -72,11 +73,32 @@ class LessonUploadController extends Controller
             ->firstOrFail();
 
         $videoUrl = null;
+        $youtubeVideoId = null;
         $youtubeStatus = null;
+        $youtubeError = null;
 
         if ($request->hasFile('video_file')) {
-            $path = $request->file('video_file')->store('lesson-video-uploads', 'local');
-            $youtubeStatus = 'pending';
+            $absolutePath = $request->file('video_file')->getRealPath();
+            if ($absolutePath === false) {
+                return back()->withErrors(['video_file' => 'Could not read uploaded video file.'])->withInput();
+            }
+
+            try {
+                $result = $uploader->upload(
+                    $absolutePath,
+                    $validated['title'],
+                    $validated['description'] ?? null
+                );
+            } catch (Throwable $exception) {
+                return back()->withErrors([
+                    'video_file' => 'YouTube upload failed: '.$exception->getMessage(),
+                ])->withInput();
+            }
+
+            $videoUrl = $result['url'];
+            $youtubeVideoId = $result['video_id'];
+            $youtubeStatus = 'ready';
+            $youtubeError = null;
         }
 
         $sortOrder = CourseLesson::where('course_section_id', $validated['section_id'])->max('sort_order') + 1;
@@ -88,16 +110,14 @@ class LessonUploadController extends Controller
             'type' => $validated['type'],
             'description' => $validated['description'] ?? null,
             'video_url' => $videoUrl,
+            'youtube_video_id' => $youtubeVideoId,
             'youtube_status' => $youtubeStatus,
+            'youtube_error' => $youtubeError,
             'content' => $validated['content'] ?? null,
             'duration' => $validated['duration'] ?? null,
             'is_free' => $validated['is_free'] ?? false,
             'sort_order' => $sortOrder,
         ]);
-
-        if (isset($path) && $validated['type'] === 'video') {
-            UploadLessonVideoToYouTube::dispatch((int) $lesson->id, $path);
-        }
 
         return back()->with('success', "Lesson \"{$validated['title']}\" uploaded successfully.");
     }

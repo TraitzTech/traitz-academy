@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Category { id: number; name: string; slug: string }
@@ -11,11 +12,8 @@ interface Course {
   level: 'beginner' | 'intermediate' | 'advanced'
   short_description: string
   description: string | null
-  price: string
-  sale_price: string | null
   duration: string | null
   status: 'draft' | 'pending_review' | 'published' | 'archived'
-  is_featured: boolean
   category: Category | null
 }
 
@@ -39,8 +37,14 @@ const form = useForm({
   is_featured: props.course.is_featured,
 })
 
+form.transform((data) => ({
+  ...data,
+  category_id: data.category_id === '' || data.category_id === null ? null : data.category_id,
+  sale_price: data.sale_price === '' || data.sale_price === null ? null : data.sale_price,
+}))
+
 function save() {
-  form.put(`/admin/courses/${props.course.id}`)
+  form.put(`/admin/courses/${props.course.id}`, { preserveScroll: true })
 }
 </script>
 
@@ -56,7 +60,7 @@ function save() {
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Update course details as admin</p>
     </div>
 
-    <div class="max-w-3xl rounded-xl bg-white p-6 shadow dark:bg-gray-800">
+    <div class="max-w-4xl rounded-xl bg-white p-6 shadow dark:bg-gray-800">
       <form class="space-y-4" @submit.prevent="save">
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Title *</label>
@@ -71,6 +75,7 @@ function save() {
               <option value="">No category</option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
+            <p v-if="form.errors.category_id" class="mt-1 text-xs text-red-600">{{ form.errors.category_id }}</p>
           </div>
           <div>
             <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Level *</label>
@@ -79,6 +84,7 @@ function save() {
               <option value="intermediate">Intermediate</option>
               <option value="advanced">Advanced</option>
             </select>
+            <p v-if="form.errors.level" class="mt-1 text-xs text-red-600">{{ form.errors.level }}</p>
           </div>
         </div>
 
@@ -89,39 +95,40 @@ function save() {
         </div>
 
         <div>
-          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-          <textarea v-model="form.description" rows="5" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Full description</label>
+          <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">Rich text — same formatting learners see on the course page.</p>
+          <RichTextEditor
+            v-model="form.description"
+            placeholder="Detailed course overview, prerequisites, outcomes…"
+            upload-url="/lesson-content/media"
+            body-class="min-h-[200px] max-h-[min(55vh,520px)]"
+          />
+          <p v-if="form.errors.description" class="mt-1 text-xs text-red-600">{{ form.errors.description }}</p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Price *</label>
-            <input v-model="form.price" type="number" min="0" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Sale price</label>
-            <input v-model="form.sale_price" type="number" min="0" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
-            <input v-model="form.duration" type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
-          </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
+          <input v-model="form.duration" type="text" class="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100" />
+          <p v-if="form.errors.duration" class="mt-1 text-xs text-red-600">{{ form.errors.duration }}</p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Status *</label>
-            <select v-model="form.status" class="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
-              <option value="draft">Draft</option>
-              <option value="pending_review">Pending review</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          <label class="mt-7 flex items-center gap-2">
-            <input v-model="form.is_featured" type="checkbox" class="rounded border-gray-300" />
-            <span class="text-sm text-gray-700 dark:text-gray-300">Featured</span>
-          </label>
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-400">
+          <p class="font-medium text-gray-800 dark:text-gray-200">Pricing &amp; featured</p>
+          <p class="mt-1">
+            Set price, sale price, installments, and featured on
+            <Link :href="`/admin/courses/${course.id}/pricing`" class="font-medium text-[#381998] hover:underline dark:text-[#42b6c5]">Admin → Courses → Pricing</Link>.
+          </p>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Status *</label>
+          <select v-model="form.status" class="w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+            <option value="draft">Draft</option>
+            <option value="pending_review">Pending review</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+          </select>
+          <p v-if="form.errors.status" class="mt-1 text-xs text-red-600">{{ form.errors.status }}</p>
         </div>
 
         <div class="pt-2">

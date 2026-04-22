@@ -5,6 +5,8 @@ namespace App\Notifications;
 use App\Models\Course;
 use App\Models\CourseLesson;
 use App\Models\Discussion;
+use App\Models\User;
+use App\Support\Lms\LmsNotificationPreference;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
@@ -21,6 +23,10 @@ class LessonDiscussionQuestionPosted extends Notification
      */
     public function via(object $notifiable): array
     {
+        if ($notifiable instanceof User && ! LmsNotificationPreference::accepts($notifiable, LmsNotificationPreference::INSTRUCTOR_LESSON_QUESTIONS)) {
+            return [];
+        }
+
         return ['database'];
     }
 

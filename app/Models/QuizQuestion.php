@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuizQuestion extends Model
 {
@@ -24,15 +25,20 @@ class QuizQuestion extends Model
     protected function casts(): array
     {
         return [
-            'options'        => 'array',
+            'options' => 'array',
             'correct_answer' => 'array',
-            'points'         => 'integer',
-            'sort_order'     => 'integer',
+            'points' => 'integer',
+            'sort_order' => 'integer',
         ];
     }
 
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order');
+    }
+
+    public function quiz(): BelongsTo
+    {
+        return $this->belongsTo(Quiz::class);
     }
 }
