@@ -1,0 +1,2 @@
+function n(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function i(t){return t.split(/\n\n+/).map(r=>`<p>${r.split(`
+`).map(s=>n(s)).join("<br />")}</p>`).join("")}function o(t,e="No lesson content has been provided yet."){if(!t?.trim())return`<p class="text-gray-500 italic">${n(e)}</p>`;const r=t.trim();return/^<[a-z!/]/i.test(r)?r:i(r)}function c(t){if(!t?.trim())return"";const e=t.trim();return/^<[a-z!/]/i.test(e)?e:i(e)}export{c,o as l};

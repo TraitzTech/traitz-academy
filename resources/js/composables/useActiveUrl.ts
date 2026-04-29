@@ -10,12 +10,24 @@ const currentUrlReactive = computed(
 );
 
 export function useActiveUrl() {
+    function normalizePath(path: string): string {
+        if (path === '/') return '/';
+        return path.endsWith('/') ? path.slice(0, -1) : path;
+    }
+
     function urlIsActive(
         urlToCheck: NonNullable<InertiaLinkProps['href']>,
         currentUrl?: string,
+        matchMode: 'exact' | 'prefix' = 'exact',
     ) {
-        const urlToCompare = currentUrl ?? currentUrlReactive.value;
-        return toUrl(urlToCheck) === urlToCompare;
+        const currentPath = normalizePath(currentUrl ?? currentUrlReactive.value);
+        const targetPath = normalizePath(toUrl(urlToCheck));
+
+        if (matchMode === 'prefix') {
+            return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+        }
+
+        return targetPath === currentPath;
     }
 
     return {

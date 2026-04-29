@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3'
 
 import { useToast } from '@/composables/useToast'
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
 interface LearningResource {
   id: number
@@ -75,7 +76,13 @@ const typeLabel = (type: string) => {
           <a v-if="resource.type === 'document' && resource.document_path" :href="documentUrl(resource.document_path) || ''" target="_blank" class="inline-flex items-center px-4 py-2 rounded-lg bg-[#42b6c5] text-white hover:bg-[#35919e]">Open / Download Document</a>
 
           <div v-else-if="resource.type === 'youtube_video' && resource.youtube_url" class="aspect-video bg-black rounded-lg overflow-hidden">
-            <iframe :src="resource.youtube_url" class="w-full h-full" allowfullscreen />
+            <iframe
+              :src="streamingEmbedSrc(resource.youtube_url) || resource.youtube_url || ''"
+              class="w-full h-full"
+              referrerpolicy="strict-origin-when-cross-origin"
+              :allow="STREAMING_IFRAME_ALLOW"
+              allowfullscreen
+            />
           </div>
 
           <a v-else-if="resource.type === 'external_link' && resource.external_url" :href="resource.external_url" target="_blank" class="inline-flex items-center px-4 py-2 rounded-lg bg-[#381998] text-white hover:bg-[#2d1377]">Visit External Resource</a>

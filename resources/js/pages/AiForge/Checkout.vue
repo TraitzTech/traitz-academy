@@ -2,9 +2,10 @@
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { Form } from '@inertiajs/vue3'
 import { watch } from 'vue'
-import PublicLayout from '@/layouts/PublicLayout.vue'
+
 import { useCart } from '@/composables/useCart'
 import { useToast } from '@/composables/useToast'
+import PublicLayout from '@/layouts/PublicLayout.vue'
 
 interface CartItem {
     swag_id: number

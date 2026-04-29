@@ -4,6 +4,7 @@ import { computed } from 'vue';
 
 import ProgramSearch from '@/components/ProgramSearch.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed';
 
 interface SuccessStory {
   id: number;
@@ -58,26 +59,7 @@ const openingCategoryLabels: Record<string, string> = {
 // Hero title
 const heroTitle = computed(() => props.siteSettings.hero_title || 'World-Class Tech Education');
 
-// Convert YouTube URL to embed URL
-const youtubeEmbedUrl = computed(() => {
-  const url = props.siteSettings.youtube_video_url;
-  if (!url) return null;
-  
-  // Handle various YouTube URL formats
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  
-  if (match && match[2].length === 11) {
-    return `https://www.youtube.com/embed/${match[2]}?autoplay=0&modestbranding=1&rel=0`;
-  }
-  
-  // If already an embed URL, return as is
-  if (url.includes('embed/')) {
-    return url;
-  }
-  
-  return null;
-});
+const youtubeEmbedUrl = computed(() => streamingEmbedSrc(props.siteSettings.youtube_video_url));
 
 // Get image URL helper
 const getImageUrl = (imageUrl: string | null) => {
@@ -308,7 +290,7 @@ const aiForgeCurrentPrice = computed(() => {
               :src="youtubeEmbedUrl"
               title="Traitz Academy Overview"
               frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              :allow="STREAMING_IFRAME_ALLOW"
               referrerpolicy="strict-origin-when-cross-origin"
               allowfullscreen
             ></iframe>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -15,6 +16,8 @@ class User extends Authenticatable
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     public const ROLE_USER = 'user';
+
+    public const ROLE_TUTOR = 'tutor';
 
     public const ROLE_CTO = 'cto';
 
@@ -37,6 +40,9 @@ class User extends Authenticatable
         'role',
         'phone_required_prompted',
         'withdrawal_pin',
+        'notification_preferences',
+        'google_calendar_refresh_token',
+        'google_calendar_email',
     ];
 
     /**
@@ -64,7 +70,13 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'withdrawal_pin' => 'hashed',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    public function personalScheduleEvents(): HasMany
+    {
+        return $this->hasMany(StudentScheduleEvent::class);
     }
 
     public function applications(): HasMany
@@ -97,6 +109,68 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class);
     }
 
+    public function coursePayments(): HasMany
+    {
+        return $this->hasMany(CoursePayment::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function liveClassesAsTutor(): HasMany
+    {
+        return $this->hasMany(LiveClass::class, 'tutor_id');
+    }
+
+    public function liveClassesCreated(): HasMany
+    {
+        return $this->hasMany(LiveClass::class, 'created_by');
+    }
+
+    public function liveClassMessages(): HasMany
+    {
+        return $this->hasMany(LiveClassMessage::class);
+    }
+
+    public function liveClassAttendance(): HasMany
+    {
+        return $this->hasMany(LiveClassAttendance::class, 'student_id');
+    }
+
+    public function discussions(): HasMany
+    {
+        return $this->hasMany(Discussion::class);
+    }
+
+    public function lessonNotes(): HasMany
+    {
+        return $this->hasMany(LessonNote::class);
+    }
+
+    public function assignmentsCreated(): HasMany
+    {
+        return $this->hasMany(Assignment::class, 'created_by');
+    }
+
+    public function selectedAssignments(): BelongsToMany
+    {
+        return $this->belongsToMany(Assignment::class, 'assignment_student', 'student_id', 'assignment_id')
+            ->withTimestamps();
+    }
+
+    public function schedulesCreated(): HasMany
+    {
+        return $this->hasMany(LmsSchedule::class, 'created_by');
+    }
+
+    public function selectedSchedules(): BelongsToMany
+    {
+        return $this->belongsToMany(LmsSchedule::class, 'lms_schedule_student', 'student_id', 'lms_schedule_id')
+            ->withTimestamps();
+    }
+
     public function recordedPayments(): HasMany
     {
         return $this->hasMany(Payment::class, 'recorded_by');
@@ -121,10 +195,16 @@ class User extends Authenticatable
     {
         return [
             self::ROLE_USER,
+            self::ROLE_TUTOR,
             self::ROLE_CTO,
             self::ROLE_CEO,
             self::ROLE_PROGRAM_COORDINATOR,
         ];
+    }
+
+    public function isTutor(): bool
+    {
+        return $this->role === self::ROLE_TUTOR;
     }
 
     public function isExecutive(): bool
@@ -140,6 +220,25 @@ class User extends Authenticatable
     public function canAccessAdminPanel(): bool
     {
         return $this->isExecutive() || $this->isProgramCoordinator();
+    }
+
+    /**
+     * Whether this user may grant manual LMS enrollment (by email) for the given course.
+     * Admins/coordinators may enroll on draft, pending review, or published courses.
+     * Tutors may enroll only on their own published courses.
+     */
+    public function canManuallyEnrollStudentsInCourse(Course $course): bool
+    {
+        if ($this->canAccessAdminPanel()) {
+            return in_array($course->status, ['published', 'pending_review', 'draft'], true);
+        }
+
+        if ($this->isTutor()) {
+            return (int) $course->instructor_id === (int) $this->id
+                && $course->status === 'published';
+        }
+
+        return false;
     }
 
     public function canManageUsers(): bool

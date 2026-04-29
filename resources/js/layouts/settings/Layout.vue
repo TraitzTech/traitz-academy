@@ -18,6 +18,10 @@ const sidebarNavItems: NavItem[] = [
         href: editProfile(),
     },
     {
+        title: 'Notifications',
+        href: '/settings/notifications',
+    },
+    {
         title: 'Password',
         href: editPassword(),
     },

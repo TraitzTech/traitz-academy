@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AiForgeOrderController as AdminAiForgeOrderContro
 use App\Http\Controllers\Admin\AiForgeRegistrationController as AdminAiForgeRegistrationController;
 use App\Http\Controllers\Admin\AiForgeSwagController as AdminAiForgeSwagController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Admin\CourseCategoryController as AdminCourseCategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GalleryItemController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\LearningResourceController;
+use App\Http\Controllers\LessonContentMediaController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProgramController;
@@ -97,6 +99,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'ensure.phone'])
     ->name('dashboard');
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/lesson-content/media', [LessonContentMediaController::class, 'store'])
+        ->name('lesson-content.upload-media');
+});
+
 // Interviews (Authenticated)
 Route::middleware(['auth', 'verified', 'ensure.phone'])->prefix('interviews')->name('interviews.')->group(function () {
     Route::get('/{interview}', [InterviewController::class, 'show'])->name('show');
@@ -122,6 +129,13 @@ Route::prefix('admin')
 
         // Programs CRUD
         Route::resource('programs', AdminProgramController::class)->except(['show']);
+
+        // Course Categories
+        Route::get('/course-categories', [AdminCourseCategoryController::class, 'index'])->name('course-categories.index');
+        Route::post('/course-categories', [AdminCourseCategoryController::class, 'store'])->name('course-categories.store');
+        Route::put('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'update'])->name('course-categories.update');
+        Route::delete('/course-categories/{courseCategory}', [AdminCourseCategoryController::class, 'destroy'])->name('course-categories.destroy');
+        Route::post('/course-categories/{courseCategory}/toggle-active', [AdminCourseCategoryController::class, 'toggleActive'])->name('course-categories.toggle-active');
         Route::resource('gallery', AdminGalleryItemController::class)->except(['show']);
         Route::resource('learning-resources', AdminLearningResourceController::class)->except(['show']);
         Route::post('/programs/{program}/toggle-status', [AdminProgramController::class, 'toggleStatus'])->name('programs.toggle-status');

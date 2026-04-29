@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\NotificationPreferencesController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SessionController;
@@ -18,6 +19,9 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('settings/notifications', [NotificationPreferencesController::class, 'edit'])->name('notifications.edit');
+    Route::patch('settings/notifications', [NotificationPreferencesController::class, 'update'])->name('notifications.update');
 
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('user-password.edit');
 

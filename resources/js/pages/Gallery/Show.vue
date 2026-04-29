@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3'
 
 import { useToast } from '@/composables/useToast'
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
 interface GalleryItem {
   id: number
@@ -58,7 +59,13 @@ const copyLink = async () => {
         <div class="mt-8 rounded-2xl overflow-hidden shadow-xl">
           <img v-if="item.type === 'image'" :src="mediaUrl(item.image_path) || ''" :alt="item.title" class="w-full max-h-[520px] object-cover">
           <div v-else class="aspect-video bg-black">
-            <iframe :src="item.youtube_url || ''" class="w-full h-full" allowfullscreen />
+            <iframe
+              :src="streamingEmbedSrc(item.youtube_url) || item.youtube_url || ''"
+              class="w-full h-full"
+              referrerpolicy="strict-origin-when-cross-origin"
+              :allow="STREAMING_IFRAME_ALLOW"
+              allowfullscreen
+            />
           </div>
         </div>
 

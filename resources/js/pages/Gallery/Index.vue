@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
 interface GalleryItem {
   id: number
@@ -38,23 +39,11 @@ const mediaUrl = (path: string | null) => {
   return path.startsWith('http') ? path : `/storage/${path}`
 }
 
-const normalizeYouTubeUrl = (url: string | null) => {
+const galleryVideoEmbedSrc = (url: string | null) => {
   if (!url) {
     return null
   }
-
-  if (url.includes('embed/')) {
-    return url
-  }
-
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-  const match = url.match(regExp)
-
-  if (match && match[2].length === 11) {
-    return `https://www.youtube.com/embed/${match[2]}?autoplay=0&modestbranding=1&rel=0`
-  }
-
-  return url
+  return streamingEmbedSrc(url) ?? url
 }
 
 const tags = computed(() => {
@@ -124,8 +113,10 @@ const copyShareLink = async (path: string) => {
               >
               <iframe
                 v-else
-                :src="normalizeYouTubeUrl(item.youtube_url) || ''"
+                :src="galleryVideoEmbedSrc(item.youtube_url) || ''"
                 class="w-full h-full"
+                referrerpolicy="strict-origin-when-cross-origin"
+                :allow="STREAMING_IFRAME_ALLOW"
                 allowfullscreen
               />
               <button
