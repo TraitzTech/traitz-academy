@@ -14,6 +14,9 @@
         <Link href="/dashboard/live-classes/recordings" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
           Recorded Live Classes
         </Link>
+        <Link href="/dashboard/notifications" class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+          Notifications
+        </Link>
       </div>
     </div>
 

@@ -8,6 +8,7 @@ import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue';
 import draggable from 'vuedraggable';
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
+import LessonForm from '@/components/LessonForm.vue';
 import RichTextEditor from '@/components/RichTextEditor.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed';
@@ -227,34 +228,18 @@ const addLessonSectionId   = ref<number | null>(null);
 const editingLessonId      = ref<number | null>(null);
 const editingLessonSection = ref<number | null>(null);
 
-/** Optional video file chosen before “Add lesson” — uploaded automatically once the lesson exists. */
-const pendingNewLessonVideoFile = ref<File | null>(null);
-const newLessonVideoInputRef    = ref<HTMLInputElement | null>(null);
-
 const lessonForm = useForm({
   title: '', type: 'video' as 'video' | 'text' | 'quiz',
   description: '', content: '', duration: '', is_free: false,
+  video_file: null as File | null,
 });
-
-function clearPendingNewLessonVideo() {
-  pendingNewLessonVideoFile.value = null;
-  if (newLessonVideoInputRef.value) {
-    newLessonVideoInputRef.value.value = '';
-  }
-}
-
-function onPendingNewLessonVideoSelected(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0] ?? null;
-  pendingNewLessonVideoFile.value = file;
-}
 
 watch(
   () => lessonForm.type,
   (type) => {
     if (type !== 'video') {
       lessonForm.duration = '';
-      clearPendingNewLessonVideo();
+      lessonForm.video_file = null;
     }
   },
 );
@@ -266,7 +251,6 @@ function openAddLesson(sectionId: number) {
   addLessonSectionId.value   = sectionId;
   editingLessonId.value      = null;
   editingLessonSection.value = null;
-  clearPendingNewLessonVideo();
   lessonForm.reset();
   lessonForm.content = '';
   lessonForm.clearErrors();
@@ -286,12 +270,12 @@ function openEditLesson(section: Section, lesson: Lesson) {
 
 function addLesson(sectionId: number) {
   const wasVideo = lessonForm.type === 'video';
-  const fileToUpload = pendingNewLessonVideoFile.value;
+  const fileToUpload = lessonForm.video_file;
+  lessonForm.video_file = null;
 
   lessonForm.post(`/tutor/courses/${props.course.id}/sections/${sectionId}/lessons`, {
     preserveScroll: true,
     onSuccess: (page) => {
-      clearPendingNewLessonVideo();
       lessonForm.reset();
 
       if (!wasVideo || !fileToUpload) {
@@ -712,64 +696,21 @@ onMounted(async () => {
               <div v-if="editingLessonId === lesson.id && editingLessonSection === section.id"
                 class="border-t border-gray-100 bg-gray-50 px-5 py-5 sm:px-6 dark:border-gray-700 dark:bg-gray-900/40">
                 <p class="mb-4 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Edit lesson</p>
-                <div class="mx-auto w-full max-w-4xl space-y-5">
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
-                    <div class="sm:col-span-8">
-                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Title <span class="text-red-500">*</span></label>
-                      <input v-model="lessonForm.title" type="text" placeholder="Lesson title"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                      <p v-if="lessonForm.errors.title" class="mt-0.5 text-xs text-red-500">{{ lessonForm.errors.title }}</p>
+                <div class="mx-auto w-full max-w-4xl">
+                  <form @submit.prevent="saveLesson(section.id, lesson.id)" class="space-y-5">
+                    <LessonForm :form="lessonForm" :show-video-upload="false" />
+                    
+                    <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
+                      <button type="submit" :disabled="lessonForm.processing"
+                        class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
+                        {{ lessonForm.processing ? 'Saving…' : 'Save Lesson' }}
+                      </button>
+                      <button type="button" @click="editingLessonId = null; editingLessonSection = null; lessonForm.reset()"
+                        class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600">
+                        Cancel
+                      </button>
                     </div>
-                    <div class="sm:col-span-4">
-                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Type <span class="text-red-500">*</span></label>
-                      <select v-model="lessonForm.type"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                        <option value="video">Video</option>
-                        <option value="text">Text / Article</option>
-                        <option value="quiz">Quiz</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div v-if="lessonForm.type === 'video'" class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
-                    <div class="sm:col-span-4">
-                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
-                      <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Save this lesson, then upload the video file from the lesson row.</p>
-                    </div>
-                  </div>
-                  <div v-if="lessonForm.type === 'text'" class="w-full rounded-xl border border-[#42b6c5]/25 bg-[#42b6c5]/[0.04] p-4 sm:p-5 dark:border-[#42b6c5]/35 dark:bg-[#42b6c5]/10">
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-100">Lesson content</label>
-                    <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                      Headings, lists, code blocks, images (upload or URL), and links — same formatting learners see in the player.
-                    </p>
-                    <RichTextEditor
-                      :key="`lesson-body-edit-${lesson.id}-${lessonForm.type}`"
-                      v-model="lessonForm.content"
-                      placeholder="Write the lesson content…"
-                      upload-url="/lesson-content/media"
-                      body-class="min-h-[280px] max-h-[min(70vh,720px)]"
-                    />
-                  </div>
-                  <div>
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Short description <span class="font-normal text-gray-400">(optional)</span></label>
-                    <input v-model="lessonForm.description" type="text" placeholder="Short description (optional)"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                  </div>
-                  <label class="flex cursor-pointer items-center gap-2.5 text-sm text-gray-700 dark:text-gray-200">
-                    <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300 text-[#381998] focus:ring-[#381998]" />
-                    Free preview (accessible without enrolment)
-                  </label>
-                  <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
-                    <button type="button" @click="saveLesson(section.id, lesson.id)" :disabled="lessonForm.processing"
-                      class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50">
-                      {{ lessonForm.processing ? 'Saving…' : 'Save Lesson' }}
-                    </button>
-                    <button type="button" @click="editingLessonId = null; editingLessonSection = null; lessonForm.reset()"
-                      class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 dark:border-gray-600">
-                      Cancel
-                    </button>
-                  </div>
+                  </form>
                 </div>
               </div>
 
@@ -931,101 +872,35 @@ onMounted(async () => {
                 For formatted articles: set <strong class="font-semibold">Type</strong> to <strong class="font-semibold">Text / Article</strong>
                 — the rich editor appears below.
               </p>
-              <div class="mx-auto w-full max-w-4xl space-y-5">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
-                  <div class="sm:col-span-8">
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Title <span class="text-red-500">*</span></label>
-                    <input v-model="lessonForm.title" type="text" placeholder="Lesson title"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                    <p v-if="lessonForm.errors.title" class="mt-0.5 text-xs text-red-500">{{ lessonForm.errors.title }}</p>
+              <div class="mx-auto w-full max-w-4xl">
+                <form @submit.prevent="addLesson(section.id)" class="space-y-5">
+                  <LessonForm :form="lessonForm" />
+                  <p v-if="videoUploadForm.errors.video_file" class="text-xs text-red-500">{{ videoUploadForm.errors.video_file }}</p>
+
+                  <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
+                    <button
+                      type="submit"
+                      :disabled="lessonForm.processing || videoUploadForm.processing"
+                      class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50"
+                    >
+                      {{
+                        lessonForm.processing
+                          ? 'Adding…'
+                          : videoUploadForm.processing
+                            ? 'Uploading video…'
+                            : 'Add lesson'
+                      }}
+                    </button>
+                    <button
+                      type="button"
+                      :disabled="lessonForm.processing || videoUploadForm.processing"
+                      @click="addLessonSectionId = null; lessonForm.reset()"
+                      class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
+                    >
+                      Cancel
+                    </button>
                   </div>
-                  <div class="sm:col-span-4">
-                    <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Type <span class="text-red-500">*</span></label>
-                    <select v-model="lessonForm.type"
-                      class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-                      <option value="video">Video</option>
-                      <option value="text">Text / Article</option>
-                      <option value="quiz">Quiz</option>
-                    </select>
-                  </div>
-                </div>
-                <div v-if="lessonForm.type === 'video'" class="space-y-4">
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:gap-x-5">
-                    <div class="sm:col-span-4">
-                      <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Duration</label>
-                      <input v-model="lessonForm.duration" type="text" placeholder="mm:ss"
-                        class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                      <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Shown next to the lesson title (optional).</p>
-                    </div>
-                  </div>
-                  <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-600 dark:bg-gray-900/50">
-                    <div class="mb-2 flex items-center gap-2">
-                      <Upload class="h-4 w-4 shrink-0 text-[#42b6c5]" />
-                      <label class="text-sm font-semibold text-gray-800 dark:text-gray-100">Video file</label>
-                    </div>
-                    <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                      Choose a file now and it will upload to YouTube right after you click <strong class="font-medium text-gray-700 dark:text-gray-300">Add lesson</strong>.
-                      You can also skip this and upload later from the lesson row.
-                    </p>
-                    <input
-                      ref="newLessonVideoInputRef"
-                      type="file"
-                      accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm"
-                      class="block w-full cursor-pointer text-sm text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#42b6c5]/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#381998] hover:file:bg-[#42b6c5]/25 dark:text-gray-300 dark:file:bg-[#42b6c5]/20"
-                      @change="onPendingNewLessonVideoSelected"
-                    />
-                    <p v-if="pendingNewLessonVideoFile" class="mt-2 text-xs font-medium text-gray-700 dark:text-gray-200">
-                      Selected: {{ pendingNewLessonVideoFile.name }}
-                    </p>
-                    <p v-if="videoUploadForm.errors.video_file" class="mt-2 text-xs text-red-500">{{ videoUploadForm.errors.video_file }}</p>
-                  </div>
-                </div>
-                <div v-if="lessonForm.type === 'text'" class="w-full rounded-xl border border-[#42b6c5]/25 bg-[#42b6c5]/[0.04] p-4 sm:p-5 dark:border-[#42b6c5]/35 dark:bg-[#42b6c5]/10">
-                  <label class="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-100">Lesson content</label>
-                  <p class="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                    Headings, lists, code blocks, images, and links — same as the edit form above.
-                  </p>
-                  <RichTextEditor
-                    :key="`lesson-body-add-${section.id}-${lessonForm.type}`"
-                    v-model="lessonForm.content"
-                    placeholder="Write the lesson content…"
-                    upload-url="/lesson-content/media"
-                    body-class="min-h-[280px] max-h-[min(70vh,720px)]"
-                  />
-                </div>
-                <div>
-                  <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Short description <span class="font-normal text-gray-400">(optional)</span></label>
-                  <input v-model="lessonForm.description" type="text" placeholder="Short description (optional)"
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-[#42b6c5] focus:outline-none focus:ring-2 focus:ring-[#42b6c5]/15 dark:bg-gray-900 dark:border-gray-600 dark:text-white" />
-                </div>
-                <label class="flex cursor-pointer items-center gap-2.5 text-sm text-gray-700 dark:text-gray-200">
-                  <input type="checkbox" v-model="lessonForm.is_free" class="rounded border-gray-300 text-[#381998] focus:ring-[#381998]" />
-                  Free preview (accessible without enrolment)
-                </label>
-                <div class="flex flex-wrap items-center gap-3 border-t border-gray-200/80 pt-4 dark:border-gray-600/60">
-                  <button
-                    type="button"
-                    @click="addLesson(section.id)"
-                    :disabled="lessonForm.processing || videoUploadForm.processing"
-                    class="rounded-xl bg-[#381998] px-5 py-2 text-sm font-semibold text-white hover:bg-[#000928] disabled:opacity-50"
-                  >
-                    {{
-                      lessonForm.processing
-                        ? 'Adding…'
-                        : videoUploadForm.processing
-                          ? 'Uploading video…'
-                          : 'Add lesson'
-                    }}
-                  </button>
-                  <button
-                    type="button"
-                    :disabled="lessonForm.processing || videoUploadForm.processing"
-                    @click="addLessonSectionId = null; lessonForm.reset(); clearPendingNewLessonVideo()"
-                    class="rounded-xl border border-gray-200 px-5 py-2 text-sm text-gray-600 hover:border-gray-400 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                </form>
               </div>
             </div>
 

@@ -59,6 +59,9 @@ function startsInText(): string {
     <Head :title="`Live Class: ${liveClass.title}`" />
 
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <Link href="/dashboard/live-classes" class="mb-4 inline-flex rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        Back to all live classes
+      </Link>
       <div class="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ liveClass.title }}</h1>

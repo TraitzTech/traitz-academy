@@ -87,6 +87,11 @@ class LiveClassController extends Controller
     {
         $user = $request->user();
         abort_unless($liveClass->canUserJoin($user), 403);
+        if ($user->role !== 'user' && $this->classIsFarOver($liveClass)) {
+            return redirect()
+                ->route('lms.live-classes.index')
+                ->with('warning', 'This live class has already ended, so the room is no longer available.');
+        }
         if ($user->role === 'user' && ! $this->studentCanEnterRoom($liveClass)) {
             return redirect()
                 ->route('lms.live-classes.details', $liveClass)
@@ -390,7 +395,24 @@ class LiveClassController extends Controller
     {
         $raw = (string) config('services.jitsi.private_key', '');
         if ($raw !== '') {
-            return str_replace('\n', PHP_EOL, trim($raw));
+            $normalized = str_replace('\n', PHP_EOL, trim($raw));
+
+            // Accept accidental "private key path" values in JITSI_PRIVATE_KEY.
+            if (! str_contains($normalized, 'BEGIN ') && ! str_contains($normalized, PHP_EOL)) {
+                $candidate = trim($normalized, " \t\n\r\0\x0B\"'");
+                $candidates = [$candidate];
+                if (! str_starts_with($candidate, '/')) {
+                    $candidates[] = base_path($candidate);
+                }
+
+                foreach ($candidates as $pathCandidate) {
+                    if (File::exists($pathCandidate)) {
+                        return (string) File::get($pathCandidate);
+                    }
+                }
+            }
+
+            return $normalized;
         }
 
         $path = (string) config('services.jitsi.private_key_path', '');
@@ -413,5 +435,15 @@ class LiveClassController extends Controller
     private function isJaasDomain(string $domain): bool
     {
         return str_contains($domain, '8x8.vc');
+    }
+
+    private function classIsFarOver(LiveClass $liveClass): bool
+    {
+        $endedAt = $liveClass->endsAt();
+        if (! $endedAt) {
+            return false;
+        }
+
+        return now()->greaterThan($endedAt->copy()->addMinutes(10));
     }
 }

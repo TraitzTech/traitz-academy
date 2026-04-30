@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { YoutubeIframe } from '@vue-youtube/component'
 import { CheckCircle2, Circle, Download, FileText, MessageCircle, NotebookPen, PlayCircle, ThumbsUp, Trash2 } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, withDefaults } from 'vue'
-import { YoutubeIframe } from '@vue-youtube/component'
 
 import AppLayout from '@/layouts/AppLayout.vue'
 import { lessonBodyHtml } from '@/utils/lessonContentHtml'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useToast } from '@/composables/useToast'
@@ -41,11 +41,26 @@ const selectedCourse = computed(() => {
   return props.courses.find((course: CourseOption) => course.id === Number(form.course_id)) ?? null
 })
 
+const studentSearch = ref('')
 const availableStudents = computed(() => selectedCourse.value?.students ?? [])
+const searchableStudents = computed(() => {
+  const q = studentSearch.value.trim().toLowerCase()
+  if (!q) return availableStudents.value
+  return availableStudents.value.filter((student: CourseStudent) =>
+    student.name.toLowerCase().includes(q) || student.email.toLowerCase().includes(q)
+  )
+})
+const uniqueStudentCount = computed(() => {
+  const ids = new Set<number>()
+  props.courses.forEach((course: CourseOption) => {
+    course.students.forEach((student: CourseStudent) => ids.add(student.id))
+  })
+  return ids.size
+})
 
 const recipientCount = computed(() => {
   if (form.audience === 'all_students' && props.mode === 'admin') {
-    return props.courses.reduce((count: number, course: CourseOption) => count + course.student_count, 0)
+    return uniqueStudentCount.value
   }
 
   if (form.audience === 'course_selected') {
@@ -65,6 +80,7 @@ watch(
   () => form.course_id,
   () => {
     form.student_ids = []
+    studentSearch.value = ''
   }
 )
 
@@ -121,13 +137,13 @@ const sendNotification = () => {
     <form @submit.prevent="sendNotification" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900/60">
       <div class="space-y-3">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Audience</label>
-        <div class="grid gap-3 md:grid-cols-3">
+        <div class="grid gap-3 md:grid-cols-2">
           <label
             v-if="mode === 'admin'"
             class="rounded-lg border p-3 text-sm cursor-pointer"
             :class="form.audience === 'all_students' ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/30' : 'border-gray-300 dark:border-gray-600'"
           >
-            <input v-model="form.audience" type="radio" value="all_students" class="mr-2" />
+            <input v-model="form.audience" type="radio" value="all_students" class="mr-2 w-full" />
             All LMS students
           </label>
           <label
@@ -167,9 +183,16 @@ const sendNotification = () => {
             {{ allStudentsSelected ? 'Clear all' : 'Select all' }}
           </button>
         </div>
-        <div class="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+        <div class="rounded-lg border border-gray-300 bg-white p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          <input
+            v-model="studentSearch"
+            type="text"
+            class="mb-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+            placeholder="Search students by name or email"
+          />
+          <div class="max-h-56 space-y-2 overflow-y-auto">
           <label
-            v-for="student in availableStudents"
+            v-for="student in searchableStudents"
             :key="student.id"
             class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700/50"
           >
@@ -184,6 +207,10 @@ const sendNotification = () => {
           <p v-if="availableStudents.length === 0" class="text-xs text-gray-500 dark:text-gray-400">
             Select a course with enrolled students first.
           </p>
+          <p v-else-if="searchableStudents.length === 0" class="text-xs text-gray-500 dark:text-gray-400">
+            No students match your search.
+          </p>
+          </div>
         </div>
       </div>
 

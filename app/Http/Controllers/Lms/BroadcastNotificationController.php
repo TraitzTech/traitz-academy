@@ -171,7 +171,7 @@ class BroadcastNotificationController extends Controller
             senderName: $request->user()?->name
         );
 
-        Notification::send($recipients, $notification);
+        Notification::sendNow($recipients, $notification);
     }
 
     /**

@@ -17,6 +17,7 @@ use App\Http\Controllers\Lms\CourseEnrollmentController;
 use App\Http\Controllers\Lms\DiscussionController as StudentDiscussionController;
 use App\Http\Controllers\Lms\LiveClassController as StudentLiveClassController;
 use App\Http\Controllers\Lms\ScheduleController;
+use App\Http\Controllers\Lms\StudentNotificationController;
 use App\Http\Controllers\Lms\StudentScheduleController;
 use App\Http\Controllers\Lms\CoursePaymentController;
 use App\Http\Controllers\Lms\CoursePlayerProgressController;
@@ -75,6 +76,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/schedules/google/callback', [StudentScheduleController::class, 'googleCallback'])->name('lms.schedules.google.callback');
     Route::post('/dashboard/schedules/google/sync', [StudentScheduleController::class, 'syncGoogle'])->name('lms.schedules.google.sync');
     Route::get('/dashboard/notes', [NoteController::class, 'index'])->name('lms.notes.index');
+    Route::get('/dashboard/notifications', [StudentNotificationController::class, 'index'])->name('lms.notifications.index');
+    Route::post('/dashboard/notifications/read-all', [StudentNotificationController::class, 'markAllAsRead'])->name('lms.notifications.read-all');
     Route::get('/dashboard/live-classes', [StudentLiveClassController::class, 'index'])->name('lms.live-classes.index');
     Route::get('/dashboard/live-classes/recordings', [StudentLiveClassController::class, 'recordings'])->name('lms.live-classes.recordings');
     Route::get('/dashboard/live-classes/{liveClass}/details', [StudentLiveClassController::class, 'details'])->name('lms.live-classes.details');

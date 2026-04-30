@@ -59,6 +59,7 @@ const executiveRoles = ['cto', 'ceo', 'admin']
 const isAdmin = computed(() => adminRoles.includes(String(user.value?.role ?? '')))
 const isExecutive = computed(() => executiveRoles.includes(String(user.value?.role ?? '')))
 const isTutor = computed(() => user.value?.role === 'tutor')
+const unreadNotificationsCount = computed(() => Number((page.props as Record<string, unknown>).unreadNotificationsCount ?? 0))
 
 // Admin standalone items (always visible at top)
 const adminStandaloneItems: NavItem[] = [
@@ -358,6 +359,12 @@ const userGroups: NavGroup[] = [
                 title: 'My Notes',
                 href: '/dashboard/notes',
                 icon: NotebookPen,
+            },
+            {
+                title: 'Notifications',
+                href: '/dashboard/notifications',
+                icon: Mail,
+                badge: unreadNotificationsCount.value > 0 ? unreadNotificationsCount.value : undefined,
             },
         ],
     },
