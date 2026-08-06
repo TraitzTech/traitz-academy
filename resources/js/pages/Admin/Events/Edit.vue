@@ -93,7 +93,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit ${event.title}`" />
 
     <!-- Header -->

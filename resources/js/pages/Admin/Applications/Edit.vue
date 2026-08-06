@@ -59,7 +59,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit Application - ${application.first_name} ${application.last_name}`" />
 
     <div class="mb-8">

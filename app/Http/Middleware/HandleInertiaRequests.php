@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Course;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -46,9 +48,39 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'info' => fn () => $request->session()->get('info'),
+                'warning' => fn () => $request->session()->get('warning'),
                 'status' => fn () => $request->session()->get('status'),
             ],
             'cartCount' => fn () => collect($request->session()->get('ai_forge_cart', []))->sum('quantity'),
+            'pendingCoursesCount' => fn () => $request->user()?->role && in_array($request->user()->role, ['cto', 'ceo', 'program_coordinator', 'admin'])
+                ? Course::where('status', 'pending_review')->count()
+                : null,
+            'internshipAccess' => function () use ($request) {
+                $user = $request->user();
+                if (! $user || ! Schema::hasTable('internships')) {
+                    return ['is_intern' => false, 'supervises' => false];
+                }
+
+                return [
+                    'is_intern' => \App\Models\Internship::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'active')
+                        ->exists(),
+                    'supervises' => $user->canAccessAdminPanel()
+                        || \App\Models\Internship::query()->forSupervisor($user)->exists(),
+                ];
+            },
+            'unreadNotificationsCount' => function () use ($request) {
+                $user = $request->user();
+                if (! $user) {
+                    return 0;
+                }
+                if (! Schema::hasTable('notifications')) {
+                    return 0;
+                }
+
+                return (int) $user->unreadNotifications()->count();
+            },
         ];
     }
 }

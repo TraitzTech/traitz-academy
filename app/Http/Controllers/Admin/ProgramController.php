@@ -84,6 +84,8 @@ class ProgramController extends Controller
             'capacity' => 'required|integer|min:1',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'applications_open_at' => 'nullable|date',
+            'applications_close_at' => 'nullable|date|after_or_equal:applications_open_at',
             'curriculum' => 'nullable|string',
         ]);
 
@@ -155,6 +157,8 @@ class ProgramController extends Controller
             'capacity' => 'required|integer|min:1',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'applications_open_at' => 'nullable|date',
+            'applications_close_at' => 'nullable|date|after_or_equal:applications_open_at',
             'curriculum' => 'nullable|string',
         ]);
 

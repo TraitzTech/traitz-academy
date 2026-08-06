@@ -70,7 +70,7 @@ const statusColors: Record<string, string> = {
 </script>
 
 <template>
-    <div>
+    <div class="mx-auto max-w-5xl">
         <Head :title="`Order ${order.order_number} - AI Forge`" />
 
         <div class="mb-8">

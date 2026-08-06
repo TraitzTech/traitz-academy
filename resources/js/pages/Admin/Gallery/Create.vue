@@ -28,7 +28,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head title="Create Gallery Item" />
 
     <div class="mb-8">

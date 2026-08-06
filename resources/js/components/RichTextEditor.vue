@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 
 interface Props {
   modelValue: string
   placeholder?: string
   uploadUrl?: string
   disabled?: boolean
+  /** Extra classes for the editable surface (e.g. taller min-height for lesson bodies). */
+  bodyClass?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Write your email content...',
   uploadUrl: '/admin/emails/media',
   disabled: false,
+  bodyClass: '',
 })
 
 const emit = defineEmits<{
@@ -23,15 +26,36 @@ const editorRef = ref<HTMLDivElement | null>(null)
 const mediaInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 
-const isEmpty = computed(() => {
-  const editor = editorRef.value
-  if (!editor) return true
+/** Contenteditable DOM changes are not reactive; track placeholder with explicit updates. */
+const showPlaceholder = ref(true)
 
-  const text = editor.textContent?.trim() || ''
+function isEditorMeaningfullyEmpty(editor: HTMLDivElement | null): boolean {
+  if (!editor) {
+    return true
+  }
+
+  const raw = editor.textContent ?? ''
+  const normalized = raw.replace(/\u00a0/g, ' ').replace(/\u200b/g, '').trim()
   const hasImage = editor.querySelector('img') !== null
 
-  return text.length === 0 && !hasImage
-})
+  return normalized.length === 0 && !hasImage
+}
+
+function refreshPlaceholderState(): void {
+  showPlaceholder.value = isEditorMeaningfullyEmpty(editorRef.value)
+}
+
+function onEditorInput(): void {
+  refreshPlaceholderState()
+  emit('update:modelValue', editorRef.value?.innerHTML || '')
+}
+
+function onEditorPaste(): void {
+  nextTick(() => {
+    refreshPlaceholderState()
+    emit('update:modelValue', editorRef.value?.innerHTML || '')
+  })
+}
 
 const syncEditorFromModel = async (value: string) => {
   await nextTick()
@@ -40,6 +64,7 @@ const syncEditorFromModel = async (value: string) => {
   if (editorRef.value.innerHTML === value) return
 
   editorRef.value.innerHTML = value || ''
+  refreshPlaceholderState()
 }
 
 watch(
@@ -51,6 +76,7 @@ watch(
 )
 
 const emitContent = () => {
+  refreshPlaceholderState()
   emit('update:modelValue', editorRef.value?.innerHTML || '')
 }
 
@@ -222,14 +248,17 @@ const uploadMedia = async (event: Event) => {
         ref="editorRef"
         :contenteditable="!disabled"
         :class="[
-          'rich-editor min-h-[220px] max-h-[500px] overflow-y-auto px-4 py-3 outline-none text-gray-900 dark:text-gray-100',
+          'rich-editor overflow-y-auto px-4 py-3 outline-none text-gray-900 dark:text-gray-100',
+          bodyClass || 'min-h-[220px] max-h-[500px]',
           disabled ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''
         ]"
-        @input="emitContent"
+        @input="onEditorInput"
+        @compositionend="onEditorInput"
+        @paste="onEditorPaste"
       ></div>
 
       <p
-        v-if="isEmpty"
+        v-if="showPlaceholder"
         class="pointer-events-none absolute top-3 left-4 text-sm text-gray-400 dark:text-gray-500"
       >
         {{ placeholder }}

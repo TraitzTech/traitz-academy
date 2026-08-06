@@ -30,6 +30,19 @@ class DatabaseSeeder extends Seeder
             'role' => 'user',
         ]);
 
+        // Create tutor user
+        User::factory()->create([
+            'name' => 'Test Tutor',
+            'email' => 'tutor@traitzacademy.com',
+            'phone' => '+1122334455',
+            'role' => User::ROLE_TUTOR,
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+
+        // Seed course categories
+        $this->call(CourseCategorySeeder::class);
+
         // // Create programs
         // $programs = Program::factory(15)->create();
 

@@ -204,6 +204,9 @@ const getRoleBadgeColor = (role: string) => {
 
 const formatRole = (role: string) => {
   if (role === 'admin') return 'CTO (Legacy)'
+  // The base "user" role is every applicant/learner — label it "Student" so
+  // it's unambiguous when filtering/exporting contacts.
+  if (role === 'user') return 'Student'
   return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
 

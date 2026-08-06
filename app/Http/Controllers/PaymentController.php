@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\SiteSetting;
 use App\Notifications\PaymentReceiptNotification;
 use App\Support\Payments\Contracts\PaymentGateway;
+use App\Support\Payments\MesombCollectPayload;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -111,26 +112,21 @@ class PaymentController extends Controller
         });
 
         try {
-            $gatewayResponse = $this->paymentGateway->collect([
-                'payer' => $sanitizedPayerPhone,
-                'amount' => (int) round((float) $payment->amount),
-                'service' => $payment->provider,
-                'country' => (string) config('services.mesomb.country', 'CM'),
-                'currency' => (string) $payment->currency,
-                'customer' => [
-                    'email' => (string) auth()->user()->email,
-                    'first_name' => (string) $application->first_name,
-                    'last_name' => (string) $application->last_name,
-                    'country' => (string) config('services.mesomb.country', 'CM'),
-                ],
-                'products' => [[
-                    'id' => (string) $application->program->id,
-                    'name' => (string) $application->program->title,
-                    'category' => (string) $application->program->category,
-                    'quantity' => 1,
-                    'amount' => (float) $payment->amount,
-                ]],
-            ]);
+            $gatewayResponse = $this->paymentGateway->collect(
+                MesombCollectPayload::singleProduct(
+                    $sanitizedPayerPhone,
+                    (int) round((float) $payment->amount),
+                    $payment->provider,
+                    (string) $payment->currency,
+                    (string) auth()->user()->email,
+                    (string) $application->first_name,
+                    (string) $application->last_name,
+                    (string) $application->program->id,
+                    (string) $application->program->title,
+                    (string) $application->program->category,
+                    (float) $payment->amount,
+                )
+            );
 
             if ($gatewayResponse->isSuccessful()) {
                 $payment->update([

@@ -28,7 +28,7 @@ defineProps<{
 const { urlIsActive } = useActiveUrl();
 
 function isGroupActive(group: NavGroup): boolean {
-    return group.items.some((item) => urlIsActive(item.href));
+    return group.items.some((item) => urlIsActive(item.href, undefined, item.activeMatch ?? 'exact'));
 }
 </script>
 
@@ -39,7 +39,7 @@ function isGroupActive(group: NavGroup): boolean {
             <SidebarMenuItem v-for="item in standalone" :key="item.title">
                 <SidebarMenuButton
                     as-child
-                    :is-active="urlIsActive(item.href)"
+                    :is-active="urlIsActive(item.href, undefined, item.activeMatch ?? 'exact')"
                     :tooltip="item.title"
                 >
                     <Link :href="item.href">
@@ -58,12 +58,18 @@ function isGroupActive(group: NavGroup): boolean {
             <SidebarMenuItem v-for="item in group.items" :key="item.title">
                 <SidebarMenuButton
                     as-child
-                    :is-active="urlIsActive(item.href)"
+                    :is-active="urlIsActive(item.href, undefined, item.activeMatch ?? 'exact')"
                     :tooltip="item.title"
                 >
                     <Link :href="item.href">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
+                        <span
+                            v-if="item.badge"
+                            class="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                        >
+                            {{ item.badge }}
+                        </span>
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>

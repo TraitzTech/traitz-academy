@@ -269,7 +269,7 @@ const sendPaymentReminder = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Application - ${application.first_name} ${application.last_name}`" />
 
     <!-- Header -->

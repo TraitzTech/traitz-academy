@@ -110,7 +110,7 @@ const submitReview = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`${response.user.name} — ${interview.title}`" />
 
     <!-- Header -->
