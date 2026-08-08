@@ -85,4 +85,3 @@ class LmsDiscussionController extends Controller
         ]);
     }
 }
-

@@ -15,16 +15,16 @@ class CourseSectionController extends Controller
         $this->authorise($course);
 
         $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $maxOrder = $course->sections()->max('sort_order') ?? -1;
 
         $course->sections()->create([
-            'title'       => $request->title,
+            'title' => $request->title,
             'description' => $request->description,
-            'sort_order'  => $maxOrder + 1,
+            'sort_order' => $maxOrder + 1,
         ]);
 
         return back()->with('success', 'Section added.');
@@ -36,12 +36,12 @@ class CourseSectionController extends Controller
         $this->authoriseSection($course, $section);
 
         $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $section->update([
-            'title'       => $request->title,
+            'title' => $request->title,
             'description' => $request->description,
         ]);
 
@@ -68,7 +68,7 @@ class CourseSectionController extends Controller
         $this->authorise($course);
 
         $request->validate([
-            'order'   => ['required', 'array'],
+            'order' => ['required', 'array'],
             'order.*' => ['integer', 'exists:course_sections,id'],
         ]);
 

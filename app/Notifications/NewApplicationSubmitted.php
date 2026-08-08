@@ -16,9 +16,7 @@ class NewApplicationSubmitted extends Notification implements ShouldQueue
     /**
      * Create a new notification instance.
      */
-    public function __construct(public Application $application)
-    {
-    }
+    public function __construct(public Application $application) {}
 
     /**
      * Get the notification's delivery channels.
@@ -38,7 +36,7 @@ class NewApplicationSubmitted extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("New Application Received: {$this->application->first_name} {$this->application->last_name}")
             ->greeting('New Application Alert!')
-            ->line("A new student has applied to one of your programs.")
+            ->line('A new student has applied to one of your programs.')
             ->line('')
             ->line('**Application Details:**')
             ->line("- **Program:** {$this->application->program->title}")
@@ -48,7 +46,7 @@ class NewApplicationSubmitted extends Notification implements ShouldQueue
             ->line("- **Country:** {$this->application->country}")
             ->line("- **Education Level:** {$this->application->education_level}")
             ->line("- **Institution:** {$this->application->institution_name}")
-            ->line("")
+            ->line('')
             ->line('**Student Motivation:**')
             ->line($this->application->motivation)
             ->line('')

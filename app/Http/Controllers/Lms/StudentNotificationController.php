@@ -39,4 +39,3 @@ class StudentNotificationController extends Controller
         return back()->with('success', 'Notifications marked as read.');
     }
 }
-

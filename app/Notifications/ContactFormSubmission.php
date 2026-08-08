@@ -20,8 +20,7 @@ class ContactFormSubmission extends Notification implements ShouldQueue
         public string $senderEmail,
         public string $subject,
         public string $message,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -40,16 +39,16 @@ class ContactFormSubmission extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject("New Contact Form Submission: {$this->subject}")
-            ->greeting("Hello,")
-            ->line("You have received a new contact form submission from your website.")
-            ->line("**Sender Details:**")
+            ->greeting('Hello,')
+            ->line('You have received a new contact form submission from your website.')
+            ->line('**Sender Details:**')
             ->line("- **Name:** {$this->senderName}")
             ->line("- **Email:** {$this->senderEmail}")
             ->line("- **Subject:** {$this->subject}")
-            ->line("**Message:**")
+            ->line('**Message:**')
             ->line($this->message)
             ->action('Reply to Sender', "mailto:{$this->senderEmail}")
-            ->line("---")
+            ->line('---')
             ->line("This is an automated notification from {$siteName}.");
     }
 

@@ -16,9 +16,7 @@ class NewEventRegistration extends Notification implements ShouldQueue
     /**
      * Create a new notification instance.
      */
-    public function __construct(public EventRegistration $registration)
-    {
-    }
+    public function __construct(public EventRegistration $registration) {}
 
     /**
      * Get the notification's delivery channels.
@@ -38,7 +36,7 @@ class NewEventRegistration extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("New Event Registration: {$this->registration->name} - {$this->registration->event->title}")
             ->greeting('New Event Registration!')
-            ->line("A new participant has registered for one of your events.")
+            ->line('A new participant has registered for one of your events.')
             ->line('')
             ->line('**Registration Details:**')
             ->line("- **Event:** {$this->registration->event->title}")
@@ -46,8 +44,8 @@ class NewEventRegistration extends Notification implements ShouldQueue
             ->line("- **Email:** {$this->registration->email}")
             ->line("- **Phone:** {$this->registration->phone}")
             ->line("- **Company:** {$this->registration->company}")
-            ->line("- **Registration Date:** " . $this->registration->created_at->format('F j, Y \a\t g:i A'))
-            ->line("- **Event Date:** " . $this->registration->event->event_date->format('F j, Y \a\t g:i A'))
+            ->line('- **Registration Date:** '.$this->registration->created_at->format('F j, Y \a\t g:i A'))
+            ->line('- **Event Date:** '.$this->registration->event->event_date->format('F j, Y \a\t g:i A'))
             ->line('')
             ->action('View Registration', route('admin.applications.index'))
             ->line('---')

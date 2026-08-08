@@ -17,25 +17,25 @@ class CourseLessonController extends Controller
         $this->authoriseSection($course, $section);
 
         $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
-            'type'        => ['required', 'in:video,text,quiz'],
+            'title' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:video,text,quiz'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'content'     => ['nullable', 'string'],
-            'duration'    => ['nullable', 'string', 'max:20'],
-            'is_free'     => ['boolean'],
+            'content' => ['nullable', 'string'],
+            'duration' => ['nullable', 'string', 'max:20'],
+            'is_free' => ['boolean'],
         ]);
 
         $maxOrder = $section->lessons()->max('sort_order') ?? -1;
 
         $section->lessons()->create([
-            'course_id'   => $course->id,
-            'title'       => $request->title,
-            'type'        => $request->type,
+            'course_id' => $course->id,
+            'title' => $request->title,
+            'type' => $request->type,
             'description' => $request->description,
-            'content'     => $request->content,
-            'duration'    => $request->duration,
-            'is_free'     => $request->boolean('is_free'),
-            'sort_order'  => $maxOrder + 1,
+            'content' => $request->content,
+            'duration' => $request->duration,
+            'is_free' => $request->boolean('is_free'),
+            'sort_order' => $maxOrder + 1,
         ]);
 
         return back()->with('success', 'Lesson added.');
@@ -48,21 +48,21 @@ class CourseLessonController extends Controller
         $this->authoriseLesson($section, $lesson);
 
         $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
-            'type'        => ['required', 'in:video,text,quiz'],
+            'title' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:video,text,quiz'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'content'     => ['nullable', 'string'],
-            'duration'    => ['nullable', 'string', 'max:20'],
-            'is_free'     => ['boolean'],
+            'content' => ['nullable', 'string'],
+            'duration' => ['nullable', 'string', 'max:20'],
+            'is_free' => ['boolean'],
         ]);
 
         $lesson->update([
-            'title'       => $request->title,
-            'type'        => $request->type,
+            'title' => $request->title,
+            'type' => $request->type,
             'description' => $request->description,
-            'content'     => $request->content,
-            'duration'    => $request->duration,
-            'is_free'     => $request->boolean('is_free'),
+            'content' => $request->content,
+            'duration' => $request->duration,
+            'is_free' => $request->boolean('is_free'),
         ]);
 
         return back()->with('success', 'Lesson updated.');
@@ -90,7 +90,7 @@ class CourseLessonController extends Controller
         $this->authoriseSection($course, $section);
 
         $request->validate([
-            'order'   => ['required', 'array'],
+            'order' => ['required', 'array'],
             'order.*' => ['integer', 'exists:course_lessons,id'],
         ]);
 

@@ -87,4 +87,3 @@ class DiscussionController extends Controller
         ]);
     }
 }
-
