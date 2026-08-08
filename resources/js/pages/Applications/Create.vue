@@ -56,11 +56,11 @@ onMounted(() => {
 });
 
 const submit = () => {
+  // No local success toast here — the redirect to /dashboard carries a
+  // flash message that AppSidebarLayout's global watcher already shows.
+  // A local toast on top of that produced two success messages.
   form.post('/applications', {
     forceFormData: true,
-    onSuccess: () => {
-      toast.success('Thank you for applying! Check your email for confirmation.');
-    },
     onError: () => {
       toast.error('Failed to submit your application. Please try again.');
     },

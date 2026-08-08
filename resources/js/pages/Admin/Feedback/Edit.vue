@@ -102,7 +102,7 @@ const submit = () => {
     })),
   }
   editForm.transform(() => payload).put(`/admin/feedback/${props.form.id}`, {
-    onSuccess: () => toast.success('Feedback form updated!'),
+    // Flash message handled by global watcher (FeedbackController::update flashes 'success')
     onError: () => toast.error('Please fix the errors and try again.'),
   })
 }

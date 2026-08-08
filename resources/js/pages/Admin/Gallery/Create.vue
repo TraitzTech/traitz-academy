@@ -21,7 +21,7 @@ const form = useForm({
 const submit = () => {
   form.post('/admin/gallery', {
     forceFormData: true,
-    onSuccess: () => toast.success('Gallery item created successfully!'),
+    // Flash message handled by global watcher (GalleryItemController::store flashes 'success')
     onError: () => toast.error('Failed to create gallery item.'),
   })
 }

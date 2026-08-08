@@ -49,7 +49,7 @@ const submit = () => {
   })).put(`/admin/applications/${props.application.id}`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Application updated successfully.')
+      // Flash message handled by global watcher (ApplicationController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update application.')

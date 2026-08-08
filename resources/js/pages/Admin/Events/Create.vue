@@ -43,7 +43,7 @@ const submit = () => {
   form.post('/admin/events', {
     forceFormData: true,
     onSuccess: () => {
-      toast.success('Event created successfully!')
+      // Flash message handled by global watcher (EventController::store flashes 'success')
     },
     onError: () => {
       toast.error('Failed to create event. Please check the form for errors.')

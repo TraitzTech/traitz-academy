@@ -118,7 +118,7 @@ const saveEvent = () => {
     router.post(url, formData, {
         forceFormData: true,
         onSuccess: () => {
-            toast.success(editing.value ? 'AI Forge event updated!' : 'AI Forge event created!')
+            // Flash message handled by global watcher (AiForgeController::store/update flashes 'success')
             submitting.value = false
         },
         onError: (errs) => {
@@ -132,28 +132,28 @@ const saveEvent = () => {
 const toggleActive = () => {
     router.post(`/admin/ai-forge/${props.event!.slug}/toggle-active`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success('Active status toggled!'),
+        // Flash message handled by global watcher (AiForgeController::toggleActive flashes 'success')
     })
 }
 
 const toggleRegistration = () => {
     router.post(`/admin/ai-forge/${props.event!.slug}/toggle-registration`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success('Registration status toggled!'),
+        // Flash message handled by global watcher (AiForgeController::toggleRegistration flashes 'success')
     })
 }
 
 const toggleSwagStore = () => {
     router.post(`/admin/ai-forge/${props.event!.slug}/toggle-swag-store`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success('Swag store status toggled!'),
+        // Flash message handled by global watcher (AiForgeController::toggleSwagStore flashes 'success')
     })
 }
 
 const updateStats = () => {
     router.put(`/admin/ai-forge/${props.event!.slug}/stats`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success('Stats refreshed!'),
+        // Flash message handled by global watcher (AiForgeController::updateStats flashes 'success')
     })
 }
 

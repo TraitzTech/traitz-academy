@@ -90,7 +90,7 @@ const toggleStatus = (event: Event) => {
   router.post(`/admin/events/${event.id}/toggle-status`, {}, {
     preserveState: true,
     onSuccess: () => {
-      toast.success(`Event ${event.is_active ? 'deactivated' : 'activated'} successfully!`)
+      // Flash message handled by global watcher (EventController::toggleStatus flashes 'success')
     },
     onError: () => {
       toast.error('Failed to toggle event status.')
@@ -108,7 +108,7 @@ const confirmDelete = () => {
   
   router.delete(`/admin/events/${eventToDelete.value.id}`, {
     onSuccess: () => {
-      toast.success('Event deleted successfully!')
+      // Flash message handled by global watcher (EventController::destroy flashes 'success')
       showDeleteModal.value = false
       eventToDelete.value = null
     },
@@ -129,7 +129,7 @@ const openBulkDeleteModal = () => {
 const confirmBulkDelete = () => {
   router.post('/admin/events/bulk-destroy', { ids: selectedIds.value }, {
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} event(s) deleted successfully!`)
+      // Flash message handled by global watcher (EventController::bulkDestroy flashes 'success')
       selectedIds.value = []
       showBulkDeleteModal.value = false
     },

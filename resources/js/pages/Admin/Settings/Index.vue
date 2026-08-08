@@ -100,7 +100,7 @@ const saveSettings = async () => {
   router.put('/admin/settings', { settings: formData.value }, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Settings saved successfully!')
+      // Flash message handled by global watcher (SettingsController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to save settings. Please try again.')
@@ -130,7 +130,7 @@ const uploadImage = async (event: Event, setting: Setting) => {
         formData.value[setting.key] = e.target?.result as string
       }
       reader.readAsDataURL(file)
-      toast.success('Image uploaded successfully!')
+      // Flash message handled by global watcher (SettingsController::uploadImage flashes 'success')
     },
     onError: () => {
       toast.error('Failed to upload image. Please try again.')
@@ -148,7 +148,7 @@ const deleteImage = (setting: Setting) => {
     preserveScroll: true,
     onSuccess: () => {
       formData.value[setting.key] = null
-      toast.success('Image deleted successfully!')
+      // Flash message handled by global watcher (SettingsController::deleteImage flashes 'success')
     },
     onError: () => {
       toast.error('Failed to delete image. Please try again.')

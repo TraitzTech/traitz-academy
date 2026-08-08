@@ -3,7 +3,6 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import { debounce } from 'lodash-es'
 import { ref, watch } from 'vue'
 
-import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Order {
@@ -29,7 +28,6 @@ const props = defineProps<Props>()
 
 defineOptions({ layout: AppLayout })
 
-const toast = useToast()
 const search = ref(props.filters.search ?? '')
 const statusFilter = ref(props.filters.status ?? '')
 
@@ -51,7 +49,7 @@ watch([search, statusFilter], applyFilters)
 const updateStatus = (order: Order, status: string) => {
     router.patch(`/admin/ai-forge/orders/${order.id}/status`, { status }, {
         preserveState: true,
-        onSuccess: () => toast.success(`Order ${status}!`),
+        // Flash message handled by global watcher (AiForgeOrderController::updateStatus flashes 'success')
     })
 }
 

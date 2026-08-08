@@ -23,7 +23,7 @@ const form = useForm({
 const submit = () => {
   form.post('/admin/learning-resources', {
     forceFormData: true,
-    onSuccess: () => toast.success('Resource created successfully!'),
+    // Flash message handled by global watcher (LearningResourceController::store flashes 'success')
     onError: () => toast.error('Failed to create resource.'),
   })
 }

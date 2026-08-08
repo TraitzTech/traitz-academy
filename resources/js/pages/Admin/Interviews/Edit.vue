@@ -126,7 +126,7 @@ const toggleQuestion = (index: number) => {
 const submit = () => {
   form.put(`/admin/interviews/${props.interview.id}`, {
     onSuccess: () => {
-      toast.success('Interview updated successfully!')
+      // Flash message handled by global watcher (InterviewController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update interview. Please check the form.')

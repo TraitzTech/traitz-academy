@@ -136,7 +136,7 @@ const confirmStatusChange = () => {
   }, {
     preserveState: true,
     onSuccess: () => {
-      toast.success('Registration status updated!')
+      // Flash message handled by global watcher (EventController::updateRegistrationStatus flashes 'success')
       showStatusModal.value = false
       selectedRegistration.value = null
     },
@@ -149,7 +149,7 @@ const confirmStatusChange = () => {
 const sendReminder = () => {
   router.post(`/admin/events/${props.event.id}/send-reminder`, {}, {
     onSuccess: () => {
-      toast.success('Reminder emails sent successfully!')
+      // Flash message handled by global watcher (EventController::sendReminder flashes 'success'/'error')
       showReminderModal.value = false
     },
     onError: () => {
@@ -174,7 +174,7 @@ const confirmBulkStatusChange = () => {
   }, {
     preserveState: true,
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} registration(s) updated!`)
+      // Flash message handled by global watcher (EventController::bulkUpdateRegistrationStatus flashes 'success')
       selectedIds.value = []
       showBulkStatusModal.value = false
     },
@@ -198,7 +198,7 @@ const confirmBulkDelete = () => {
   }, {
     preserveState: true,
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} registration(s) deleted!`)
+      // Flash message handled by global watcher (EventController::bulkDeleteRegistrations flashes 'success')
       selectedIds.value = []
       showBulkDeleteModal.value = false
     },

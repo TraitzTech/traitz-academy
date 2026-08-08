@@ -182,7 +182,6 @@ const acceptApplication = () => {
     preserveState: true,
     onSuccess: () => {
       showAcceptModal.value = false
-      toast.success(`Application from ${props.application.first_name} ${props.application.last_name} accepted!`)
     },
     onError: () => {
       toast.error('Failed to accept application.')
@@ -197,7 +196,6 @@ const rejectApplication = () => {
     preserveState: true,
     onSuccess: () => {
       showRejectModal.value = false
-      toast.success(`Application from ${props.application.first_name} ${props.application.last_name} rejected.`)
     },
     onError: () => {
       toast.error('Failed to reject application.')
@@ -209,7 +207,6 @@ const deleteApplication = () => {
   router.delete(`/admin/applications/${props.application.id}`, {
     onSuccess: () => {
       showDeleteModal.value = false
-      toast.success('Application deleted successfully!')
     },
     onError: () => {
       toast.error('Failed to delete application.')
@@ -236,7 +233,6 @@ const scheduleInterview = () => {
     onSuccess: () => {
       showInterviewModal.value = false
       schedulingInterview.value = false
-      toast.success('Interview scheduled and invitation email sent!')
     },
     onError: (errors) => {
       schedulingInterview.value = false
@@ -256,11 +252,9 @@ const getInterviewStatusColor = (status: string | null) => {
 }
 
 const sendPaymentReminder = () => {
+  // Flash message handled by the global watcher — ApplicationController::sendPaymentReminder already flashes success/error.
   router.post(`/admin/applications/${props.application.id}/payment-reminder`, {}, {
     preserveState: true,
-    onSuccess: () => {
-      toast.success('Payment reminder sent successfully.')
-    },
     onError: () => {
       toast.error('Failed to send payment reminder.')
     },

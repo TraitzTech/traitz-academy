@@ -71,7 +71,7 @@ const submit = () => {
   form.post(`/payments/${props.application.id}`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Payment initiated successfully.')
+      // Flash message handled by global watcher (PaymentController::store flashes 'success'/'error')
     },
     onError: () => {
       toast.error('Payment could not be completed. Please verify your details.')

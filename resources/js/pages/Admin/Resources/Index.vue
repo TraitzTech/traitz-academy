@@ -55,7 +55,7 @@ const remove = (resource: ResourceItem) => {
   if (!confirm(`Delete "${resource.title}"?`)) return
 
   router.delete(`/admin/learning-resources/${resource.slug}`, {
-    onSuccess: () => toast.success('Resource deleted successfully!'),
+    // Flash message handled by global watcher (LearningResourceController::destroy flashes 'success')
     onError: () => toast.error('Failed to delete resource.'),
   })
 }

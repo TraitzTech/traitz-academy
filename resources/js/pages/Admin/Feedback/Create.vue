@@ -81,7 +81,7 @@ const submit = () => {
     })),
   }
   form.transform(() => payload).post('/admin/feedback', {
-    onSuccess: () => toast.success('Feedback form created!'),
+    // Flash message handled by global watcher (FeedbackController::store flashes 'success')
     onError: () => toast.error('Please fix the errors and try again.'),
   })
 }

@@ -67,7 +67,7 @@ const submit = () => {
   form.post(`/dashboard/courses/${props.course.id}/checkout`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Payment initiated successfully.')
+      // Flash message handled by global watcher (CoursePaymentController::store flashes 'success'/'error')
     },
     onError: () => {
       toast.error('Payment could not be completed. Please verify your details.')

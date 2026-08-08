@@ -145,7 +145,7 @@ const acceptApplication = () => {
     onSuccess: () => {
       showAcceptModal.value = false
       acceptingApp.value = null
-      toast.success(`Application from ${app.first_name} ${app.last_name} accepted!`)
+      // Flash message handled by global watcher (ApplicationController::accept flashes 'success')
     },
     onError: () => {
       toast.error('Failed to accept application.')
@@ -169,7 +169,7 @@ const rejectApplication = () => {
     onSuccess: () => {
       showRejectModal.value = false
       rejectingApp.value = null
-      toast.success(`Application from ${appName} rejected.`)
+      // Flash message handled by global watcher (ApplicationController::reject flashes 'success')
     },
     onError: () => {
       toast.error('Failed to reject application.')
@@ -189,7 +189,7 @@ const confirmDelete = () => {
   if (!deletingApp.value) return
   router.delete(`/admin/applications/${deletingApp.value.id}`, {
     onSuccess: () => {
-      toast.success('Application deleted successfully!')
+      // Flash message handled by global watcher (ApplicationController::destroy flashes 'success')
       showDeleteModal.value = false
       deletingApp.value = null
     },
@@ -237,7 +237,7 @@ const confirmBulkAccept = () => {
       const count = selectedIds.value.length
       selectedIds.value = []
       showBulkAcceptModal.value = false
-      toast.success(`Accepted ${count} application(s)!`)
+      // Flash message handled by global watcher (ApplicationController::bulkAction flashes 'success')
     },
     onError: () => {
       toast.error('Failed to accept selected applications.')
@@ -255,7 +255,7 @@ const confirmBulkReject = () => {
       const count = selectedIds.value.length
       selectedIds.value = []
       showBulkRejectModal.value = false
-      toast.success(`Rejected ${count} application(s)!`)
+      // Flash message handled by global watcher (ApplicationController::bulkAction flashes 'success')
     },
     onError: () => {
       toast.error('Failed to reject selected applications.')
@@ -273,7 +273,7 @@ const confirmBulkDelete = () => {
       const count = selectedIds.value.length
       selectedIds.value = []
       showBulkDeleteModal.value = false
-      toast.success(`Deleted ${count} application(s)!`)
+      // Flash message handled by global watcher (ApplicationController::bulkAction flashes 'success')
     },
     onError: () => {
       toast.error('Failed to delete selected applications.')
@@ -285,7 +285,7 @@ const sendPaymentReminder = (app: Application) => {
   router.post(`/admin/applications/${app.id}/payment-reminder`, {}, {
     preserveState: true,
     onSuccess: () => {
-      toast.success(`Payment reminder sent to ${app.first_name} ${app.last_name}.`)
+      // Flash message handled by global watcher (ApplicationController::sendPaymentReminder flashes 'success'/'error')
     },
     onError: () => {
       toast.error('Failed to send payment reminder.')
@@ -301,7 +301,7 @@ const confirmBulkPaymentReminder = () => {
     onSuccess: () => {
       showBulkPaymentReminderModal.value = false
       selectedIds.value = []
-      toast.success('Bulk payment reminders processed successfully.')
+      // Flash message handled by global watcher (ApplicationController::bulkPaymentReminder flashes 'success'/'error')
     },
     onError: () => {
       toast.error('Failed to send bulk payment reminders.')
@@ -337,7 +337,7 @@ const confirmBulkSchedule = () => {
       selectedIds.value = []
       showBulkScheduleModal.value = false
       selectedInterviewId.value = null
-      toast.success(`Interview scheduled for ${count} applicant(s)!`)
+      // Flash message handled by global watcher (ApplicationController::bulkScheduleInterview flashes 'success')
     },
     onError: () => {
       toast.error('Failed to schedule interviews.')
