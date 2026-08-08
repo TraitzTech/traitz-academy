@@ -32,4 +32,20 @@ return [
     // Require the day's logbook entry to be filled before an intern can clock out.
     'require_logbook_before_clock_out' => (bool) env('INTERNSHIP_REQUIRE_LOGBOOK', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Logbook compliance
+    |--------------------------------------------------------------------------
+    |
+    | Interns must submit a logbook entry every working day, independent of
+    | whether they clocked in at the office that day. `working_days` uses
+    | Carbon's ISO weekday numbering (1 = Monday .. 7 = Sunday).
+    |
+    */
+
+    'logbook' => [
+        'working_days' => [1, 2, 3, 4, 5],
+        'reminder_time' => env('INTERNSHIP_LOGBOOK_REMINDER_TIME', '20:00'),
+    ],
+
 ];

@@ -26,6 +26,7 @@ class LogbookEntry extends Model
         'hours_spent',
         'learnings',
         'blockers',
+        'solution',
         'status',
         'submitted_at',
         'supervisor_feedback',

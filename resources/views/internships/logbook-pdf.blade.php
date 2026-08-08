@@ -20,6 +20,8 @@
         .badge.approved { background: #dcfce7; color: #15803d; }
         .field-label { color: #6b7280; font-size: 10px; text-transform: uppercase; margin-top: 6px; }
         .content { white-space: pre-wrap; }
+        .content p { margin: 0 0 6px; }
+        .content img { max-width: 100%; }
         .sign { margin-top: 30px; width: 100%; }
         .sign td { width: 50%; padding-top: 30px; }
         .sign .line { border-top: 1px solid #9ca3af; padding-top: 4px; color: #6b7280; font-size: 11px; }
@@ -57,7 +59,14 @@
                 <span class="date">{{ $entry->date->format('l, d M Y') }}</span>
                 <span class="badge {{ $entry->status === 'approved' ? 'approved' : '' }}">{{ str_replace('_', ' ', $entry->status) }}</span>
             </div>
-            <div class="content">{{ $entry->content }}</div>
+            @php $isHtml = (bool) preg_match('/^<[a-z!\/]/i', ltrim($entry->content ?? '')); @endphp
+            <div class="content">
+                @if ($isHtml)
+                    {!! $entry->content !!}
+                @else
+                    {{ $entry->content }}
+                @endif
+            </div>
 
             @if ($entry->hours_spent)
                 <div class="field-label">Hours</div>{{ $entry->hours_spent }}

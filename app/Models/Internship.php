@@ -35,6 +35,7 @@ class Internship extends Model
         'application_id',
         'supervisor_id',
         'start_date',
+        'logbook_starts_on',
         'end_date',
         'status',
         'work_mode',
@@ -45,9 +46,19 @@ class Internship extends Model
     {
         return [
             'start_date' => 'date',
+            'logbook_starts_on' => 'date',
             'end_date' => 'date',
             'completed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The date from which logbook entries are expected (and missed days start
+     * counting). Falls back to start_date when not set explicitly.
+     */
+    public function effectiveLogbookStart(): ?\Carbon\CarbonInterface
+    {
+        return $this->logbook_starts_on ?? $this->start_date;
     }
 
     public function cohort(): BelongsTo
@@ -112,6 +123,76 @@ class Internship extends Model
     public function timezone(): string
     {
         return $this->cohort?->timezone ?? config('app.timezone', 'UTC');
+    }
+
+    /**
+     * Whether the given date is a day the logbook is compulsory for
+     * (independent of office attendance — see config('internship.logbook')).
+     */
+    public function isWorkingDay(\Carbon\CarbonInterface $date): bool
+    {
+        return in_array($date->dayOfWeekIso, config('internship.logbook.working_days', [1, 2, 3, 4, 5]), true);
+    }
+
+    /**
+     * Whether a logbook entry has been submitted (at any point, regardless of
+     * its current review status) for the given date.
+     */
+    public function hasLogbookEntryFor(\Carbon\CarbonInterface $date): bool
+    {
+        return $this->logbookEntries()
+            ->whereDate('date', $date)
+            ->whereNotNull('submitted_at')
+            ->exists();
+    }
+
+    /**
+     * Working days elapsed from start_date through today (or end_date, if the
+     * internship has already ended), in the internship's timezone.
+     */
+    public function workingDaysElapsed(): int
+    {
+        $effectiveStart = $this->effectiveLogbookStart();
+        if (! $effectiveStart) {
+            return 0;
+        }
+
+        $timezone = $this->timezone();
+        $start = $effectiveStart->copy()->timezone($timezone)->startOfDay();
+        $today = now($timezone)->startOfDay();
+        $end = $this->end_date
+            ? $this->end_date->copy()->timezone($timezone)->startOfDay()->min($today)
+            : $today;
+
+        if ($end->lessThan($start)) {
+            return 0;
+        }
+
+        // Date::use(CarbonImmutable::class) is set app-wide, so addDay()
+        // returns a new instance rather than mutating — reassign each pass.
+        $count = 0;
+        $cursor = $start;
+        while ($cursor->lessThanOrEqualTo($end)) {
+            if ($this->isWorkingDay($cursor)) {
+                $count++;
+            }
+            $cursor = $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    /**
+     * Working days elapsed with no submitted logbook entry, floored at 0.
+     */
+    public function missedLogbookDaysCount(): int
+    {
+        $submittedDays = $this->logbookEntries()
+            ->whereNotNull('submitted_at')
+            ->distinct()
+            ->count('date');
+
+        return max(0, $this->workingDaysElapsed() - $submittedDays);
     }
 
     public function scopeActive($query)
