@@ -73,12 +73,12 @@ class LearningAudienceService
 
     public function cohortsSupervisedBy(int $userId): Builder
     {
-        return Cohort::query()->whereHas('programs', fn ($q) => $q->wherePivot('supervisor_id', $userId));
+        return Cohort::query()->whereHas('programs', fn ($q) => $q->where('cohort_program.supervisor_id', $userId));
     }
 
     public function programsSupervisedBy(int $userId): Builder
     {
-        return Program::query()->whereHas('cohorts', fn ($q) => $q->wherePivot('supervisor_id', $userId));
+        return Program::query()->whereHas('cohorts', fn ($q) => $q->where('cohort_program.supervisor_id', $userId));
     }
 
     /**
