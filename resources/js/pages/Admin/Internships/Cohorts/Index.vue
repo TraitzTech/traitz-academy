@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { CalendarDays, Plus, Trash2, Users } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { CalendarDays, CheckCheck, Plus, Trash2, Users } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -20,7 +20,7 @@ interface Cohort {
   programs: string[]
 }
 
-defineProps<{
+const props = defineProps<{
   cohorts: { data: Cohort[]; links: { url: string | null; label: string; active: boolean }[] }
   programs: Option[]
   supervisors: Option[]
@@ -47,6 +47,30 @@ function addProgramRow() {
 }
 function removeProgramRow(i: number) {
   form.programs.splice(i, 1)
+}
+const allProgramsSelected = computed(() => {
+  const selected = new Set(form.programs.map((r) => r.program_id).filter(Boolean))
+  return props.programs.length > 0 && props.programs.every((p) => selected.has(p.id))
+})
+function selectAllPrograms() {
+  // Keep any supervisor already chosen for a program, just fill in the rest.
+  const existing = new Map(form.programs.filter((r) => r.program_id).map((r) => [r.program_id, r.supervisor_id]))
+  form.programs = props.programs.map((p) => ({ program_id: p.id, supervisor_id: existing.get(p.id) ?? '' }))
+}
+
+function deleteCohort(c: Cohort) {
+  const warning = c.internships_count > 0
+    ? `Delete "${c.name}"? Its ${c.internships_count} intern(s) will be unassigned, not deleted.`
+    : `Delete "${c.name}"? This cannot be undone.`
+  if (!confirm(warning)) return
+  router.delete(`/admin/internships/cohorts/${c.id}`, { preserveScroll: true })
+}
+
+const PROGRAM_BADGE_LIMIT = 3
+const expandedPrograms = ref<Set<number>>(new Set())
+function toggleProgramsExpanded(cohortId: number) {
+  if (expandedPrograms.value.has(cohortId)) expandedPrograms.value.delete(cohortId)
+  else expandedPrograms.value.add(cohortId)
 }
 
 function submit() {
@@ -148,9 +172,19 @@ const statusClass: Record<string, string> = {
               <Trash2 class="h-4 w-4" />
             </button>
           </div>
-          <button type="button" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#381998] hover:underline" @click="addProgramRow">
-            <Plus class="h-3.5 w-3.5" /> Add another program
-          </button>
+          <div class="mt-1 flex flex-wrap items-center gap-4">
+            <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-[#381998] hover:underline" @click="addProgramRow">
+              <Plus class="h-3.5 w-3.5" /> Add another program
+            </button>
+            <button
+              v-if="!allProgramsSelected"
+              type="button"
+              class="inline-flex items-center gap-1 text-xs font-semibold text-[#381998] hover:underline"
+              @click="selectAllPrograms"
+            >
+              <CheckCheck class="h-3.5 w-3.5" /> Select all programs
+            </button>
+          </div>
         </div>
 
         <label class="flex items-start gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-600">
@@ -192,9 +226,23 @@ const statusClass: Record<string, string> = {
               {{ c.name }}
               <span v-if="c.is_intake" class="ml-1.5 rounded-full bg-[#42b6c5]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#2a8a96]">Intake</span>
             </td>
-            <td class="px-5 py-3">
+            <td class="px-5 py-3 max-w-xs">
               <span v-if="c.programs.length === 0" class="text-gray-400">—</span>
-              <span v-for="p in c.programs" :key="p" class="mr-1 inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-200">{{ p }}</span>
+              <div v-else class="flex flex-wrap gap-1">
+                <span
+                  v-for="p in (expandedPrograms.has(c.id) ? c.programs : c.programs.slice(0, PROGRAM_BADGE_LIMIT))"
+                  :key="p"
+                  class="inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >{{ p }}</span>
+                <button
+                  v-if="c.programs.length > PROGRAM_BADGE_LIMIT"
+                  type="button"
+                  class="inline-block rounded-md px-2 py-0.5 text-xs font-semibold text-[#381998] hover:underline"
+                  @click="toggleProgramsExpanded(c.id)"
+                >
+                  {{ expandedPrograms.has(c.id) ? 'Show less' : `+${c.programs.length - PROGRAM_BADGE_LIMIT} more` }}
+                </button>
+              </div>
             </td>
             <td class="px-5 py-3 text-gray-500">
               <span class="inline-flex items-center gap-1"><CalendarDays class="h-3.5 w-3.5" />{{ c.start_date }} → {{ c.end_date }}</span>
@@ -206,7 +254,10 @@ const statusClass: Record<string, string> = {
               <span :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', statusClass[c.status] || 'bg-gray-100 text-gray-700']">{{ c.status }}</span>
             </td>
             <td class="px-5 py-3 text-right">
-              <Link :href="`/admin/internships/cohorts/${c.id}`" class="text-xs font-semibold text-[#381998] hover:underline">Manage</Link>
+              <div class="flex items-center justify-end gap-3">
+                <Link :href="`/admin/internships/cohorts/${c.id}`" class="text-xs font-semibold text-[#381998] hover:underline">Manage</Link>
+                <button type="button" class="text-xs font-semibold text-red-500 hover:underline" @click="deleteCohort(c)">Delete</button>
+              </div>
             </td>
           </tr>
         </tbody>
