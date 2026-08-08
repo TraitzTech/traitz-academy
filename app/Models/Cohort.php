@@ -96,13 +96,33 @@ class Cohort extends Model
         return $query->where('status', self::STATUS_ACTIVE);
     }
 
+    /**
+     * Cohorts still accepting interns: an upcoming/active status AND, when an
+     * intake window is set, today falling within it. A closed status or a
+     * lapsed window both take a cohort out of auto-placement.
+     */
     public function scopeOpenForIntake($query)
     {
-        return $query->whereIn('status', [self::STATUS_UPCOMING, self::STATUS_ACTIVE]);
+        $today = now()->toDateString();
+
+        return $query
+            ->whereIn('status', [self::STATUS_UPCOMING, self::STATUS_ACTIVE])
+            ->where(fn ($q) => $q->whereNull('intake_opens_at')->orWhereDate('intake_opens_at', '<=', $today))
+            ->where(fn ($q) => $q->whereNull('intake_closes_at')->orWhereDate('intake_closes_at', '>=', $today));
     }
 
     public function scopeIntake($query)
     {
         return $query->where('is_intake', true);
+    }
+
+    /**
+     * A cohort no longer taking interns at all — completed or cancelled.
+     * Manual/bulk placement is blocked for these (auto-placement additionally
+     * respects the intake window via {@see scopeOpenForIntake}).
+     */
+    public function isClosed(): bool
+    {
+        return in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED], true);
     }
 }

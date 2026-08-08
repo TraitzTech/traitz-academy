@@ -34,6 +34,10 @@ class CreateInternshipFromApplication
             throw new RuntimeException('The chosen cohort does not run this program.');
         }
 
+        if ($cohort !== null && $cohort->isClosed()) {
+            throw new RuntimeException('The chosen cohort is closed — interns can no longer be added.');
+        }
+
         // No cohort given → auto-place into the current intake cohort, provided it
         // runs the applicant's program (so the intern inherits that program's
         // supervisor). Falls back to standalone otherwise.

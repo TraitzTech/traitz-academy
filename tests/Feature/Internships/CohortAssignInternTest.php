@@ -55,6 +55,22 @@ it('rejects adding an intern whose program is not run by the cohort', function (
     expect($intern->fresh()->cohort_id)->toBeNull();
 });
 
+it('rejects adding interns to a closed cohort', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_CTO]);
+    [$cohort, $program] = makeCohortWithProgram();
+    $cohort->update(['status' => Cohort::STATUS_COMPLETED]);
+
+    $intern = Internship::factory()->create(['program_id' => $program->id, 'cohort_id' => null]);
+
+    $this->actingAs($admin)
+        ->post("/admin/internships/cohorts/{$cohort->id}/interns", [
+            'internship_ids' => [$intern->id],
+        ])
+        ->assertStatus(422);
+
+    expect($intern->fresh()->cohort_id)->toBeNull();
+});
+
 it('skips a user already in the cohort instead of hitting the unique constraint', function () {
     $admin = User::factory()->create(['role' => User::ROLE_CTO]);
     [$cohort, $program] = makeCohortWithProgram();

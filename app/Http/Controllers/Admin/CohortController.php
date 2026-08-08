@@ -161,6 +161,8 @@ class CohortController extends Controller
 
     public function assignIntern(Request $request, Cohort $cohort): RedirectResponse
     {
+        abort_if($cohort->isClosed(), 422, 'This cohort is closed — interns can no longer be added.');
+
         $validated = $request->validate([
             'internship_ids' => ['required', 'array', 'min:1'],
             'internship_ids.*' => ['integer', 'exists:internships,id'],
@@ -226,6 +228,8 @@ class CohortController extends Controller
      */
     public function createIntern(Request $request, Cohort $cohort): RedirectResponse
     {
+        abort_if($cohort->isClosed(), 422, 'This cohort is closed — interns can no longer be added.');
+
         $validated = $request->validate([
             'program_id' => ['required', 'exists:programs,id'],
             'mode' => ['required', 'in:existing,new'],
