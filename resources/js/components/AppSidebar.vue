@@ -350,11 +350,6 @@ const userGroups: NavGroup[] = [
                 icon: Library,
             },
             {
-                title: 'My Notes',
-                href: '/dashboard/notes',
-                icon: NotebookPen,
-            },
-            {
                 title: 'Notifications',
                 href: '/dashboard/notifications',
                 icon: Mail,
@@ -379,6 +374,12 @@ const userGroups: NavGroup[] = [
                 title: 'Discussions',
                 href: '/dashboard/discussions',
                 icon: MessageCircle,
+            },
+            {
+                // Lesson notes are tied to course lessons, so they live with Courses.
+                title: 'My Notes',
+                href: '/dashboard/notes',
+                icon: NotebookPen,
             },
             {
                 title: 'My Certificates',
