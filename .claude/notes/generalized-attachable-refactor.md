@@ -40,3 +40,8 @@ User wanted Tasks (Assignments), Live Videos, and Schedule to work for Courses, 
 ## Full plan file
 The original approved plan (with more architectural rationale/rollout ordering) is at:
 `C:\Users\Miltech\.claude\plans\mighty-percolating-kahan.md`
+
+## Production DB dry run — DONE (2026-08-06)
+User downloaded a SQL dump from the live production database, imported it into a fresh local `traitz-academy` database (not the live server itself), and ran `php artisan migrate`. Succeeded cleanly — confirms the full 90-migration chain (48 production + 42 from this work) applies safely to real production data shapes, not just synthetic dev/test data. Live production itself was never touched.
+
+**Remaining outstanding item before any deploy conversation: rotate the Jitsi private key.** It's still exposed in `origin/lms`'s pushed history on GitHub (removed only from the local `integration/lms-into-main` branch — see the security note earlier in this session). This is on the user's side (their Jitsi/JaaS account) and needs a `git filter-repo`/BFG pass separately if full history scrubbing is wanted.

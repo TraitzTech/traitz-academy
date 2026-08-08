@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 interface GroupStudent {
   id: number
   name: string
   email: string
+  program_id?: number | null
+}
+
+interface GroupProgram {
+  id: number
+  title: string
 }
 
 interface GroupRow {
@@ -13,6 +19,7 @@ interface GroupRow {
   title: string
   student_count: number
   students: GroupStudent[]
+  programs?: GroupProgram[]
 }
 
 type AttachableType = 'course' | 'cohort' | 'program'
@@ -66,7 +73,20 @@ const groupsForType = computed<GroupRow[]>(() => {
 })
 
 const selectedGroup = computed(() => groupsForType.value.find((g) => g.id === Number(form.attachable_id)) ?? null)
-const availableStudents = computed(() => selectedGroup.value?.students ?? [])
+
+// Cohorts span multiple programs — this narrows the checklist below to one
+// program's interns without changing what the task is actually attached to
+// (still the whole cohort).
+const programFilter = ref<number | ''>('')
+const cohortPrograms = computed(() => (form.attachable_type === 'cohort' ? selectedGroup.value?.programs ?? [] : []))
+
+const availableStudents = computed(() => {
+  const students = selectedGroup.value?.students ?? []
+  if (form.attachable_type === 'cohort' && programFilter.value) {
+    return students.filter((s) => s.program_id === programFilter.value)
+  }
+  return students
+})
 const allStudentsSelected = computed(() => {
   return availableStudents.value.length > 0 && form.student_ids.length === availableStudents.value.length
 })
@@ -76,6 +96,7 @@ watch(
   () => {
     form.attachable_id = ''
     form.student_ids = []
+    programFilter.value = ''
   }
 )
 
@@ -83,8 +104,13 @@ watch(
   () => form.attachable_id,
   () => {
     form.student_ids = []
+    programFilter.value = ''
   }
 )
+
+watch(programFilter, () => {
+  form.student_ids = []
+})
 
 const canSubmit = computed(() => {
   if (!form.attachable_id || !form.title.trim() || !form.instructions.trim()) return false
@@ -107,6 +133,7 @@ function submit() {
       form.attachable_type = 'course'
       form.attachable_id = ''
       form.student_ids = []
+      programFilter.value = ''
     },
   })
 }
@@ -201,6 +228,13 @@ function formatDateTime(value: string | null) {
       </div>
 
       <div v-if="form.audience === 'selected_students'">
+        <div v-if="cohortPrograms.length > 0" class="mb-3">
+          <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Filter by program <span class="font-normal text-gray-400">(optional — narrows the list below only)</span></label>
+          <select v-model="programFilter" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
+            <option value="">All programs in this cohort</option>
+            <option v-for="p in cohortPrograms" :key="p.id" :value="p.id">{{ p.title }}</option>
+          </select>
+        </div>
         <div class="mb-1 flex items-center justify-between">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Select students</label>
           <button type="button" class="text-xs font-semibold text-[#381998]" @click="toggleAllStudents">
