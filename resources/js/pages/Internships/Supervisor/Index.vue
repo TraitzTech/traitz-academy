@@ -15,6 +15,7 @@ interface Intern {
   cohort: string | null
   status: string
   pending_reviews: number
+  missed_logbook_days: number
   supervisor: string | null
   start_date: string | null
 }
@@ -49,14 +50,14 @@ function fmtDate(d: string | null) {
 
 <template>
   <div class="mx-auto max-w-6xl">
-    <Head :title="viewAll ? 'All Interns' : 'My Interns'" />
+    <Head :title="viewAll ? 'Intern Activity' : 'My Interns'" />
 
     <div class="mb-6 flex items-center gap-3">
       <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#381998]/10">
         <Users class="h-5 w-5 text-[#381998]" />
       </div>
       <div>
-        <h1 class="text-2xl font-bold text-[#000928] dark:text-white">{{ viewAll ? 'All Interns' : 'My Interns' }}</h1>
+        <h1 class="text-2xl font-bold text-[#000928] dark:text-white">{{ viewAll ? 'Intern Activity' : 'My Interns' }}</h1>
         <p class="text-sm text-gray-500">
           {{ viewAll ? 'Every intern across all cohorts — review logbooks and attendance.' : 'Interns you supervise — review their logbooks and attendance.' }}
         </p>
@@ -98,13 +99,14 @@ function fmtDate(d: string | null) {
       <div v-else class="overflow-x-auto">
         <table class="w-full table-fixed text-sm">
           <colgroup>
-            <col class="w-[19%]" />
             <col class="w-[16%]" />
             <col class="w-[13%]" />
-            <col v-if="viewAll" class="w-[13%]" />
             <col class="w-[11%]" />
-            <col class="w-[10%]" />
-            <col class="w-[10%]" />
+            <col v-if="viewAll" class="w-[10%]" />
+            <col class="w-[9%]" />
+            <col class="w-[8%]" />
+            <col class="w-[12%]" />
+            <col class="w-[12%]" />
             <col class="w-[8%]" />
           </colgroup>
           <thead class="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700">
@@ -116,6 +118,7 @@ function fmtDate(d: string | null) {
               <th class="px-5 py-3">Started</th>
               <th class="px-5 py-3">Status</th>
               <th class="px-5 py-3">To review</th>
+              <th class="px-5 py-3">Missed logs</th>
               <th class="px-5 py-3"></th>
             </tr>
           </thead>
@@ -131,7 +134,11 @@ function fmtDate(d: string | null) {
               <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ fmtDate(i.start_date) }}</td>
               <td class="truncate px-5 py-3 capitalize text-gray-600 dark:text-gray-300">{{ i.status }}</td>
               <td class="px-5 py-3">
-                <span v-if="i.pending_reviews > 0" class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{{ i.pending_reviews }} pending</span>
+                <span v-if="i.pending_reviews > 0" class="inline-block whitespace-nowrap rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{{ i.pending_reviews }} pending</span>
+                <span v-else class="text-xs text-gray-400">—</span>
+              </td>
+              <td class="px-5 py-3">
+                <span v-if="i.missed_logbook_days > 0" class="inline-block whitespace-nowrap rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">{{ i.missed_logbook_days }} missed</span>
                 <span v-else class="text-xs text-gray-400">—</span>
               </td>
               <td class="px-5 py-3 text-right">

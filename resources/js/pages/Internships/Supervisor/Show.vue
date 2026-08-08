@@ -5,16 +5,19 @@ import { reactive } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { lessonBodyHtml } from '@/utils/lessonContentHtml'
 
 defineOptions({ layout: AppLayout })
 
 interface Attendance { id: number; date: string; clock_in_at: string | null; clock_out_at: string | null; hours: string | number | null; status: string }
 interface Logbook { id: number; date: string; content: string; hours_spent: string | number | null; learnings: string | null; blockers: string | null; status: string; supervisor_feedback: string | null }
+interface Compliance { working_days_elapsed: number; logbook_entries_submitted: number; missed_logbook_days: number }
 
 const props = defineProps<{
   internship: { id: number; name: string | null; email: string | null; program: string | null; cohort: string | null; status: string }
   attendance: Attendance[]
   logbook: Logbook[]
+  compliance: Compliance
 }>()
 
 const toast = useToast()
@@ -69,6 +72,22 @@ const attStatus: Record<string, string> = {
       </a>
     </div>
 
+    <!-- Logbook compliance -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p class="text-2xl font-bold text-[#000928] dark:text-white">{{ compliance.working_days_elapsed }}</p>
+        <p class="mt-1 text-xs text-gray-500">Working days so far</p>
+      </div>
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p class="text-2xl font-bold text-emerald-600">{{ compliance.logbook_entries_submitted }}</p>
+        <p class="mt-1 text-xs text-gray-500">Logbook entries submitted</p>
+      </div>
+      <div class="rounded-2xl border border-gray-100 bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p :class="['text-2xl font-bold', compliance.missed_logbook_days > 0 ? 'text-rose-600' : 'text-gray-400']">{{ compliance.missed_logbook_days }}</p>
+        <p class="mt-1 text-xs text-gray-500">Missed working days</p>
+      </div>
+    </div>
+
     <!-- Logbook review -->
     <div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <h2 class="mb-4 font-bold text-[#000928] dark:text-white">Logbook</h2>
@@ -79,7 +98,7 @@ const attStatus: Record<string, string> = {
             <span class="text-sm font-semibold text-[#000928] dark:text-white">{{ e.date }}</span>
             <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-200">{{ e.status.replace('_', ' ') }}</span>
           </div>
-          <p class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200">{{ e.content }}</p>
+          <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-200 dark:prose-invert" v-html="lessonBodyHtml(e.content, 'No entry text.')" />
           <div class="mt-2 grid gap-2 text-xs text-gray-500 sm:grid-cols-2">
             <p v-if="e.hours_spent">Hours: {{ e.hours_spent }}</p>
             <p v-if="e.learnings">Learnings: {{ e.learnings }}</p>

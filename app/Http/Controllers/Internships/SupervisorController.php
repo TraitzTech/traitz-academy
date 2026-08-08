@@ -52,6 +52,7 @@ class SupervisorController extends Controller
             'cohort' => $i->cohort?->name,
             'status' => $i->status,
             'pending_reviews' => $i->pending_reviews,
+            'missed_logbook_days' => $i->missedLogbookDaysCount(),
             'supervisor' => $supervisorNames->get($i->effectiveSupervisorId()),
             'start_date' => optional($i->start_date)->toDateString(),
         ]);
@@ -98,6 +99,9 @@ class SupervisorController extends Controller
                 'supervisor_feedback' => $e->supervisor_feedback,
             ]);
 
+        $workingDaysElapsed = $internship->workingDaysElapsed();
+        $missedLogbookDays = $internship->missedLogbookDaysCount();
+
         return Inertia::render('Internships/Supervisor/Show', [
             'internship' => [
                 'id' => $internship->id,
@@ -109,6 +113,11 @@ class SupervisorController extends Controller
             ],
             'attendance' => $attendance,
             'logbook' => $logbook,
+            'compliance' => [
+                'working_days_elapsed' => $workingDaysElapsed,
+                'logbook_entries_submitted' => $workingDaysElapsed - $missedLogbookDays,
+                'missed_logbook_days' => $missedLogbookDays,
+            ],
         ]);
     }
 

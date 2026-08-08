@@ -226,6 +226,30 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether this user actually supervises any interns — via a per-intern
+     * supervisor override or as the supervisor of a program within a cohort.
+     * Capability-based (not role-based), so a tutor or even a plain user who
+     * was deliberately assigned as a supervisor qualifies.
+     */
+    public function supervisesInterns(): bool
+    {
+        return Internship::query()->forSupervisor($this)->exists();
+    }
+
+    /**
+     * Who may create "learning ops" work (assignments, schedule items,
+     * broadcast notifications) for the audiences they own: tutors and admins
+     * as before, plus anyone who actually supervises interns.
+     */
+    public function canManageLearningOps(): bool
+    {
+        return $this->isTutor()
+            || $this->canAccessAdminPanel()
+            || $this->isSupervisor()
+            || $this->supervisesInterns();
+    }
+
+    /**
      * A plain learner/applicant account (no staff privileges).
      */
     public function isStudent(): bool

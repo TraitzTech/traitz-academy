@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'executive' => \App\Http\Middleware\IsExecutive::class,
             'tutor' => \App\Http\Middleware\IsTutor::class,
+            'learning-ops' => \App\Http\Middleware\CanManageLearningOps::class,
             'ensure.phone' => \App\Http\Middleware\EnsurePhoneNumber::class,
         ]);
     })

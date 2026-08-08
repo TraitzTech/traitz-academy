@@ -148,22 +148,6 @@ Route::middleware(['auth', 'verified', 'tutor'])
 
         Route::get('students', [TutorStudentController::class, 'index'])->name('students.index');
         Route::get('discussions', [TutorDiscussionController::class, 'index'])->name('discussions.index');
-        Route::get('assignments', [AssignmentController::class, 'tutorIndex'])->name('assignments.index');
-        Route::post('assignments', [AssignmentController::class, 'tutorStore'])->name('assignments.store');
-        Route::put('schedules/{schedule}', [ScheduleController::class, 'tutorUpdate'])->name('schedules.update');
-        Route::delete('schedules/{schedule}', [ScheduleController::class, 'tutorDestroy'])->name('schedules.destroy');
-        Route::get('schedules', [ScheduleController::class, 'tutorIndex'])->name('schedules.index');
-        Route::post('schedules', [ScheduleController::class, 'tutorStore'])->name('schedules.store');
-        Route::get('notifications', [BroadcastNotificationController::class, 'tutorIndex'])->name('notifications.index');
-        Route::post('notifications', [BroadcastNotificationController::class, 'tutorSend'])->name('notifications.send');
-        Route::get('live-classes', [TutorLiveClassController::class, 'index'])->name('live-classes.index');
-        Route::get('live-classes/create', [TutorLiveClassController::class, 'create'])->name('live-classes.create');
-        Route::post('live-classes', [TutorLiveClassController::class, 'store'])->name('live-classes.store');
-        Route::get('live-classes/{liveClass}', [TutorLiveClassController::class, 'show'])->name('live-classes.show');
-        Route::get('live-classes/{liveClass}/edit', [TutorLiveClassController::class, 'edit'])->name('live-classes.edit');
-        Route::put('live-classes/{liveClass}', [TutorLiveClassController::class, 'update'])->name('live-classes.update');
-        Route::delete('live-classes/{liveClass}', [TutorLiveClassController::class, 'destroy'])->name('live-classes.destroy');
-        Route::post('live-classes/{liveClass}/recordings', [TutorLiveClassController::class, 'addRecording'])->name('live-classes.recordings.store');
 
         // Lesson upload
         Route::get('lessons/upload', [LessonUploadController::class, 'index'])->name('lessons.upload');
@@ -209,4 +193,30 @@ Route::middleware(['auth', 'verified', 'tutor'])
         Route::get('quizzes/{quiz}/attempts', [TutorQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
         Route::get('quizzes/{quiz}/attempts/{attempt}', [TutorQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
         Route::put('quizzes/{quiz}/attempts/{attempt}/grade', [TutorQuizAttemptController::class, 'grade'])->name('quizzes.attempts.grade');
+    });
+
+// Learning ops (assignments, schedules, notifications, live classes) span
+// course students AND the interns of cohorts/programs a user supervises — so
+// they're open to tutors, admins, and internship supervisors alike, not tutors
+// only. Same /tutor URIs and tutor.* names, so existing pages need no changes.
+Route::middleware(['auth', 'verified', 'learning-ops'])
+    ->prefix('tutor')
+    ->name('tutor.')
+    ->group(function () {
+        Route::get('assignments', [AssignmentController::class, 'tutorIndex'])->name('assignments.index');
+        Route::post('assignments', [AssignmentController::class, 'tutorStore'])->name('assignments.store');
+        Route::get('schedules', [ScheduleController::class, 'tutorIndex'])->name('schedules.index');
+        Route::post('schedules', [ScheduleController::class, 'tutorStore'])->name('schedules.store');
+        Route::put('schedules/{schedule}', [ScheduleController::class, 'tutorUpdate'])->name('schedules.update');
+        Route::delete('schedules/{schedule}', [ScheduleController::class, 'tutorDestroy'])->name('schedules.destroy');
+        Route::get('notifications', [BroadcastNotificationController::class, 'tutorIndex'])->name('notifications.index');
+        Route::post('notifications', [BroadcastNotificationController::class, 'tutorSend'])->name('notifications.send');
+        Route::get('live-classes', [TutorLiveClassController::class, 'index'])->name('live-classes.index');
+        Route::get('live-classes/create', [TutorLiveClassController::class, 'create'])->name('live-classes.create');
+        Route::post('live-classes', [TutorLiveClassController::class, 'store'])->name('live-classes.store');
+        Route::get('live-classes/{liveClass}', [TutorLiveClassController::class, 'show'])->name('live-classes.show');
+        Route::get('live-classes/{liveClass}/edit', [TutorLiveClassController::class, 'edit'])->name('live-classes.edit');
+        Route::put('live-classes/{liveClass}', [TutorLiveClassController::class, 'update'])->name('live-classes.update');
+        Route::delete('live-classes/{liveClass}', [TutorLiveClassController::class, 'destroy'])->name('live-classes.destroy');
+        Route::post('live-classes/{liveClass}/recordings', [TutorLiveClassController::class, 'addRecording'])->name('live-classes.recordings.store');
     });

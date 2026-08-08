@@ -10,6 +10,14 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+
+        // Supervisors are staff, not learners — send them to their own home
+        // instead of the applicant dashboard (which is empty for them).
+        if (! $user->isTutor() && ! $user->canAccessAdminPanel()
+            && ($user->isSupervisor() || $user->supervisesInterns())) {
+            return redirect()->route('supervisor.dashboard');
+        }
+
         $applications = $user->applications()->with(['program', 'interview'])->latest()->get();
         $registrations = $user->registrations()->with('event')->latest()->get();
 
