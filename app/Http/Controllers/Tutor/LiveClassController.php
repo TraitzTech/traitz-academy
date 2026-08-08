@@ -6,7 +6,6 @@ use App\Concerns\SyncsLiveClassTargets;
 use App\Http\Controllers\Concerns\GeneratesLiveClassMeeting;
 use App\Http\Controllers\Controller;
 use App\Jobs\UploadLiveClassRecordingToYouTube;
-use App\Models\Cohort;
 use App\Models\Course;
 use App\Models\LiveClass;
 use App\Models\LiveClassRecording;
@@ -47,7 +46,8 @@ class LiveClassController extends Controller
 
         return Inertia::render('Tutor/LiveClasses/Create', [
             'courses' => $this->ownedCourses($userId),
-            'cohorts' => $this->supervisedCohorts($userId),
+            // Supervisors target their program, not whole cohorts.
+            'cohorts' => collect(),
             'programs' => $this->supervisedPrograms($userId),
             'students' => $this->reachableStudents($userId),
         ]);
@@ -116,7 +116,7 @@ class LiveClassController extends Controller
             'liveClass' => $liveClass,
             'targets' => $this->targetRowsForDisplay($liveClass),
             'courses' => $this->ownedCourses($userId),
-            'cohorts' => $this->supervisedCohorts($userId),
+            'cohorts' => collect(),
             'programs' => $this->supervisedPrograms($userId),
             'students' => $this->reachableStudents($userId),
         ]);
@@ -194,26 +194,55 @@ class LiveClassController extends Controller
     private function syncOwnedAudience(Request $request, LiveClass $liveClass, array $validated): void
     {
         $userId = (int) $request->user()->id;
+        $isAdmin = (bool) $request->user()->canAccessAdminPanel();
 
-        if ($liveClass->access_type === 'course') {
-            // Keep only targets the user actually owns/supervises — same
-            // authorization the other learning-ops tools use.
-            $targets = collect($validated['targets'] ?? [])
-                ->filter(function ($target) use ($userId) {
-                    $modelClass = LearningAudienceService::TYPES[$target['type'] ?? ''] ?? null;
-                    $model = $modelClass ? $modelClass::find((int) $target['id']) : null;
+        if ($liveClass->access_type === 'custom') {
+            $studentIds = collect($validated['student_ids'] ?? [])->map(fn ($id) => (int) $id);
 
-                    return $model !== null && $this->audience->userCanManage($model, $userId);
-                })
-                ->values()
-                ->all();
+            // A supervisor may only hand-pick their own reachable interns.
+            if (! $isAdmin) {
+                $reachable = $this->reachableStudentIds($userId);
+                $studentIds = $studentIds->filter(fn ($id) => $reachable->contains($id));
+            }
 
-            $this->syncTargets($liveClass, $targets);
-            $liveClass->students()->sync([]);
-        } else {
-            $liveClass->students()->sync($validated['student_ids'] ?? []);
+            $liveClass->students()->sync($studentIds->unique()->values()->all());
             $this->syncTargets($liveClass, []);
+
+            return;
         }
+
+        // access_type === 'course': keep only targets the user owns/supervises —
+        // same authorization the other learning-ops tools use.
+        $targets = collect($validated['targets'] ?? [])
+            ->filter(function ($target) use ($userId) {
+                $modelClass = LearningAudienceService::TYPES[$target['type'] ?? ''] ?? null;
+                $model = $modelClass ? $modelClass::find((int) $target['id']) : null;
+
+                return $model !== null && $this->audience->userCanManage($model, $userId);
+            })
+            ->values();
+
+        // A supervisor's program target resolves program-wide — across every
+        // cohort/batch — in resolveAudienceIds()/visibility, which would reach
+        // interns in cohorts owned by other supervisors. Pin the audience to
+        // the supervisor's exact interns by demoting to an explicit custom
+        // roster. Admins keep the broad program target.
+        if (! $isAdmin && $targets->contains(fn ($t) => $t['type'] === 'program')) {
+            $studentIds = $targets->flatMap(fn ($t) => match ($t['type']) {
+                'program' => $this->audience->supervisedProgramStudentIds($userId, Program::findOrFail((int) $t['id'])),
+                'course' => $this->audience->studentIds(Course::findOrFail((int) $t['id'])),
+                default => collect(),
+            })->unique()->values();
+
+            $liveClass->update(['access_type' => 'custom']);
+            $liveClass->students()->sync($studentIds->all());
+            $this->syncTargets($liveClass, []);
+
+            return;
+        }
+
+        $this->syncTargets($liveClass, $targets->all());
+        $liveClass->students()->sync([]);
     }
 
     private function notifyAudience(LiveClass $liveClass): void
@@ -235,30 +264,35 @@ class LiveClassController extends Controller
             ->get(['id', 'title']);
     }
 
-    private function supervisedCohorts(int $userId): \Illuminate\Support\Collection
-    {
-        return $this->audience->cohortsSupervisedBy($userId)->orderBy('name')->get(['id', 'name']);
-    }
-
     private function supervisedPrograms(int $userId): \Illuminate\Support\Collection
     {
         return $this->audience->programsSupervisedBy($userId)->orderBy('title')->get(['id', 'title']);
     }
 
-    private function reachableStudents(int $userId): \Illuminate\Support\Collection
+    /**
+     * Student/intern IDs this user may put in a custom-audience class: their
+     * course rosters plus the interns in the cohorts where they supervise each
+     * program (never program-wide across cohorts owned by others).
+     */
+    private function reachableStudentIds(int $userId): \Illuminate\Support\Collection
     {
-        $studentIds = $this->ownedCourses($userId)->flatMap(function (Course $course) {
+        $courseStudentIds = $this->ownedCourses($userId)->flatMap(function (Course $course) {
             return $course->enrollments()
                 ->whereIn('access_status', ['active', 'completed'])
                 ->pluck('user_id');
         });
 
-        $studentIds = $studentIds->merge(
-            $this->supervisedCohorts($userId)->flatMap(fn (Cohort $cohort) => $cohort->studentIds())
-        )->merge(
-            $this->supervisedPrograms($userId)->flatMap(fn (Program $program) => $program->studentIds())
-        )->unique();
+        $programStudentIds = $this->supervisedPrograms($userId)
+            ->flatMap(fn (Program $program) => $this->audience->supervisedProgramStudentIds($userId, $program));
 
-        return User::query()->whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'email']);
+        return $courseStudentIds->merge($programStudentIds)->unique()->values();
+    }
+
+    private function reachableStudents(int $userId): \Illuminate\Support\Collection
+    {
+        return User::query()
+            ->whereIn('id', $this->reachableStudentIds($userId))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
     }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 interface Option { id: number; name?: string; title?: string; email?: string }
 
@@ -29,6 +30,14 @@ const targetTypeLabels: Record<TargetType, string> = {
 function targetKey(type: TargetType, id: number) {
   return `${type}:${id}`
 }
+
+// Only show target groups that actually have options — supervisors get
+// programs (and any courses they instruct), never whole cohorts.
+const targetGroups = computed(() =>
+  ([['course', props.courses], ['cohort', props.cohorts], ['program', props.programs]] as const).filter(
+    ([, options]) => options.length > 0
+  )
+)
 
 function toLocalDateTimeInput(value: string | null | undefined): string {
   if (!value) return ''
@@ -134,7 +143,7 @@ function submit() {
       </div>
 
       <div v-if="form.access_type === 'course'" class="grid gap-3">
-        <div v-for="typeGroup in ([['course', courses], ['cohort', cohorts], ['program', programs]] as const)" :key="typeGroup[0]">
+        <div v-for="typeGroup in targetGroups" :key="typeGroup[0]">
           <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ targetTypeLabels[typeGroup[0]] }}</label>
           <div class="mt-1 max-h-32 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2 dark:border-gray-600">
             <label v-for="option in typeGroup[1]" :key="option.id" class="flex items-center gap-2 text-sm">
