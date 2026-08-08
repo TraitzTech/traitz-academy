@@ -188,6 +188,7 @@ class ApplicationController extends Controller
 
         if (! $wasAccepted && $application->status === 'accepted') {
             $this->sendAcceptanceNotification($application);
+            $this->promoteToInternshipIfApplicable($application);
         }
 
         return redirect()

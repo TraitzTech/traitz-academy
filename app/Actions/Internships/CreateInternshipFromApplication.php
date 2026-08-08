@@ -59,6 +59,9 @@ class CreateInternshipFromApplication
                     'application_id' => $application->id,
                     'supervisor_id' => $supervisorId,
                     'start_date' => $cohort?->start_date,
+                    // Logbook expectations begin at acceptance, so an intern
+                    // isn't retroactively behind if the cohort started earlier.
+                    'logbook_starts_on' => now()->toDateString(),
                     'end_date' => $cohort?->end_date,
                     'status' => Internship::STATUS_ACTIVE,
                 ]);
