@@ -19,11 +19,11 @@ function liveClassCohort(User $supervisor): array
     return [$cohort, $program];
 }
 
-it('lets a supervisor schedule a live class for a cohort they supervise', function () {
+it('lets a supervisor schedule a live class for a program they supervise', function () {
     Notification::fake();
 
     $supervisor = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
-    [$cohort] = liveClassCohort($supervisor);
+    [, $program] = liveClassCohort($supervisor);
 
     $this->actingAs($supervisor)
         ->post('/tutor/live-classes', [
@@ -32,15 +32,15 @@ it('lets a supervisor schedule a live class for a cohort they supervise', functi
             'duration' => 60,
             'access_type' => 'course',
             'meeting_url' => 'https://meet.example.com/abc',
-            'targets' => [['type' => 'cohort', 'id' => $cohort->id]],
+            'targets' => [['type' => 'program', 'id' => $program->id]],
         ])
         ->assertRedirect();
 
     $liveClass = LiveClass::query()->where('title', 'Weekly sync')->firstOrFail();
     expect(DB::table('live_class_targets')
         ->where('live_class_id', $liveClass->id)
-        ->where('target_type', Cohort::class)
-        ->where('target_id', $cohort->id)
+        ->where('target_type', Program::class)
+        ->where('target_id', $program->id)
         ->exists())->toBeTrue();
 });
 
@@ -51,7 +51,7 @@ it('drops a live-class target the supervisor does not supervise', function () {
     liveClassCohort($supervisor);
 
     $other = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
-    [$otherCohort] = liveClassCohort($other);
+    [, $otherProgram] = liveClassCohort($other);
 
     $this->actingAs($supervisor)
         ->post('/tutor/live-classes', [
@@ -60,7 +60,7 @@ it('drops a live-class target the supervisor does not supervise', function () {
             'duration' => 60,
             'access_type' => 'course',
             'meeting_url' => 'https://meet.example.com/xyz',
-            'targets' => [['type' => 'cohort', 'id' => $otherCohort->id]],
+            'targets' => [['type' => 'program', 'id' => $otherProgram->id]],
         ])
         ->assertRedirect();
 

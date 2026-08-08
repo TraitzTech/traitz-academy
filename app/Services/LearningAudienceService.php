@@ -10,6 +10,7 @@ use App\Models\Program;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 /**
  * Single home for "who is the audience" across the three attachable targets —
@@ -59,15 +60,71 @@ class LearningAudienceService
 
     /**
      * Whether a tutor/supervisor may create work for this attachable: the
-     * course's instructor, or the supervisor of the cohort's/program's pivot.
+     * course's instructor, or a supervisor of the program (via the
+     * cohort_program pivot). Supervision is per (cohort, program), so a
+     * supervisor targets the *program* they are under — never a whole cohort,
+     * which may span programs run by other supervisors. Admins bypass this.
      */
     public function userCanManage(Model $attachable, int $userId): bool
     {
         return match (true) {
             $attachable instanceof Course => (int) $attachable->instructor_id === $userId,
-            $attachable instanceof Cohort => $attachable->programs()->wherePivot('supervisor_id', $userId)->exists(),
             $attachable instanceof Program => $attachable->cohorts()->wherePivot('supervisor_id', $userId)->exists(),
             default => false,
+        };
+    }
+
+    /**
+     * Cohort IDs where this user supervises the given program (its
+     * cohort_program pivot rows). This is the exact reach of a supervisor
+     * within a program that may run across several cohorts (batches).
+     */
+    public function supervisedProgramCohortIds(int $userId, int $programId): Collection
+    {
+        return Cohort::query()
+            ->whereHas('programs', fn ($q) => $q
+                ->where('programs.id', $programId)
+                ->where('cohort_program.supervisor_id', $userId))
+            ->pluck('id');
+    }
+
+    /**
+     * The interns a supervisor may target within a program: only those in the
+     * cohorts where this user supervises that program. A program can run in
+     * cohorts owned by other supervisors — those interns are out of reach.
+     */
+    public function supervisedProgramStudentIds(int $userId, Program $program): Collection
+    {
+        $cohortIds = $this->supervisedProgramCohortIds($userId, $program->id);
+
+        if ($cohortIds->isEmpty()) {
+            return collect();
+        }
+
+        return Internship::query()
+            ->where('program_id', $program->id)
+            ->whereIn('cohort_id', $cohortIds)
+            ->pluck('user_id')
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * The student/intern IDs a given user may actually assign work to for an
+     * attachable. Admins see the full roster; a course instructor owns their
+     * whole course; a supervisor is scoped to the interns in the cohorts where
+     * they supervise the program.
+     */
+    public function manageableStudentIds(Model $attachable, ?int $userId, bool $isAdmin): Collection
+    {
+        if ($isAdmin) {
+            return $this->studentIds($attachable);
+        }
+
+        return match (true) {
+            $attachable instanceof Course => $this->studentIds($attachable),
+            $attachable instanceof Program => $this->supervisedProgramStudentIds((int) $userId, $attachable),
+            default => collect(),
         };
     }
 
@@ -92,9 +149,42 @@ class LearningAudienceService
     {
         return [
             'courses' => $this->coursesWithRoster(Course::query()->where('instructor_id', $user->id)),
-            'cohorts' => $this->cohortsWithRoster($this->cohortsSupervisedBy((int) $user->id)),
-            'programs' => $this->programsWithRoster($this->programsSupervisedBy((int) $user->id)),
+            // Supervisors target the program they are under, not whole cohorts,
+            // so no cohort group is offered here (admins use allGroups()).
+            'cohorts' => [],
+            'programs' => $this->supervisedProgramsWithRoster((int) $user->id),
         ];
+    }
+
+    /**
+     * Programs a supervisor may target, each with its roster narrowed to the
+     * interns in the cohorts where this user actually supervises the program.
+     *
+     * @return array<int, array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}>
+     */
+    public function supervisedProgramsWithRoster(int $userId): array
+    {
+        return $this->programsSupervisedBy($userId)
+            ->select('id', 'title')
+            ->orderBy('title')
+            ->get()
+            ->map(function (Program $program) use ($userId) {
+                $studentIds = $this->supervisedProgramStudentIds($userId, $program);
+
+                $students = User::query()
+                    ->whereIn('id', $studentIds)
+                    ->get(['id', 'name', 'email'])
+                    ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email])
+                    ->all();
+
+                return [
+                    'id' => $program->id,
+                    'title' => $program->title,
+                    'student_count' => count($students),
+                    'students' => $students,
+                ];
+            })
+            ->all();
     }
 
     /**

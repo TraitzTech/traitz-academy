@@ -136,19 +136,30 @@ class AssignmentController extends Controller
             abort_unless($this->audience->userCanManage($attachable, (int) $tutorId), 403);
         }
 
-        $allowedStudentIds = $this->audience->studentIds($attachable);
+        $allowedStudentIds = $this->audience->manageableStudentIds($attachable, $tutorId, $isAdmin);
+
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
 
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds
                 ->filter(fn ($id) => $allowedStudentIds->contains($id))
                 ->values();
 
             abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            // A supervisor's program roster is scoped to the cohorts they
+            // supervise, but "everyone in the program" is resolved student-side
+            // by program membership alone — which would reach interns in other
+            // cohorts. Pin the audience to the supervisor's exact interns.
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+
+            abort_if($selectedIds->isEmpty(), 422, 'You have no interns to assign in this program.');
         } else {
             $selectedIds = collect();
         }
@@ -162,7 +173,7 @@ class AssignmentController extends Controller
             'created_by' => (int) $request->user()->id,
             'title' => (string) $payload['title'],
             'instructions' => (string) $payload['instructions'],
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'attachment_path' => $attachmentPath,
             'due_at' => $payload['due_at'] ?? null,
         ]);

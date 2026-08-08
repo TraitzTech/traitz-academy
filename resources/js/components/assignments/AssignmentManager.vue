@@ -72,6 +72,26 @@ const groupsForType = computed<GroupRow[]>(() => {
   return props.courses
 })
 
+// Only offer a target type the user actually manages something in. Supervisors
+// get programs only (no whole-cohort targeting); admins get all three.
+const availableTypes = computed<AttachableType[]>(() => {
+  const types: AttachableType[] = []
+  if (props.courses.length) types.push('course')
+  if (props.cohorts.length) types.push('cohort')
+  if (props.programs.length) types.push('program')
+  return types
+})
+
+watch(
+  availableTypes,
+  (types) => {
+    if (types.length && !types.includes(form.attachable_type)) {
+      form.attachable_type = types[0]
+    }
+  },
+  { immediate: true }
+)
+
 const selectedGroup = computed(() => groupsForType.value.find((g) => g.id === Number(form.attachable_id)) ?? null)
 
 // Cohorts span multiple programs — this narrows the checklist below to one
@@ -176,9 +196,7 @@ function formatDateTime(value: string | null) {
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
           <select v-model="form.attachable_type" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
-            <option value="course">Course</option>
-            <option value="cohort">Internship Cohort</option>
-            <option value="program">Program</option>
+            <option v-for="type in availableTypes" :key="type" :value="type">{{ typeLabels[type] }}</option>
           </select>
         </div>
         <div>

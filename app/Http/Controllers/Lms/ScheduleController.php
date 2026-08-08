@@ -192,12 +192,19 @@ class ScheduleController extends Controller
             abort(422, 'A course, cohort, or program is required for this audience.');
         }
 
-        $allowedStudentIds = $attachable ? $this->audience->studentIds($attachable) : collect();
+        $allowedStudentIds = $attachable ? $this->audience->manageableStudentIds($attachable, $userId, $isAdmin) : collect();
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values();
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds->filter(fn ($id) => $allowedStudentIds->contains($id))->values();
             abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            // Scope a supervisor's program schedule to their exact interns (see
+            // AssignmentController): "course_students" resolves program-wide.
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+            abort_if($selectedIds->isEmpty(), 422, 'You have no interns to schedule in this program.');
         } else {
             $selectedIds = collect();
         }
@@ -209,7 +216,7 @@ class ScheduleController extends Controller
             'attachable_id' => $attachable?->id,
             'title' => (string) $payload['title'],
             'description' => $payload['description'] ?? null,
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'location' => $payload['location'] ?? null,
             'starts_at' => (string) $payload['starts_at'],
             'ends_at' => $payload['ends_at'] ?? null,
@@ -241,12 +248,17 @@ class ScheduleController extends Controller
             abort(422, 'A course, cohort, or program is required for this audience.');
         }
 
-        $allowedStudentIds = $attachable ? $this->audience->studentIds($attachable) : collect();
+        $allowedStudentIds = $attachable ? $this->audience->manageableStudentIds($attachable, $userId, $isAdmin) : collect();
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values();
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds->filter(fn ($id) => $allowedStudentIds->contains($id))->values();
             abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+            abort_if($selectedIds->isEmpty(), 422, 'You have no interns to schedule in this program.');
         } else {
             $selectedIds = collect();
         }
@@ -257,7 +269,7 @@ class ScheduleController extends Controller
             'attachable_id' => $attachable?->id,
             'title' => (string) $payload['title'],
             'description' => $payload['description'] ?? null,
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'location' => $payload['location'] ?? null,
             'starts_at' => (string) $payload['starts_at'],
             'ends_at' => $payload['ends_at'] ?? null,

@@ -123,7 +123,7 @@ class BroadcastNotificationController extends Controller
             abort_unless($this->audience->userCanManage($attachable, (int) $userId), 403);
         }
 
-        $memberIds = $this->audience->studentIds($attachable);
+        $memberIds = $this->audience->manageableStudentIds($attachable, $userId, $isAdmin);
         if ($memberIds->isEmpty()) {
             return collect();
         }

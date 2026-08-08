@@ -19,7 +19,7 @@ function supervisedCohort(User $supervisor): array
     return [$cohort, $program];
 }
 
-it('lets a supervisor broadcast a notification to a cohort of interns', function () {
+it('lets a supervisor broadcast a notification to their program interns', function () {
     Notification::fake();
 
     $supervisor = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
@@ -31,8 +31,8 @@ it('lets a supervisor broadcast a notification to a cohort of interns', function
     $this->actingAs($supervisor)
         ->post('/tutor/notifications', [
             'audience' => 'all_course_students',
-            'attachable_type' => 'cohort',
-            'attachable_id' => $cohort->id,
+            'attachable_type' => 'program',
+            'attachable_id' => $program->id,
             'subject' => 'Standup tomorrow',
             'message' => 'Please be on time.',
         ])
@@ -41,7 +41,26 @@ it('lets a supervisor broadcast a notification to a cohort of interns', function
     Notification::assertSentTo($intern, ManualLmsAnnouncementNotification::class);
 });
 
-it('forbids a supervisor from notifying a cohort they do not supervise', function () {
+it('forbids a supervisor from notifying a whole cohort', function () {
+    Notification::fake();
+
+    $supervisor = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
+    [$cohort] = supervisedCohort($supervisor);
+
+    $this->actingAs($supervisor)
+        ->post('/tutor/notifications', [
+            'audience' => 'all_course_students',
+            'attachable_type' => 'cohort',
+            'attachable_id' => $cohort->id,
+            'subject' => 'Whole cohort',
+            'message' => 'Should not send.',
+        ])
+        ->assertStatus(403);
+
+    Notification::assertNothingSent();
+});
+
+it('forbids a supervisor from notifying a program they do not supervise', function () {
     Notification::fake();
 
     $supervisor = User::factory()->create(['role' => User::ROLE_SUPERVISOR]);
@@ -55,8 +74,8 @@ it('forbids a supervisor from notifying a cohort they do not supervise', functio
     $this->actingAs($supervisor)
         ->post('/tutor/notifications', [
             'audience' => 'all_course_students',
-            'attachable_type' => 'cohort',
-            'attachable_id' => $otherCohort->id,
+            'attachable_type' => 'program',
+            'attachable_id' => $otherProgram->id,
             'subject' => 'Sneaky',
             'message' => 'Should not send.',
         ])
