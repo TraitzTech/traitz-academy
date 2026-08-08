@@ -13,6 +13,7 @@ use App\Models\LiveClassRecording;
 use App\Models\Program;
 use App\Models\User;
 use App\Notifications\Lms\LiveClassScheduledNotification;
+use App\Services\LearningAudienceService;
 use App\Support\LiveClass\GoogleMeetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,8 @@ class LiveClassController extends Controller
 {
     use GeneratesLiveClassMeeting;
     use SyncsLiveClassTargets;
+
+    public function __construct(private readonly LearningAudienceService $audience) {}
 
     public function index(Request $request): Response
     {
@@ -193,18 +196,14 @@ class LiveClassController extends Controller
         $userId = (int) $request->user()->id;
 
         if ($liveClass->access_type === 'course') {
-            $allowedCourseIds = $this->ownedCourses($userId)->pluck('id')->all();
-            $allowedCohortIds = $this->supervisedCohorts($userId)->pluck('id')->all();
-            $allowedProgramIds = $this->supervisedPrograms($userId)->pluck('id')->all();
-
+            // Keep only targets the user actually owns/supervises — same
+            // authorization the other learning-ops tools use.
             $targets = collect($validated['targets'] ?? [])
-                ->filter(function ($target) use ($allowedCourseIds, $allowedCohortIds, $allowedProgramIds) {
-                    return match ($target['type'] ?? null) {
-                        'course' => in_array((int) $target['id'], $allowedCourseIds, true),
-                        'cohort' => in_array((int) $target['id'], $allowedCohortIds, true),
-                        'program' => in_array((int) $target['id'], $allowedProgramIds, true),
-                        default => false,
-                    };
+                ->filter(function ($target) use ($userId) {
+                    $modelClass = LearningAudienceService::TYPES[$target['type'] ?? ''] ?? null;
+                    $model = $modelClass ? $modelClass::find((int) $target['id']) : null;
+
+                    return $model !== null && $this->audience->userCanManage($model, $userId);
                 })
                 ->values()
                 ->all();
@@ -238,18 +237,12 @@ class LiveClassController extends Controller
 
     private function supervisedCohorts(int $userId): \Illuminate\Support\Collection
     {
-        return Cohort::query()
-            ->whereHas('programs', fn ($q) => $q->wherePivot('supervisor_id', $userId))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        return $this->audience->cohortsSupervisedBy($userId)->orderBy('name')->get(['id', 'name']);
     }
 
     private function supervisedPrograms(int $userId): \Illuminate\Support\Collection
     {
-        return Program::query()
-            ->whereHas('cohorts', fn ($q) => $q->wherePivot('supervisor_id', $userId))
-            ->orderBy('title')
-            ->get(['id', 'title']);
+        return $this->audience->programsSupervisedBy($userId)->orderBy('title')->get(['id', 'title']);
     }
 
     private function reachableStudents(int $userId): \Illuminate\Support\Collection
