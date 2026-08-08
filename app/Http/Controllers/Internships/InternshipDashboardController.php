@@ -18,8 +18,9 @@ class InternshipDashboardController extends Controller
     public function index(Request $request, OfficeGeofence $geofence): Response
     {
         $internship = $this->activeInternshipFor($request->user());
-        $internship->load('program:id,title', 'cohort.programs:id,title', 'supervisor:id,name');
+        $internship->load('program:id,title,office_days', 'cohort.programs:id,title', 'supervisor:id,name');
         $today = $this->todayFor($internship);
+        $todayDate = \Carbon\Carbon::parse($today, $internship->timezone());
 
         $attendance = InternshipAttendance::query()
             ->where('internship_id', $internship->id)
@@ -63,6 +64,8 @@ class InternshipDashboardController extends Controller
             ] : null,
             'requiresLocation' => $geofence->isEnforced(),
             'requiresLogbookBeforeClockOut' => (bool) config('internship.require_logbook_before_clock_out', true),
+            'todayIsOfficeDay' => empty($internship->program?->office_days) ? null : $internship->program->isOfficeDay($todayDate),
+            'officeDaysLabel' => $internship->program?->officeDaysLabel(),
         ]);
     }
 }

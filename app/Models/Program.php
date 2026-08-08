@@ -38,6 +38,7 @@ class Program extends Model
         'applications_open_at',
         'applications_close_at',
         'curriculum',
+        'office_days',
     ];
 
     /**
@@ -69,7 +70,37 @@ class Program extends Model
             'end_date' => 'datetime',
             'applications_open_at' => 'datetime',
             'applications_close_at' => 'datetime',
+            'office_days' => 'array',
         ];
+    }
+
+    /**
+     * Whether interns in this program are expected at the office on the
+     * given date, per the program's weekly schedule. Informational only —
+     * nothing in the app hard-blocks clock-in/out based on this.
+     */
+    public function isOfficeDay(\Carbon\CarbonInterface $date): bool
+    {
+        return in_array($date->dayOfWeekIso, $this->office_days ?? [], true);
+    }
+
+    /**
+     * Short weekday list for display (e.g. "Tue, Thu"), or null if this
+     * program has no fixed office schedule configured.
+     */
+    public function officeDaysLabel(): ?string
+    {
+        if (empty($this->office_days)) {
+            return null;
+        }
+
+        $names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        $days = collect($this->office_days)
+            ->filter(fn ($d) => $d >= 1 && $d <= 7)
+            ->sort()
+            ->map(fn ($d) => $names[$d]);
+
+        return $days->isEmpty() ? null : $days->implode(', ');
     }
 
     /**

@@ -87,6 +87,8 @@ class ProgramController extends Controller
             'applications_open_at' => 'nullable|date',
             'applications_close_at' => 'nullable|date|after_or_equal:applications_open_at',
             'curriculum' => 'nullable|string',
+            'office_days' => 'nullable|array',
+            'office_days.*' => 'integer|between:1,7',
         ]);
 
         $slug = Str::slug($validated['title']);
@@ -160,6 +162,8 @@ class ProgramController extends Controller
             'applications_open_at' => 'nullable|date',
             'applications_close_at' => 'nullable|date|after_or_equal:applications_open_at',
             'curriculum' => 'nullable|string',
+            'office_days' => 'nullable|array',
+            'office_days.*' => 'integer|between:1,7',
         ]);
 
         if (isset($validated['title'])) {

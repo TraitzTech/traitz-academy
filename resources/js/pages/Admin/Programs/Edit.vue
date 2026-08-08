@@ -28,6 +28,7 @@ interface Program {
   applications_open_at: string | null
   applications_close_at: string | null
   curriculum: string | null
+  office_days: number[] | null
 }
 
 interface Props {
@@ -63,7 +64,26 @@ const form = useForm({
   applications_open_at: props.program.applications_open_at?.split('T')[0] || '',
   applications_close_at: props.program.applications_close_at?.split('T')[0] || '',
   curriculum: props.program.curriculum || '',
+  office_days: props.program.office_days || [] as number[],
 })
+
+const isInternship = computed(() => ['academic-internship', 'professional-internship'].includes(form.category))
+
+const weekdays = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+]
+
+function toggleOfficeDay(day: number) {
+  form.office_days = form.office_days.includes(day)
+    ? form.office_days.filter((d) => d !== day)
+    : [...form.office_days, day].sort((a, b) => a - b)
+}
 
 const imagePreview = ref<string | null>(
   props.program.image_url
@@ -115,8 +135,6 @@ const handleImageChange = (e: Event) => {
 }
 
 const submit = () => {
-  console.log('Submitting form with data:', form.data())
-
   form.transform((data) => ({
     ...data,
     _method: 'PUT',
@@ -126,11 +144,9 @@ const submit = () => {
     forceFormData: true,
     preserveScroll: true,
     onSuccess: () => {
-      console.log('Update successful!')
-      toast.success('Program updated successfully!')
+      // Flash message handled by global watcher (ProgramController::update flashes 'success')
     },
-    onError: (errors: Record<string, string>) => {
-      console.error('Update failed with errors:', errors)
+    onError: () => {
       toast.error('Failed to update program. Please check the form for errors.')
     },
     onFinish: () => {
@@ -410,6 +426,30 @@ const submit = () => {
             />
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Require CV for applications</span>
           </label>
+        </div>
+      </div>
+
+      <!-- Office schedule (internship programs only) -->
+      <div v-if="isInternship" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Office schedule</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Which weekdays are interns in this program expected at the office? Leave blank if there's no fixed schedule — interns will pick office/remote each day themselves instead.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="day in weekdays"
+            :key="day.value"
+            type="button"
+            :class="[
+              'rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors',
+              form.office_days.includes(day.value)
+                ? 'border-[#381998] bg-[#381998]/10 text-[#381998]'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-gray-600 dark:text-gray-400',
+            ]"
+            @click="toggleOfficeDay(day.value)"
+          >
+            {{ day.label }}
+          </button>
         </div>
       </div>
 
