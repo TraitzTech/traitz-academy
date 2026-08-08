@@ -4,16 +4,16 @@ import { Head } from '@inertiajs/vue3'
 import NotificationComposer from '@/components/notifications/NotificationComposer.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-interface CourseStudent {
+interface Member {
   id: number
   name: string
   email: string
 }
 
-interface CourseOption {
+interface GroupOption {
   id: number
   title: string
-  students: CourseStudent[]
+  students: Member[]
   student_count: number
 }
 
@@ -21,13 +21,21 @@ defineOptions({ layout: AppLayout })
 
 defineProps<{
   mode: 'tutor'
-  courses: CourseOption[]
+  courses: GroupOption[]
+  cohorts: GroupOption[]
+  programs: GroupOption[]
 }>()
 </script>
 
 <template>
   <div>
-    <Head title="Learner Notifications" />
-    <NotificationComposer mode="tutor" :courses="courses" submit-url="/tutor/notifications" />
+    <Head title="Notifications" />
+    <NotificationComposer
+      mode="tutor"
+      :courses="courses"
+      :cohorts="cohorts"
+      :programs="programs"
+      submit-url="/tutor/notifications"
+    />
   </div>
 </template>
