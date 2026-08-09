@@ -39,6 +39,7 @@ class Internship extends Model
         'end_date',
         'status',
         'work_mode',
+        'working_days',
         'completed_at',
     ];
 
@@ -49,7 +50,18 @@ class Internship extends Model
             'logbook_starts_on' => 'date',
             'end_date' => 'date',
             'completed_at' => 'datetime',
+            'working_days' => 'array',
         ];
+    }
+
+    /**
+     * The logbook working days for this intern (Carbon ISO weekday numbers,
+     * 1=Mon..7=Sun): this intern's override if set, else the cohort's, else
+     * the app default.
+     */
+    public function effectiveWorkingDays(): array
+    {
+        return $this->working_days ?? $this->cohort?->effectiveWorkingDays() ?? config('internship.logbook.working_days', [1, 2, 3, 4, 5]);
     }
 
     /**
@@ -131,7 +143,7 @@ class Internship extends Model
      */
     public function isWorkingDay(\Carbon\CarbonInterface $date): bool
     {
-        return in_array($date->dayOfWeekIso, config('internship.logbook.working_days', [1, 2, 3, 4, 5]), true);
+        return in_array($date->dayOfWeekIso, $this->effectiveWorkingDays(), true);
     }
 
     /**
@@ -183,16 +195,25 @@ class Internship extends Model
     }
 
     /**
+     * Distinct dates with a submitted logbook entry, regardless of whether
+     * that date falls on a configured working day — an intern who logs on a
+     * weekend still gets credit for it here rather than it being silently
+     * clamped away by the missed-days subtraction.
+     */
+    public function submittedLogbookDaysCount(): int
+    {
+        return $this->logbookEntries()
+            ->whereNotNull('submitted_at')
+            ->distinct()
+            ->count('date');
+    }
+
+    /**
      * Working days elapsed with no submitted logbook entry, floored at 0.
      */
     public function missedLogbookDaysCount(): int
     {
-        $submittedDays = $this->logbookEntries()
-            ->whereNotNull('submitted_at')
-            ->distinct()
-            ->count('date');
-
-        return max(0, $this->workingDaysElapsed() - $submittedDays);
+        return max(0, $this->workingDaysElapsed() - $this->submittedLogbookDaysCount());
     }
 
     public function scopeActive($query)

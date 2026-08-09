@@ -58,5 +58,6 @@ Route::middleware(['auth', 'verified', 'admin'])
         Route::post('/cohorts/{cohort}/interns/manual', [CohortController::class, 'createIntern'])->name('cohorts.interns.create');
         Route::delete('/cohorts/{cohort}/interns/{internship}', [CohortController::class, 'removeIntern'])->name('cohorts.interns.remove');
         Route::put('/internships/{internship}/supervisor', [CohortController::class, 'updateInternSupervisor'])->name('internships.supervisor');
+        Route::put('/internships/{internship}/working-days', [CohortController::class, 'updateInternWorkingDays'])->name('internships.working-days');
         Route::get('/users/search', [CohortController::class, 'searchUsers'])->name('users.search');
     });

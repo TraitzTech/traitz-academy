@@ -32,6 +32,7 @@ class Cohort extends Model
         'is_intake',
         'timezone',
         'expected_hours_per_day',
+        'working_days',
     ];
 
     protected function casts(): array
@@ -43,7 +44,17 @@ class Cohort extends Model
             'intake_closes_at' => 'date',
             'is_intake' => 'boolean',
             'expected_hours_per_day' => 'decimal:1',
+            'working_days' => 'array',
         ];
+    }
+
+    /**
+     * The logbook working days for interns in this cohort (Carbon ISO weekday
+     * numbers, 1=Mon..7=Sun): this cohort's override if set, else the app default.
+     */
+    public function effectiveWorkingDays(): array
+    {
+        return $this->working_days ?? config('internship.logbook.working_days', [1, 2, 3, 4, 5]);
     }
 
     /**

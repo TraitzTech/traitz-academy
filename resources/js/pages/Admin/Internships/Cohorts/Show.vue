@@ -17,6 +17,8 @@ interface Intern {
   status: string
   supervisor: string | null
   effective_supervisor_id: number | null
+  working_days: number[] | null
+  effective_working_days: number[]
 }
 interface CohortProgram { id: number; title: string; supervisor_id: number | null }
 interface Cohort {
@@ -29,6 +31,7 @@ interface Cohort {
   status: string
   is_intake: boolean
   timezone: string | null
+  working_days: number[] | null
   programs: CohortProgram[]
 }
 interface AvailableIntern { id: number; name: string | null; email: string | null; program: string | null; accepted_at: string | null }
@@ -72,8 +75,24 @@ const settings = useForm({
   status: props.cohort.status,
   is_intake: props.cohort.is_intake ?? false,
   timezone: props.cohort.timezone ?? '',
+  working_days: (props.cohort.working_days ?? [1, 2, 3, 4, 5]) as number[],
   programs: props.cohort.programs.map((p) => ({ program_id: p.id as number | string, supervisor_id: (p.supervisor_id ?? '') as number | string })),
 })
+
+const WEEKDAYS = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+]
+function toggleDay(days: number[], day: number) {
+  const i = days.indexOf(day)
+  if (i === -1) days.push(day)
+  else days.splice(i, 1)
+}
 
 function addProgramRow() {
   settings.programs.push({ program_id: '', supervisor_id: '' })
@@ -114,8 +133,9 @@ const selectedInterns = ref<number[]>([])
 const availProgram = ref('')
 const acceptedFrom = ref('')
 const acceptedTo = ref('')
+const availSearch = ref('')
 const dateFilterActive = computed(() => Boolean(acceptedFrom.value || acceptedTo.value))
-const availFilterActive = computed(() => Boolean(availProgram.value || dateFilterActive.value))
+const availFilterActive = computed(() => Boolean(availProgram.value || dateFilterActive.value || availSearch.value))
 
 // Programs that actually have unassigned interns waiting, with a count each,
 // so the admin can pick one and bulk-add just that program's applicants.
@@ -133,6 +153,8 @@ const availableFiltered = computed(() => props.available.filter((a) => {
   if (!a.accepted_at) return !dateFilterActive.value
   if (acceptedFrom.value && a.accepted_at < acceptedFrom.value) return false
   if (acceptedTo.value && a.accepted_at > acceptedTo.value) return false
+  const search = availSearch.value.trim().toLowerCase()
+  if (search && !(a.name?.toLowerCase().includes(search) || a.email?.toLowerCase().includes(search))) return false
   return true
 }))
 const allVisibleSelected = computed(() => {
@@ -144,6 +166,7 @@ function clearAvailFilters() {
   availProgram.value = ''
   acceptedFrom.value = ''
   acceptedTo.value = ''
+  availSearch.value = ''
 }
 function toggleSelectedIntern(id: number) {
   selectedInterns.value = selectedInterns.value.includes(id)
@@ -281,6 +304,32 @@ function removeIntern(internshipId: number) {
 function setInternSupervisor(internshipId: number, supervisorId: string) {
   router.put(`/admin/internships/internships/${internshipId}/supervisor`, { supervisor_id: supervisorId || null }, { preserveScroll: true })
 }
+
+// Per-intern working-days override popover — a shared button toggles editing
+// for the row whose id is currently open; other rows' state is untouched
+// until they're opened themselves.
+const editingDaysFor = ref<number | null>(null)
+const editingDays = ref<number[]>([])
+function openDaysEditor(intern: Intern) {
+  editingDaysFor.value = intern.id
+  editingDays.value = [...(intern.working_days ?? intern.effective_working_days)]
+}
+function closeDaysEditor() {
+  editingDaysFor.value = null
+}
+function saveInternWorkingDays(internshipId: number) {
+  router.put(`/admin/internships/internships/${internshipId}/working-days`, { working_days: editingDays.value }, {
+    preserveScroll: true,
+    onSuccess: () => { editingDaysFor.value = null },
+  })
+}
+function clearInternWorkingDays(internshipId: number) {
+  router.put(`/admin/internships/internships/${internshipId}/working-days`, { working_days: [] }, {
+    preserveScroll: true,
+    onSuccess: () => { editingDaysFor.value = null },
+  })
+}
+const DAY_LETTERS: Record<number, string> = { 1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S', 7: 'S' }
 </script>
 
 <template>
@@ -357,6 +406,22 @@ function setInternSupervisor(internshipId: number, supervisorId: string) {
             <label :class="label">End date</label>
             <input v-model="settings.end_date" type="date" :class="field" />
           </div>
+        </div>
+
+        <div>
+          <label :class="label">Working days (logbook)</label>
+          <div class="flex flex-wrap gap-2">
+            <label
+              v-for="d in WEEKDAYS"
+              :key="d.value"
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium dark:border-gray-600"
+              :class="settings.working_days.includes(d.value) ? 'bg-[#381998]/10 text-[#381998] border-[#381998]/40' : 'text-gray-500 dark:text-gray-300'"
+            >
+              <input type="checkbox" class="hidden" :checked="settings.working_days.includes(d.value)" @change="toggleDay(settings.working_days, d.value)" />
+              {{ d.label }}
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-500">Interns default to these days unless a per-intern override is set below.</p>
         </div>
 
         <div class="rounded-xl border border-dashed border-gray-300 p-4 dark:border-gray-600">
@@ -469,6 +534,13 @@ function setInternSupervisor(internshipId: number, supervisorId: string) {
             </div>
 
             <div class="flex flex-wrap items-end gap-3">
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-gray-500">Search</label>
+                <div class="relative">
+                  <Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <input v-model="availSearch" type="text" placeholder="Name or email" :class="[fieldSm, 'w-48 pl-8']" />
+                </div>
+              </div>
               <div>
                 <label class="mb-1 block text-xs font-semibold text-gray-500">Accepted from</label>
                 <input v-model="acceptedFrom" type="date" :class="fieldSm" />
@@ -629,13 +701,14 @@ function setInternSupervisor(internshipId: number, supervisorId: string) {
               <th class="px-6 py-3">Intern</th>
               <th class="px-6 py-3">Program</th>
               <th class="px-6 py-3">Supervisor (override)</th>
+              <th class="px-6 py-3">Working days</th>
               <th class="px-6 py-3"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
             <template v-for="(row, idx) in rosterRows" :key="row.type === 'intern' ? `i-${row.intern.id}` : `h-${row.program}-${idx}`">
               <tr v-if="row.type === 'header'" class="bg-gray-50 dark:bg-gray-900/40">
-                <td colspan="4" class="px-6 py-2 text-xs font-bold uppercase tracking-wide text-[#381998] dark:text-[#b9a6f0]">
+                <td colspan="5" class="px-6 py-2 text-xs font-bold uppercase tracking-wide text-[#381998] dark:text-[#b9a6f0]">
                   {{ row.program }} <span class="ml-1 font-medium text-gray-400">· {{ row.count }}</span>
                 </td>
               </tr>
@@ -654,6 +727,37 @@ function setInternSupervisor(internshipId: number, supervisorId: string) {
                     <option value="">Use program supervisor</option>
                     <option v-for="s in supervisors" :key="s.id" :value="s.id">{{ s.name }}</option>
                   </select>
+                </td>
+                <td class="relative px-6 py-3">
+                  <button
+                    type="button"
+                    class="rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-[#381998] hover:text-[#381998] dark:border-gray-600 dark:text-gray-300"
+                    @click="editingDaysFor === row.intern.id ? closeDaysEditor() : openDaysEditor(row.intern)"
+                  >
+                    <span v-for="v in [1, 2, 3, 4, 5, 6, 7]" :key="v" :class="row.intern.effective_working_days.includes(v) ? 'font-bold text-[#381998] dark:text-[#b9a6f0]' : 'text-gray-300 dark:text-gray-600'">{{ DAY_LETTERS[v] }}</span>
+                    <span v-if="row.intern.working_days" class="ml-1 text-[10px] text-gray-400">(override)</span>
+                  </button>
+                  <div v-if="editingDaysFor === row.intern.id" class="absolute right-6 top-full z-10 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-600 dark:bg-gray-800">
+                    <div class="mb-2 flex flex-wrap gap-1.5">
+                      <label
+                        v-for="d in WEEKDAYS"
+                        :key="d.value"
+                        class="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-[11px] font-medium dark:border-gray-600"
+                        :class="editingDays.includes(d.value) ? 'bg-[#381998]/10 text-[#381998] border-[#381998]/40' : 'text-gray-500 dark:text-gray-300'"
+                      >
+                        <input type="checkbox" class="hidden" :checked="editingDays.includes(d.value)" @change="toggleDay(editingDays, d.value)" />
+                        {{ d.label }}
+                      </label>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                      <button type="button" class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" @click="clearInternWorkingDays(row.intern.id)">
+                        Use cohort default
+                      </button>
+                      <button type="button" class="rounded-lg bg-[#381998] px-3 py-1 text-[11px] font-semibold text-white hover:bg-[#000928]" @click="saveInternWorkingDays(row.intern.id)">
+                        Save
+                      </button>
+                    </div>
+                  </div>
                 </td>
                 <td class="px-6 py-3 text-right">
                   <button class="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:underline" @click="removeIntern(row.intern.id)">

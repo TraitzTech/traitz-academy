@@ -39,8 +39,24 @@ const form = useForm({
   is_intake: false,
   timezone: '',
   expected_hours_per_day: '' as string | number,
+  working_days: [1, 2, 3, 4, 5] as number[],
   programs: [{ program_id: '' as string | number, supervisor_id: '' as string | number }],
 })
+
+const WEEKDAYS = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+]
+function toggleDay(days: number[], day: number) {
+  const i = days.indexOf(day)
+  if (i === -1) days.push(day)
+  else days.splice(i, 1)
+}
 
 function addProgramRow() {
   form.programs.push({ program_id: '', supervisor_id: '' })
@@ -137,6 +153,22 @@ const statusClass: Record<string, string> = {
             <label class="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">Expected hours / day</label>
             <input v-model="form.expected_hours_per_day" type="number" min="0" max="24" step="0.5" placeholder="e.g. 8" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
           </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">Working days (logbook)</label>
+          <div class="flex flex-wrap gap-2">
+            <label
+              v-for="d in WEEKDAYS"
+              :key="d.value"
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium dark:border-gray-600"
+              :class="form.working_days.includes(d.value) ? 'bg-[#381998]/10 text-[#381998] border-[#381998]/40' : 'text-gray-500 dark:text-gray-300'"
+            >
+              <input type="checkbox" class="hidden" :checked="form.working_days.includes(d.value)" @change="toggleDay(form.working_days, d.value)" />
+              {{ d.label }}
+            </label>
+          </div>
+          <p class="mt-1 text-xs text-gray-500">Interns in this cohort must submit a logbook entry on these days. Leave the app default (Mon–Fri) unless this cohort works a different schedule.</p>
         </div>
 
         <!-- Application window (stamped onto all programs in this cohort) -->

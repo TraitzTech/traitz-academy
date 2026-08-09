@@ -32,6 +32,7 @@ class CohortController extends Controller
                 'name' => $c->name,
                 'status' => $c->status,
                 'is_intake' => $c->is_intake,
+                'working_days' => $c->working_days,
                 'start_date' => optional($c->start_date)->toDateString(),
                 'end_date' => optional($c->end_date)->toDateString(),
                 'internships_count' => $c->internships_count,
@@ -51,6 +52,7 @@ class CohortController extends Controller
         $programs = $validated['programs'] ?? [];
         unset($validated['programs'], $validated['status']);
         $validated['timezone'] = ($validated['timezone'] ?? null) ?: config('app.timezone', 'UTC');
+        $validated['working_days'] = empty($validated['working_days'] ?? null) ? null : array_values($validated['working_days']);
 
         $cohort = Cohort::query()->create([
             ...$validated,
@@ -88,6 +90,8 @@ class CohortController extends Controller
                 'status' => $i->status,
                 'supervisor' => $i->supervisor?->name,
                 'effective_supervisor_id' => $i->effectiveSupervisorId(),
+                'working_days' => $i->working_days,
+                'effective_working_days' => $i->effectiveWorkingDays(),
             ]);
 
         // Users already in this cohort — excluded from the pool below so we
@@ -125,6 +129,7 @@ class CohortController extends Controller
                 'status' => $cohort->status,
                 'is_intake' => $cohort->is_intake,
                 'timezone' => $cohort->timezone,
+                'working_days' => $cohort->working_days,
                 'programs' => $programList,
             ],
             'interns' => $interns,
@@ -141,6 +146,7 @@ class CohortController extends Controller
         unset($validated['programs']);
         $validated['status'] = $validated['status'] ?? $cohort->status;
         $validated['timezone'] = ($validated['timezone'] ?? null) ?: $cohort->timezone ?: config('app.timezone', 'UTC');
+        $validated['working_days'] = empty($validated['working_days'] ?? null) ? null : array_values($validated['working_days']);
 
         $cohort->update($validated);
 
@@ -250,7 +256,31 @@ class CohortController extends Controller
                 return back()->with('error', "{$user->name} is already an intern in this cohort.");
             }
 
-            DB::transaction(fn () => $this->placeIntern($cohort, $user->id, $programId));
+            DB::transaction(function () use ($cohort, $user, $programId) {
+                // Reuse a pre-existing standalone record for this user+program
+                // (e.g. auto-created on application acceptance) instead of
+                // inserting a second Internship row that would silently orphan
+                // the first — leaving their real attendance/logbook data on a
+                // record that no longer shows up anywhere.
+                $existing = Internship::query()
+                    ->whereNull('cohort_id')
+                    ->where('user_id', $user->id)
+                    ->where('program_id', $programId)
+                    ->first();
+
+                if ($existing) {
+                    $existing->update([
+                        'cohort_id' => $cohort->id,
+                        'start_date' => $existing->start_date ?? $cohort->start_date,
+                        'logbook_starts_on' => $existing->logbook_starts_on ?? $this->cohortToday($cohort),
+                        'end_date' => $existing->end_date ?? $cohort->end_date,
+                    ]);
+
+                    return;
+                }
+
+                $this->placeIntern($cohort, $user->id, $programId);
+            });
 
             return back()->with('success', "{$user->name} added as an intern.");
         }
@@ -335,6 +365,23 @@ class CohortController extends Controller
         return back()->with('success', 'Supervisor updated.');
     }
 
+    /**
+     * Set a per-intern working-days override (null/empty clears it, falling
+     * back to the cohort's working days, then the app default).
+     */
+    public function updateInternWorkingDays(Request $request, Internship $internship): RedirectResponse
+    {
+        $validated = $request->validate([
+            'working_days' => ['nullable', 'array'],
+            'working_days.*' => ['integer', 'between:1,7'],
+        ]);
+
+        $days = $validated['working_days'] ?? [];
+        $internship->update(['working_days' => empty($days) ? null : array_values($days)]);
+
+        return back()->with('success', 'Working days updated.');
+    }
+
     private function validateCohort(Request $request, ?Cohort $cohort = null): array
     {
         return $request->validate([
@@ -347,6 +394,8 @@ class CohortController extends Controller
             'is_intake' => ['boolean'],
             'timezone' => ['nullable', 'string', 'max:64'],
             'expected_hours_per_day' => ['nullable', 'numeric', 'min:0', 'max:24'],
+            'working_days' => ['nullable', 'array'],
+            'working_days.*' => ['integer', 'between:1,7'],
             'status' => ['sometimes', 'in:upcoming,active,completed,cancelled'],
             'programs' => ['array'],
             'programs.*.program_id' => ['required', 'exists:programs,id'],
