@@ -70,3 +70,24 @@ it('computes missed logbook days as working days elapsed minus submitted days', 
     expect($internship->workingDaysElapsed())->toBe(6);
     expect($internship->missedLogbookDaysCount())->toBe(4);
 });
+
+it('counts a submission on a non-working day toward submitted days without going negative on missed days', function () {
+    // Placed on a Saturday, "today" is still the weekend — zero working days
+    // have elapsed, but the intern already submitted an entry that day.
+    Carbon\Carbon::setTestNow(Carbon\Carbon::parse('2026-08-09 22:00:00')); // a Sunday
+
+    $user = User::factory()->create();
+    $internship = Internship::factory()->create([
+        'user_id' => $user->id,
+        'status' => 'active',
+        'start_date' => '2026-08-08',
+        'logbook_starts_on' => '2026-08-08',
+        'end_date' => now()->addMonth()->toDateString(),
+    ]);
+
+    LogbookEntry::factory()->submitted()->create(['internship_id' => $internship->id, 'date' => '2026-08-08']);
+
+    expect($internship->workingDaysElapsed())->toBe(0);
+    expect($internship->submittedLogbookDaysCount())->toBe(1);
+    expect($internship->missedLogbookDaysCount())->toBe(0);
+});

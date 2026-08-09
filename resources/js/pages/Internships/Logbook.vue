@@ -63,6 +63,19 @@ function statusClass(status: string) {
   return statusStyles[status] ?? statusStyles.draft
 }
 
+// "approved" reads to interns as "reviewed" — the supervisor acknowledged the
+// entry, not necessarily graded it (nothing is gated on this status).
+const statusLabels: Record<string, string> = {
+  approved: 'Reviewed',
+  needs_revision: 'Needs revision',
+  submitted: 'Submitted',
+  draft: 'Draft',
+}
+
+function statusLabel(status: string) {
+  return statusLabels[status] ?? status.replace('_', ' ')
+}
+
 function fmtDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 }
@@ -115,8 +128,8 @@ function toggleExpanded(id: number) {
               <h1 class="text-xl font-bold leading-tight text-[#000928] dark:text-white">{{ fmtDate(today) }}</h1>
             </div>
           </div>
-          <span v-if="todayEntry" :class="['shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize', statusClass(todayEntry.status)]">
-            {{ todayEntry.status.replace('_', ' ') }}
+          <span v-if="todayEntry" :class="['shrink-0 rounded-full px-3 py-1 text-xs font-semibold', statusClass(todayEntry.status)]">
+            {{ statusLabel(todayEntry.status) }}
           </span>
         </div>
 
@@ -147,7 +160,7 @@ function toggleExpanded(id: number) {
         <div v-if="!formOpen" class="flex flex-wrap items-center justify-between gap-4">
           <div v-if="todayEntry" class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
-              <span :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize', statusClass(todayEntry.status)]">{{ todayEntry.status.replace('_', ' ') }}</span>
+              <span :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', statusClass(todayEntry.status)]">{{ statusLabel(todayEntry.status) }}</span>
               <span v-if="todayEntry.hours_spent" class="inline-flex items-center gap-0.5 text-xs text-gray-400"><Clock class="h-3 w-3" />{{ todayEntry.hours_spent }}h</span>
             </div>
             <p class="mt-1.5 truncate text-sm text-gray-500 dark:text-gray-400">{{ preview(todayEntry.content) }}</p>
@@ -260,7 +273,7 @@ function toggleExpanded(id: number) {
           </div>
           <div v-if="logbookLocked" class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/40 dark:bg-emerald-900/20">
             <CheckCircle2 class="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <p class="text-sm font-medium text-emerald-700 dark:text-emerald-300">Approved by your supervisor — locked.</p>
+            <p class="text-sm font-medium text-emerald-700 dark:text-emerald-300">Reviewed by your supervisor — locked.</p>
           </div>
         </fieldset>
       </div>
@@ -292,7 +305,7 @@ function toggleExpanded(id: number) {
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm font-bold text-[#000928] dark:text-white">{{ fmtDateShort(entry.date) }}</span>
-                <span :class="['rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize', statusClass(entry.status)]">{{ entry.status.replace('_', ' ') }}</span>
+                <span :class="['rounded-full px-2 py-0.5 text-[10px] font-semibold', statusClass(entry.status)]">{{ statusLabel(entry.status) }}</span>
                 <span v-if="entry.hours_spent" class="inline-flex items-center gap-0.5 text-xs text-gray-400"><Clock class="h-3 w-3" />{{ entry.hours_spent }}h</span>
                 <span v-if="entry.blockers" class="inline-flex items-center gap-0.5 text-xs text-amber-500" title="Had difficulties"><AlertTriangle class="h-3 w-3" /></span>
               </div>
