@@ -51,10 +51,18 @@ class CreateInternshipFromApplication
         }
 
         return DB::transaction(function () use ($application, $cohort, $supervisorId) {
-            $internship = Internship::query()->firstOrNew([
-                'cohort_id' => $cohort?->id,
-                'user_id' => $application->user_id,
-            ]);
+            // A user may have re-applied and been accepted more than once for
+            // the same program — reuse their existing engagement in that
+            // program (regardless of cohort) rather than minting a second
+            // standalone Internship that would silently orphan the first.
+            $internship = Internship::query()
+                ->where('user_id', $application->user_id)
+                ->where('program_id', $application->program_id)
+                ->first()
+                ?? new Internship([
+                    'cohort_id' => $cohort?->id,
+                    'user_id' => $application->user_id,
+                ]);
 
             // Preserve an existing record's data; only fill on first creation.
             if (! $internship->exists) {
@@ -70,9 +78,25 @@ class CreateInternshipFromApplication
                     'status' => Internship::STATUS_ACTIVE,
                 ]);
                 $internship->save();
-            } elseif ($supervisorId !== null && $internship->supervisor_id === null) {
-                // Allow assigning a per-intern supervisor on a later pass.
-                $internship->update(['supervisor_id' => $supervisorId]);
+            } else {
+                $updates = [];
+
+                if ($supervisorId !== null && $internship->supervisor_id === null) {
+                    // Allow assigning a per-intern supervisor on a later pass.
+                    $updates['supervisor_id'] = $supervisorId;
+                }
+
+                if ($cohort !== null && $internship->cohort_id === null) {
+                    // A re-application accepted straight into a cohort should
+                    // actually place them, not leave the existing record standalone.
+                    $updates['cohort_id'] = $cohort->id;
+                    $updates['start_date'] = $internship->start_date ?? $cohort->start_date;
+                    $updates['end_date'] = $internship->end_date ?? $cohort->end_date;
+                }
+
+                if ($updates !== []) {
+                    $internship->update($updates);
+                }
             }
 
             return $internship;

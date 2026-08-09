@@ -34,6 +34,7 @@ class BackfillInternshipsFromApplications extends Command
         $this->info(($dryRun ? '[dry run] ' : '')."Found {$applications->count()} accepted applicant(s) without an internship record.");
 
         $created = 0;
+        $skipped = 0;
         foreach ($applications as $application) {
             $this->line("  • {$application->first_name} {$application->last_name} — program #{$application->program_id} (accepted ".optional($application->reviewed_at)->toDateString().')');
 
@@ -41,9 +42,19 @@ class BackfillInternshipsFromApplications extends Command
                 continue;
             }
 
-            // Idempotent per application; left standalone (cohort_id null) so an
-            // admin places them into the right cohort via the UI. The original
-            // acceptance date is preserved through the linked application.
+            // A user may have more than one accepted application for the same
+            // program (a re-application) — only one of them should have ever
+            // become an internship. Dedupe by (user, program), not just by
+            // whether *this* application already has one linked.
+            if (Internship::where('user_id', $application->user_id)->where('program_id', $application->program_id)->exists()) {
+                $skipped++;
+
+                continue;
+            }
+
+            // Left standalone (cohort_id null) so an admin places them into the
+            // right cohort via the UI. The original acceptance date is
+            // preserved through the linked application.
             Internship::query()->firstOrCreate(
                 ['application_id' => $application->id],
                 [
@@ -54,6 +65,10 @@ class BackfillInternshipsFromApplications extends Command
                 ],
             );
             $created++;
+        }
+
+        if ($skipped > 0) {
+            $this->comment("Skipped {$skipped} application(s) whose applicant already has an internship in that program.");
         }
 
         if ($dryRun) {

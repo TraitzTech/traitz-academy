@@ -71,14 +71,34 @@ it('rejects adding interns to a closed cohort', function () {
     expect($intern->fresh()->cohort_id)->toBeNull();
 });
 
-it('skips a user already in the cohort instead of hitting the unique constraint', function () {
+it('skips a user already in the cohort under a different program instead of hitting the unique constraint', function () {
+    $admin = User::factory()->create(['role' => User::ROLE_CTO]);
+    [$cohort, $programA] = makeCohortWithProgram();
+    $programB = Program::factory()->create(['category' => 'professional-internship']);
+    $cohort->programs()->attach($programB->id, ['supervisor_id' => null]);
+    $user = User::factory()->create();
+
+    // Same user already assigned to the cohort, but under a different program it runs.
+    Internship::factory()->create(['program_id' => $programB->id, 'cohort_id' => $cohort->id, 'user_id' => $user->id]);
+    // A standalone application for this cohort's other program.
+    $standalone = Internship::factory()->create(['program_id' => $programA->id, 'cohort_id' => null, 'user_id' => $user->id]);
+
+    $this->actingAs($admin)
+        ->post("/admin/internships/cohorts/{$cohort->id}/interns", [
+            'internship_ids' => [$standalone->id],
+        ])
+        ->assertRedirect();
+
+    // The standalone record stays unassigned — a user only holds one slot per cohort.
+    expect($standalone->fresh()->cohort_id)->toBeNull();
+    expect(Internship::where('cohort_id', $cohort->id)->where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('reuses an existing standalone record for the same user+program instead of erroring', function () {
     $admin = User::factory()->create(['role' => User::ROLE_CTO]);
     [$cohort, $program] = makeCohortWithProgram();
     $user = User::factory()->create();
 
-    // Same user already assigned to the cohort under this program.
-    Internship::factory()->create(['program_id' => $program->id, 'cohort_id' => $cohort->id, 'user_id' => $user->id]);
-    // A second, standalone record for the same user (e.g. a second application).
     $standalone = Internship::factory()->create(['program_id' => $program->id, 'cohort_id' => null, 'user_id' => $user->id]);
 
     $this->actingAs($admin)
@@ -87,7 +107,6 @@ it('skips a user already in the cohort instead of hitting the unique constraint'
         ])
         ->assertRedirect();
 
-    // The standalone record stays unassigned — no duplicate, no 500.
-    expect($standalone->fresh()->cohort_id)->toBeNull();
-    expect(Internship::where('cohort_id', $cohort->id)->where('user_id', $user->id)->count())->toBe(1);
+    expect($standalone->fresh()->cohort_id)->toBe($cohort->id);
+    expect(Internship::where('user_id', $user->id)->where('program_id', $program->id)->count())->toBe(1);
 });
