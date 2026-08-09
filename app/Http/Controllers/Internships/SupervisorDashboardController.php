@@ -26,7 +26,7 @@ class SupervisorDashboardController extends Controller
 
         $internships = Internship::query()
             ->forSupervisor($user)
-            ->with('intern:id,name,email', 'program:id,title', 'cohort:id,name')
+            ->with('intern:id,name,email', 'program:id,title', 'cohort:id,name,timezone')
             ->withCount(['logbookEntries as pending_reviews' => fn ($q) => $q->where('status', LogbookEntry::STATUS_SUBMITTED)])
             ->get();
 
