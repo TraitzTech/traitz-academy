@@ -99,6 +99,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'ensure.phone'])
     ->name('dashboard');
 
+Route::get('/dashboard/programs', [DashboardController::class, 'programs'])
+    ->middleware(['auth', 'verified', 'ensure.phone'])
+    ->name('dashboard.programs');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/lesson-content/media', [LessonContentMediaController::class, 'store'])
         ->name('lesson-content.upload-media');

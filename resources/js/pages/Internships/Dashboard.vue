@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { AlertTriangle, ArrowRight, Briefcase, Building2, CalendarRange, CheckCircle2, Clock, Home, Laptop, LogIn, LogOut, MapPin, NotebookPen, Sparkles, UserCheck, Users } from 'lucide-vue-next'
+import { AlertTriangle, ArrowRight, Building2, CalendarRange, CheckCircle2, Clock, Home, Laptop, LogIn, LogOut, MapPin, NotebookPen, Sparkles, UserCheck, Users } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
@@ -24,6 +24,19 @@ const props = defineProps<{
 
 const toast = useToast()
 const busy = ref(false)
+
+// "approved" reads as "reviewed" — it's an acknowledgment, not a grade, and
+// nothing is gated on it.
+const logbookStatusLabels: Record<string, string> = {
+  approved: 'Reviewed',
+  needs_revision: 'Needs revision',
+  submitted: 'Submitted',
+  draft: 'Draft',
+}
+
+function logbookStatusLabel(status: string) {
+  return logbookStatusLabels[status] ?? status.replace('_', ' ')
+}
 
 const clockedIn = computed(() => !!props.attendance?.clock_in_at)
 const clockedOut = computed(() => !!props.attendance?.clock_out_at)
@@ -130,19 +143,13 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
 
     <!-- Overview -->
     <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div class="h-1.5 bg-gradient-to-r from-[#381998] via-[#42b6c5] to-[#000928]"></div>
       <div class="p-6">
         <div class="flex flex-wrap items-start justify-between gap-3">
-          <div class="flex items-start gap-3">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#381998]/10">
-              <Briefcase class="h-5 w-5 text-[#381998]" />
-            </div>
-            <div>
-              <h1 class="text-xl font-bold text-[#000928] dark:text-white">{{ internship.program || 'Internship' }}</h1>
-              <p v-if="internship.cohort" class="mt-0.5 inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                <Users class="h-3.5 w-3.5" /> {{ internship.cohort }}
-              </p>
-            </div>
+          <div>
+            <h1 class="text-xl font-bold text-[#000928] dark:text-white">{{ internship.program || 'Internship' }}</h1>
+            <p v-if="internship.cohort" class="mt-0.5 inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+              <Users class="h-3.5 w-3.5" /> {{ internship.cohort }}
+            </p>
           </div>
           <span :class="['shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize', statusBadgeClass]">{{ internship.status }}</span>
         </div>
@@ -170,8 +177,6 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
 
     <!-- Today: one unified journal panel, not a wall of separate boxes -->
     <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div class="h-1.5 bg-gradient-to-r from-[#42b6c5] to-[#381998]"></div>
-
       <div class="p-6 sm:p-8">
         <!-- Header: date + status pills -->
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -182,12 +187,12 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
           <span
             v-if="logbook"
             :class="[
-              'shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize',
+              'shrink-0 rounded-full px-3 py-1 text-xs font-semibold',
               logbook.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                 : logbook.status === 'needs_revision' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200',
             ]"
-          >Logbook {{ logbook.status.replace('_', ' ') }}</span>
+          >Logbook {{ logbookStatusLabel(logbook.status) }}</span>
         </div>
 
         <!-- Attendance -->
@@ -254,9 +259,7 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
                       clockedIn ? 'border-[#381998]/20 bg-[#381998]/5' : 'border-dashed border-gray-200 dark:border-gray-600',
                     ]"
                   >
-                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#381998]/10">
-                      <LogIn class="h-3.5 w-3.5 text-[#381998]" />
-                    </div>
+                    <LogIn class="h-4 w-4 shrink-0 text-[#381998]" />
                     <div class="leading-tight">
                       <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">In</p>
                       <p class="text-sm font-bold text-[#000928] dark:text-white">{{ fmtTime(attendance?.clock_in_at ?? null) }}</p>
@@ -280,9 +283,7 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
                     v-if="clockedOut"
                     class="flex shrink-0 items-center gap-2 rounded-xl border border-[#42b6c5]/20 bg-[#42b6c5]/5 px-3.5 py-2.5"
                   >
-                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#42b6c5]/10">
-                      <LogOut class="h-3.5 w-3.5 text-[#2a8a96]" />
-                    </div>
+                    <LogOut class="h-4 w-4 shrink-0 text-[#2a8a96]" />
                     <div class="leading-tight">
                       <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Out</p>
                       <p class="text-sm font-bold text-[#000928] dark:text-white">{{ fmtTime(attendance?.clock_out_at ?? null) }}</p>
@@ -329,9 +330,7 @@ const logbookStatusClass = computed(() => logbookStatusStyles[props.logbook?.sta
         <div class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#42b6c5]/10">
-                <NotebookPen class="h-4 w-4 text-[#2a8a96]" />
-              </div>
+              <NotebookPen class="h-4 w-4 shrink-0 text-[#2a8a96]" />
               <div>
                 <p class="text-sm font-semibold text-[#000928] dark:text-white">Today's logbook</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Required every working day — office or not.</p>

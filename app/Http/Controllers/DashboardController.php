@@ -7,6 +7,13 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    /**
+     * Cards shown inline on the dashboard before linking out to the full
+     * "My Programs" list — keeps the page short for interns accepted into
+     * several programs.
+     */
+    private const INLINE_PAYMENT_LIMIT = 3;
+
     public function index()
     {
         $user = auth()->user();
@@ -69,7 +76,53 @@ class DashboardController extends Controller
             ->filter()
             ->values();
 
-        $paymentSummaries = $applications
+        $paymentSummaries = $this->buildPaymentSummaries($applications);
+
+        // Outstanding balances first (most actionable), then most recent —
+        // so the capped inline list surfaces what actually needs attention.
+        $orderedSummaries = $paymentSummaries
+            ->sortBy([
+                fn ($a, $b) => ($a['remaining_amount'] > 0 ? 0 : 1) <=> ($b['remaining_amount'] > 0 ? 0 : 1),
+                fn ($a, $b) => $b['application_id'] <=> $a['application_id'],
+            ])
+            ->values();
+
+        return Inertia::render('Dashboard', [
+            'user' => $user,
+            'applications' => $applications,
+            'registrations' => $registrations,
+            'interviews' => $availableInterviews,
+            'scheduledInterviews' => $scheduledInterviews,
+            'paymentSummaries' => $orderedSummaries->take(self::INLINE_PAYMENT_LIMIT)->values(),
+            'paymentSummariesTotal' => $orderedSummaries->count(),
+        ]);
+    }
+
+    /**
+     * Full "My Programs" list — every accepted application's payment
+     * progress, without the dashboard's inline cap.
+     */
+    public function programs()
+    {
+        $user = auth()->user();
+
+        $applications = $user->applications()->with(['program', 'interview'])->latest()->get();
+        $paymentSummaries = $this->buildPaymentSummaries($applications)
+            ->sortByDesc('application_id')
+            ->values();
+
+        return Inertia::render('Dashboard/Programs', [
+            'paymentSummaries' => $paymentSummaries,
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Application>  $applications
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function buildPaymentSummaries($applications)
+    {
+        return $applications
             ->where('status', 'accepted')
             ->map(function ($application) {
                 $programPrice = (float) ($application->program?->price ?? 0);
@@ -105,14 +158,5 @@ class DashboardController extends Controller
                 ];
             })
             ->values();
-
-        return Inertia::render('Dashboard', [
-            'user' => $user,
-            'applications' => $applications,
-            'registrations' => $registrations,
-            'interviews' => $availableInterviews,
-            'scheduledInterviews' => $scheduledInterviews,
-            'paymentSummaries' => $paymentSummaries,
-        ]);
     }
 }
