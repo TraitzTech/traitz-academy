@@ -27,6 +27,20 @@ function fmt(iso: string | null) {
   return iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
+// "approved" reads as "reviewed" here — nothing is gated on this status, it's
+// an acknowledgment, not a grade. "needs_revision" stays a real signal since
+// it reopens the entry for the intern to edit.
+const statusLabels: Record<string, string> = {
+  approved: 'Reviewed',
+  needs_revision: 'Needs revision',
+  submitted: 'Submitted',
+  draft: 'Draft',
+}
+
+function statusLabel(status: string) {
+  return statusLabels[status] ?? status.replace('_', ' ')
+}
+
 function review(entryId: number, status: 'approved' | 'needs_revision') {
   router.put(`/supervisor/interns/logbook/${entryId}/review`, {
     status,
@@ -96,7 +110,7 @@ const attStatus: Record<string, string> = {
         <div v-for="e in logbook" :key="e.id" class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
           <div class="mb-2 flex items-center justify-between">
             <span class="text-sm font-semibold text-[#000928] dark:text-white">{{ e.date }}</span>
-            <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-200">{{ e.status.replace('_', ' ') }}</span>
+            <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-200">{{ statusLabel(e.status) }}</span>
           </div>
           <div class="prose prose-sm max-w-none text-gray-700 dark:text-gray-200 dark:prose-invert" v-html="lessonBodyHtml(e.content, 'No entry text.')" />
           <div class="mt-2 grid gap-2 text-xs text-gray-500 sm:grid-cols-2">
@@ -109,7 +123,7 @@ const attStatus: Record<string, string> = {
           <div v-if="e.status === 'submitted'" class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
             <textarea v-model="feedback[e.id]" rows="2" placeholder="Feedback (optional)…" class="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
             <div class="mt-2 flex gap-2">
-              <button class="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700" @click="review(e.id, 'approved')">Approve</button>
+              <button class="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-green-700" @click="review(e.id, 'approved')">Mark reviewed</button>
               <button class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-600" @click="review(e.id, 'needs_revision')">Request revision</button>
             </div>
           </div>

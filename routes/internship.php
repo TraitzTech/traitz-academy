@@ -43,6 +43,15 @@ Route::middleware(['auth', 'verified', 'ensure.phone'])
         Route::post('/{internship}/attendance', [SupervisorController::class, 'markAttendance'])->name('attendance.mark');
     });
 
+// Supervisor: read-only view of cohorts they have interns in.
+Route::middleware(['auth', 'verified', 'ensure.phone'])
+    ->prefix('supervisor/cohorts')
+    ->name('supervisor.cohorts.')
+    ->group(function () {
+        Route::get('/', [SupervisorController::class, 'cohorts'])->name('index');
+        Route::get('/{cohort}', [SupervisorController::class, 'cohortShow'])->name('show');
+    });
+
 // Admin/coordinator: cohort management + supervisor assignment.
 Route::middleware(['auth', 'verified', 'admin'])
     ->prefix('admin/internships')

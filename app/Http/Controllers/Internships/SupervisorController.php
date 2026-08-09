@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Internships;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cohort;
 use App\Models\Internship;
 use App\Models\InternshipAttendance;
 use App\Models\LogbookEntry;
@@ -67,7 +68,7 @@ class SupervisorController extends Controller
     {
         $this->authorize('view', $internship);
 
-        $internship->load('intern:id,name,email', 'program:id,title', 'cohort:id,name');
+        $internship->load('intern:id,name,email', 'program:id,title', 'cohort:id,name,timezone');
 
         $attendance = InternshipAttendance::query()
             ->where('internship_id', $internship->id)
@@ -100,7 +101,8 @@ class SupervisorController extends Controller
             ]);
 
         $workingDaysElapsed = $internship->workingDaysElapsed();
-        $missedLogbookDays = $internship->missedLogbookDaysCount();
+        $submittedLogbookDays = $internship->submittedLogbookDaysCount();
+        $missedLogbookDays = max(0, $workingDaysElapsed - $submittedLogbookDays);
 
         return Inertia::render('Internships/Supervisor/Show', [
             'internship' => [
@@ -115,10 +117,97 @@ class SupervisorController extends Controller
             'logbook' => $logbook,
             'compliance' => [
                 'working_days_elapsed' => $workingDaysElapsed,
-                'logbook_entries_submitted' => $workingDaysElapsed - $missedLogbookDays,
+                'logbook_entries_submitted' => $submittedLogbookDays,
                 'missed_logbook_days' => $missedLogbookDays,
             ],
         ]);
+    }
+
+    /**
+     * Read-only list of cohorts this user has interns in (directly or via a
+     * program they supervise). Full cohort management (create/edit/assign)
+     * stays admin-only — this is just visibility into dates and rosters.
+     */
+    public function cohorts(Request $request): Response
+    {
+        $user = $request->user();
+
+        $cohortIds = $this->supervisedCohortIds($user);
+
+        $cohorts = Cohort::query()
+            ->whereIn('id', $cohortIds)
+            ->with('programs:id,title')
+            ->withCount(['internships as my_interns_count' => fn ($q) => $q->forSupervisor($user)])
+            ->latest('start_date')
+            ->get()
+            ->map(fn (Cohort $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'status' => $c->status,
+                'is_intake' => $c->is_intake,
+                'start_date' => optional($c->start_date)->toDateString(),
+                'end_date' => optional($c->end_date)->toDateString(),
+                'intake_opens_at' => optional($c->intake_opens_at)->toDateString(),
+                'intake_closes_at' => optional($c->intake_closes_at)->toDateString(),
+                'my_interns_count' => $c->my_interns_count,
+                'programs' => $c->programs->pluck('title')->values(),
+            ]);
+
+        return Inertia::render('Internships/Supervisor/Cohorts/Index', [
+            'cohorts' => $cohorts,
+        ]);
+    }
+
+    public function cohortShow(Request $request, Cohort $cohort): Response
+    {
+        $user = $request->user();
+        abort_unless($this->supervisedCohortIds($user)->contains($cohort->id), 403);
+
+        $cohort->load('programs:id,title');
+
+        $interns = Internship::query()
+            ->where('cohort_id', $cohort->id)
+            ->forSupervisor($user)
+            ->with('intern:id,name,email', 'program:id,title')
+            ->get()
+            ->map(fn (Internship $i) => [
+                'id' => $i->id,
+                'name' => $i->intern?->name,
+                'email' => $i->intern?->email,
+                'program' => $i->program?->title,
+                'status' => $i->status,
+                'start_date' => optional($i->start_date)->toDateString(),
+            ]);
+
+        return Inertia::render('Internships/Supervisor/Cohorts/Show', [
+            'cohort' => [
+                'id' => $cohort->id,
+                'name' => $cohort->name,
+                'description' => $cohort->description,
+                'start_date' => optional($cohort->start_date)->toDateString(),
+                'end_date' => optional($cohort->end_date)->toDateString(),
+                'intake_opens_at' => optional($cohort->intake_opens_at)->toDateString(),
+                'intake_closes_at' => optional($cohort->intake_closes_at)->toDateString(),
+                'status' => $cohort->status,
+                'is_intake' => $cohort->is_intake,
+                'programs' => $cohort->programs->pluck('title')->values(),
+            ],
+            'interns' => $interns,
+        ]);
+    }
+
+    /**
+     * Cohort IDs where this user supervises at least one intern — directly
+     * assigned or via the program's cohort-pivot supervisor.
+     */
+    private function supervisedCohortIds(User $user): \Illuminate\Support\Collection
+    {
+        return Internship::query()
+            ->forSupervisor($user)
+            ->whereNotNull('cohort_id')
+            ->pluck('cohort_id')
+            ->unique()
+            ->values();
     }
 
     public function reviewLogbook(Request $request, LogbookEntry $logbookEntry): RedirectResponse
