@@ -11,6 +11,7 @@ class LearningResourceController extends Controller
     public function index(): Response
     {
         $resources = LearningResource::query()
+            ->global()
             ->active()
             ->ordered()
             ->paginate(18)
@@ -23,9 +24,10 @@ class LearningResourceController extends Controller
 
     public function show(LearningResource $learningResource): Response
     {
-        abort_unless($learningResource->is_active, 404);
+        abort_unless($learningResource->is_active && $learningResource->attachable_id === null, 404);
 
         $related = LearningResource::query()
+            ->global()
             ->active()
             ->whereKeyNot($learningResource->id)
             ->when(! empty($learningResource->tags), function ($query) use ($learningResource) {

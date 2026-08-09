@@ -17,6 +17,7 @@ use App\Http\Controllers\Lms\CourseEnrollmentController;
 use App\Http\Controllers\Lms\CoursePaymentController;
 use App\Http\Controllers\Lms\CoursePlayerProgressController;
 use App\Http\Controllers\Lms\DiscussionController as StudentDiscussionController;
+use App\Http\Controllers\Lms\LearningResourceController as LmsLearningResourceController;
 use App\Http\Controllers\Lms\LessonDiscussionController;
 use App\Http\Controllers\Lms\LessonNoteController;
 use App\Http\Controllers\Lms\LiveClassController as StudentLiveClassController;
@@ -68,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/online-courses/{course}/enroll', [CourseEnrollmentController::class, 'store'])->name('lms.courses.enroll');
     Route::get('/dashboard/discussions', [StudentDiscussionController::class, 'index'])->name('lms.discussions.index');
     Route::get('/dashboard/assignments', [AssignmentController::class, 'studentIndex'])->name('lms.assignments.index');
+    Route::get('/dashboard/program-resources', [LmsLearningResourceController::class, 'studentIndex'])->name('lms.resources.index');
     Route::get('/dashboard/schedules', [StudentScheduleController::class, 'index'])->name('lms.schedules.index');
     Route::post('/dashboard/schedules/personal-events', [StudentScheduleController::class, 'storePersonal'])->name('lms.schedules.personal-events.store');
     Route::put('/dashboard/schedules/personal-events/{event}', [StudentScheduleController::class, 'updatePersonal'])->name('lms.schedules.personal-events.update');
@@ -196,15 +198,16 @@ Route::middleware(['auth', 'verified', 'tutor'])
     });
 
 // Learning ops (assignments, schedules, notifications, live classes) span
-// course students AND the interns of cohorts/programs a user supervises — so
-// they're open to tutors, admins, and internship supervisors alike, not tutors
-// only. Same /tutor URIs and tutor.* names, so existing pages need no changes.
+
 Route::middleware(['auth', 'verified', 'learning-ops'])
     ->prefix('tutor')
     ->name('tutor.')
     ->group(function () {
         Route::get('assignments', [AssignmentController::class, 'tutorIndex'])->name('assignments.index');
         Route::post('assignments', [AssignmentController::class, 'tutorStore'])->name('assignments.store');
+        Route::get('resources', [LmsLearningResourceController::class, 'tutorIndex'])->name('resources.index');
+        Route::post('resources', [LmsLearningResourceController::class, 'tutorStore'])->name('resources.store');
+        Route::delete('resources/{learningResource}', [LmsLearningResourceController::class, 'tutorDestroy'])->name('resources.destroy');
         Route::get('schedules', [ScheduleController::class, 'tutorIndex'])->name('schedules.index');
         Route::post('schedules', [ScheduleController::class, 'tutorStore'])->name('schedules.store');
         Route::put('schedules/{schedule}', [ScheduleController::class, 'tutorUpdate'])->name('schedules.update');
