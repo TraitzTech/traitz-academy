@@ -57,7 +57,7 @@ class HandleInertiaRequests extends Middleware
                 : null,
             'internshipAccess' => function () use ($request) {
                 $user = $request->user();
-                if (! $user || ! Schema::hasTable('internships')) {
+                if (! $user || ! $this->tableExists('internships')) {
                     return ['is_intern' => false, 'supervises' => false];
                 }
 
@@ -75,12 +75,25 @@ class HandleInertiaRequests extends Middleware
                 if (! $user) {
                     return 0;
                 }
-                if (! Schema::hasTable('notifications')) {
+                if (! $this->tableExists('notifications')) {
                     return 0;
                 }
 
                 return (int) $user->unreadNotifications()->count();
             },
         ];
+    }
+
+    /**
+     * Cached table-existence check. The schema is stable for a running app,
+     * so this avoids a slow information_schema query on every request.
+     */
+    protected function tableExists(string $table): bool
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "schema.has_table.{$table}",
+            now()->addDay(),
+            fn () => Schema::hasTable($table),
+        );
     }
 }

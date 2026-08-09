@@ -2,6 +2,10 @@
 import { useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
+
 interface GroupStudent {
   id: number
   name: string
@@ -48,6 +52,31 @@ const props = defineProps<{
   assignments: AssignmentRow[]
   submitUrl: string
 }>()
+
+const showCreateForm = ref(false)
+
+const searchQuery = ref('')
+const visibleCount = ref(10)
+const PAGE_SIZE = 10
+
+const filteredAssignments = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return props.assignments
+  return props.assignments.filter(
+    (a) => a.title.toLowerCase().includes(q) || (a.attachable.title ?? '').toLowerCase().includes(q)
+  )
+})
+
+watch(searchQuery, () => {
+  visibleCount.value = PAGE_SIZE
+})
+
+const visibleAssignments = computed(() => filteredAssignments.value.slice(0, visibleCount.value))
+const hasMoreAssignments = computed(() => visibleCount.value < filteredAssignments.value.length)
+
+function loadMoreAssignments() {
+  visibleCount.value += PAGE_SIZE
+}
 
 const typeLabels: Record<AttachableType, string> = {
   course: 'Course',
@@ -150,10 +179,15 @@ function submit() {
     onSuccess: () => {
       form.reset()
       form.audience = 'all_course_students'
-      form.attachable_type = 'course'
+      form.attachable_type = availableTypes.value[0] ?? 'course'
       form.attachable_id = ''
       form.student_ids = []
       programFilter.value = ''
+      showCreateForm.value = false
+    },
+    onError: (errors: Record<string, string>) => {
+      const first = Object.values(errors)[0]
+      if (first) toast.error(first)
     },
   })
 }
@@ -180,20 +214,34 @@ function formatDateTime(value: string | null) {
   if (!value) return 'No due date'
   return new Date(value).toLocaleString()
 }
+
+function isOverdue(value: string | null) {
+  if (!value) return false
+  return new Date(value).getTime() < Date.now()
+}
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Send tasks to a course, an internship cohort, or a program.</p>
+    <div class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Tasks</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Send tasks to a course, an internship cohort, or a program.</p>
+      </div>
+      <button
+        type="button"
+        class="rounded-lg bg-[#381998] px-4 py-2 text-sm font-semibold text-white"
+        @click="showCreateForm = !showCreateForm"
+      >
+        {{ showCreateForm ? 'Cancel' : '+ Create task' }}
+      </button>
     </div>
 
-    <form @submit.prevent="submit" class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <form v-if="showCreateForm" @submit.prevent="submit" class="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Create task</h2>
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <div>
+      <div class="grid gap-4" :class="availableTypes.length > 1 ? 'md:grid-cols-2' : ''">
+        <div v-if="availableTypes.length > 1">
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
           <select v-model="form.attachable_type" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900">
             <option v-for="type in availableTypes" :key="type" :value="type">{{ typeLabels[type] }}</option>
@@ -291,36 +339,77 @@ function formatDateTime(value: string | null) {
     </form>
 
     <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent tasks</h2>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Recent tasks <span class="text-sm font-normal text-gray-400">({{ filteredAssignments.length }})</span>
+        </h2>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Search tasks..."
+          class="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-900"
+        />
       </div>
       <div v-if="assignments.length === 0" class="p-6 text-sm text-gray-500 dark:text-gray-400">
         No tasks created yet.
       </div>
+      <div v-else-if="filteredAssignments.length === 0" class="p-6 text-sm text-gray-500 dark:text-gray-400">
+        No tasks match "{{ searchQuery }}".
+      </div>
       <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
-        <div v-for="assignment in assignments" :key="assignment.id" class="p-6">
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
+        <div
+          v-for="assignment in visibleAssignments"
+          :key="assignment.id"
+          class="flex flex-wrap items-start justify-between gap-4 p-6 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/30"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
               <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ assignment.title }}</h3>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                <span v-if="assignment.attachable.type" class="rounded-full bg-[#42b6c5]/10 px-2 py-0.5 font-semibold text-[#2a8a96]">
-                  {{ typeLabels[assignment.attachable.type] }}
-                </span>
-                {{ assignment.attachable.title }} • Due: {{ formatDateTime(assignment.due_at) }}
-              </p>
-              <p class="mt-2 line-clamp-3 text-sm text-gray-700 dark:text-gray-300">{{ assignment.instructions }}</p>
+              <span
+                v-if="assignment.attachable.type"
+                class="rounded-full bg-[#42b6c5]/10 px-2 py-0.5 text-xs font-semibold text-[#2a8a96]"
+              >
+                {{ typeLabels[assignment.attachable.type] }}
+              </span>
+              <span
+                v-if="isOverdue(assignment.due_at)"
+                class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400"
+              >
+                Overdue
+              </span>
             </div>
-            <div class="text-right text-xs text-gray-500 dark:text-gray-400">
-              <div class="capitalize">
-                {{ assignment.audience === 'all_course_students' ? 'Everyone in group' : `${assignment.selected_students_count ?? 0} selected students` }}
-              </div>
-              <div class="mt-1">Created {{ formatDateTime(assignment.created_at) }}</div>
-              <a v-if="assignment.attachment_url" :href="assignment.attachment_url" target="_blank" class="mt-2 inline-block text-[#381998]">
-                View attachment
-              </a>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ assignment.attachable.title }}</p>
+            <p class="mt-2 line-clamp-3 text-sm text-gray-700 dark:text-gray-300">{{ assignment.instructions }}</p>
+
+            <a
+              v-if="assignment.attachment_url"
+              :href="assignment.attachment_url"
+              target="_blank"
+              class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#381998] hover:underline"
+            >
+              📎 View attachment
+            </a>
+          </div>
+
+          <div class="flex shrink-0 flex-col items-end gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <div class="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              🗓️ Due {{ formatDateTime(assignment.due_at) }}
             </div>
+            <div>
+              {{ assignment.audience === 'all_course_students' ? 'Everyone in group' : `${assignment.selected_students_count ?? 0} selected students` }}
+            </div>
+            <div class="text-gray-400 dark:text-gray-500">Created {{ formatDateTime(assignment.created_at) }}</div>
           </div>
         </div>
+      </div>
+      <div v-if="hasMoreAssignments" class="border-t border-gray-100 p-4 text-center dark:border-gray-700">
+        <button
+          type="button"
+          class="rounded-lg border border-gray-300 px-4 py-1.5 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300"
+          @click="loadMoreAssignments"
+        >
+          Load more ({{ filteredAssignments.length - visibleCount }} remaining)
+        </button>
       </div>
     </div>
   </div>

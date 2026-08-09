@@ -12,6 +12,7 @@ use App\Models\Program;
 use App\Services\LearningAudienceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -150,7 +151,9 @@ class AssignmentController extends Controller
                 ->filter(fn ($id) => $allowedStudentIds->contains($id))
                 ->values();
 
-            abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['student_ids' => 'Please select at least one valid student.']);
+            }
         } elseif (! $isAdmin && $attachable instanceof Program) {
             // A supervisor's program roster is scoped to the cohorts they
             // supervise, but "everyone in the program" is resolved student-side
@@ -159,7 +162,9 @@ class AssignmentController extends Controller
             $audienceValue = 'selected_students';
             $selectedIds = $allowedStudentIds->values();
 
-            abort_if($selectedIds->isEmpty(), 422, 'You have no interns to assign in this program.');
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['attachable_id' => 'You have no interns to assign in this program.']);
+            }
         } else {
             $selectedIds = collect();
         }
