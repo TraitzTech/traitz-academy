@@ -292,7 +292,15 @@ class LiveClassController extends Controller
     {
         return User::query()
             ->whereIn('id', $this->reachableStudentIds($userId))
+            ->with(['internships' => fn ($q) => $q->latest('id')])
             ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'cohort_id' => $u->internships->first()?->cohort_id,
+                'program_id' => $u->internships->first()?->program_id,
+            ]);
     }
 }

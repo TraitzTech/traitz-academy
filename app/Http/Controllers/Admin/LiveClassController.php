@@ -40,11 +40,11 @@ class LiveClassController extends Controller
     public function create(): Response
     {
         return Inertia::render('Admin/Lms/LiveClasses/Create', [
-            'tutors' => User::query()->where('role', User::ROLE_TUTOR)->orderBy('name')->get(['id', 'name']),
+            'tutors' => User::query()->whereIn('role', [User::ROLE_TUTOR, User::ROLE_SUPERVISOR, User::ROLE_PROGRAM_COORDINATOR])->orderBy('name')->get(['id', 'name']),
             'courses' => Course::query()->orderBy('title')->get(['id', 'title']),
             'cohorts' => Cohort::query()->orderBy('name')->get(['id', 'name']),
             'programs' => Program::query()->orderBy('title')->get(['id', 'title']),
-            'students' => User::query()->where('role', User::ROLE_USER)->orderBy('name')->get(['id', 'name', 'email']),
+            'students' => $this->studentsWithInternship(),
         ]);
     }
 
@@ -114,11 +114,11 @@ class LiveClassController extends Controller
         return Inertia::render('Admin/Lms/LiveClasses/Edit', [
             'liveClass' => $liveClass,
             'targets' => $this->targetRowsForDisplay($liveClass),
-            'tutors' => User::query()->where('role', User::ROLE_TUTOR)->orderBy('name')->get(['id', 'name']),
+            'tutors' => User::query()->whereIn('role', [User::ROLE_TUTOR, User::ROLE_SUPERVISOR, User::ROLE_PROGRAM_COORDINATOR])->orderBy('name')->get(['id', 'name']),
             'courses' => Course::query()->orderBy('title')->get(['id', 'title']),
             'cohorts' => Cohort::query()->orderBy('name')->get(['id', 'name']),
             'programs' => Program::query()->orderBy('title')->get(['id', 'title']),
-            'students' => User::query()->where('role', User::ROLE_USER)->orderBy('name')->get(['id', 'name', 'email']),
+            'students' => $this->studentsWithInternship(),
         ]);
     }
 
@@ -186,6 +186,26 @@ class LiveClassController extends Controller
         UploadLiveClassRecordingToYouTube::dispatch($recording->id);
 
         return back()->with('success', 'Recording upload queued.');
+    }
+
+    /**
+     * All students, each tagged with their internship's cohort/program (if
+     * any) so the "custom students" picker can be filtered by cohort/program.
+     */
+    private function studentsWithInternship(): \Illuminate\Support\Collection
+    {
+        return User::query()
+            ->where('role', User::ROLE_USER)
+            ->with(['internships' => fn ($q) => $q->latest('id')])
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'cohort_id' => $u->internships->first()?->cohort_id,
+                'program_id' => $u->internships->first()?->program_id,
+            ]);
     }
 
     private function notifyAudience(LiveClass $liveClass): void

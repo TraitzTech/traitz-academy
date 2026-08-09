@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface Option { id: number; name?: string; title?: string; email?: string }
+interface StudentOption extends Option { cohort_id?: number | null; program_id?: number | null }
 
 type TargetType = 'course' | 'cohort' | 'program'
 
@@ -15,7 +16,7 @@ const props = defineProps<{
   courses: Option[]
   cohorts: Option[]
   programs: Option[]
-  students: Option[]
+  students: StudentOption[]
   initial?: Record<string, any>
   initialTargets?: Target[]
   showTutorSelect?: boolean
@@ -64,6 +65,29 @@ const form = useForm({
   student_ids: props.initial?.students?.map((s: any) => s.id) ?? [],
 })
 
+// "Custom students" picker: narrow the checkbox list by cohort, then by
+// program within that cohort — purely client-side, doesn't affect selection.
+const studentCohortFilter = ref<number | ''>('')
+const studentProgramFilter = ref<number | ''>('')
+
+// Only offer programs that actually have students in the selected cohort
+// (falls back to every program with a student when no cohort is chosen).
+const filterProgramOptions = computed(() => {
+  const relevantIds = new Set(
+    props.students
+      .filter((s) => (studentCohortFilter.value === '' ? true : s.cohort_id === studentCohortFilter.value))
+      .map((s) => s.program_id)
+      .filter((id): id is number => id != null)
+  )
+  return props.programs.filter((p) => relevantIds.has(p.id))
+})
+
+const filteredStudents = computed(() => props.students.filter((s) => {
+  if (studentCohortFilter.value !== '' && s.cohort_id !== studentCohortFilter.value) return false
+  if (studentProgramFilter.value !== '' && s.program_id !== studentProgramFilter.value) return false
+  return true
+}))
+
 function submit() {
   const targets: Target[] = form.target_keys.map((key) => {
     const [type, id] = key.split(':')
@@ -97,9 +121,9 @@ function submit() {
         <textarea v-model="form.description" rows="3" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
       </div>
       <div v-if="showTutorSelect">
-        <label class="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">Tutor</label>
+        <label class="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">Host</label>
         <select v-model="form.tutor_id" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white">
-          <option value="">Select tutor</option>
+          <option value="">Select host</option>
           <option v-for="t in tutors || []" :key="t.id" :value="t.id">{{ t.name }}</option>
         </select>
       </div>
@@ -156,11 +180,29 @@ function submit() {
       </div>
       <div v-else class="grid gap-2">
         <label class="text-xs font-semibold uppercase tracking-wide text-gray-500">Select students</label>
+        <div v-if="cohorts.length > 0" class="flex flex-wrap gap-2">
+          <select
+            v-model="studentCohortFilter"
+            class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+            @change="studentProgramFilter = ''"
+          >
+            <option value="">All cohorts</option>
+            <option v-for="c in cohorts" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+          <select
+            v-model="studentProgramFilter"
+            class="rounded-lg border border-gray-200 px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+          >
+            <option value="">All programs</option>
+            <option v-for="p in filterProgramOptions" :key="p.id" :value="p.id">{{ p.title }}</option>
+          </select>
+        </div>
         <div class="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2 dark:border-gray-600">
-          <label v-for="student in students" :key="student.id" class="flex items-center gap-2 text-sm">
+          <label v-for="student in filteredStudents" :key="student.id" class="flex items-center gap-2 text-sm">
             <input v-model="form.student_ids" :value="student.id" type="checkbox" />
             <span>{{ student.name }} <span class="text-xs text-gray-400">({{ student.email }})</span></span>
           </label>
+          <p v-if="filteredStudents.length === 0" class="text-xs text-gray-400">No students match this filter.</p>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ defineProps<{ courses: any[]; cohorts: any[]; programs: any[]; students: any[] }
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl">
+  <div>
     <Head title="Create Live Class" />
     <h1 class="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Create live class</h1>
     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
