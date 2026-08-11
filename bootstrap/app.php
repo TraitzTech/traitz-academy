@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             \Illuminate\Support\Facades\Route::middleware('web')
                 ->group(base_path('routes/lms.php'));
+            \Illuminate\Support\Facades\Route::middleware('web')
+                ->group(base_path('routes/internship.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -33,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'executive' => \App\Http\Middleware\IsExecutive::class,
             'tutor' => \App\Http\Middleware\IsTutor::class,
+            'learning-ops' => \App\Http\Middleware\CanManageLearningOps::class,
             'ensure.phone' => \App\Http\Middleware\EnsurePhoneNumber::class,
         ]);
     })

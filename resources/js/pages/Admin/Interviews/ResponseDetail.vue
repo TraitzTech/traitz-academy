@@ -100,7 +100,7 @@ const submitReview = () => {
     preserveScroll: true,
     onSuccess: () => {
       showSubmitReviewModal.value = false
-      toast.success('Review submitted successfully!')
+      // Flash message handled by global watcher (InterviewController::reviewResponse flashes 'success')
     },
     onError: () => {
       toast.error('Failed to submit review.')
@@ -110,7 +110,7 @@ const submitReview = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`${response.user.name} — ${interview.title}`" />
 
     <!-- Header -->

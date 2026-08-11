@@ -381,7 +381,7 @@ const recordManualPayment = () => {
     preserveScroll: true,
     onSuccess: () => {
       showManualModal.value = false
-      toast.success('Manual payment recorded successfully.')
+      // Flash message handled by global watcher (PaymentController::storeManual flashes 'success')
     },
     onError: (errors) => {
       const errorMessage = errors.amount || errors.application_id || errors.status || errors.payer_phone || 'Failed to record manual payment.'
@@ -421,7 +421,7 @@ const updatePayment = () => {
     onSuccess: () => {
       showEditModal.value = false
       editingPayment.value = null
-      toast.success('Payment updated successfully.')
+      // Flash message handled by global watcher (PaymentController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update payment.')

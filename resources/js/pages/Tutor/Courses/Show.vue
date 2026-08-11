@@ -18,6 +18,7 @@ import {
 import { computed, ref } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
+import { categoryIconFor } from '@/utils/categoryIcons'
 import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
 
 interface LessonRow {
@@ -143,6 +144,7 @@ const totalLessons = computed(() =>
     ]"
   >
     <Head :title="`${course.title} — View`" />
+    <div class="mx-auto max-w-6xl">
       <!-- Hero -->
       <section
         class="relative mb-8 overflow-hidden rounded-2xl bg-linear-to-br from-[#000928] via-[#1a0a52] to-[#381998] p-6 text-white shadow-lg sm:p-8"
@@ -158,7 +160,7 @@ const totalLessons = computed(() =>
                 v-if="course.category"
                 class="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold"
               >
-                <span v-if="course.category.icon">{{ course.category.icon }}</span>
+                <component :is="categoryIconFor(course.category.icon)" v-if="categoryIconFor(course.category.icon)" class="h-3.5 w-3.5" />
                 {{ course.category.name }}
               </span>
               <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
@@ -371,5 +373,6 @@ const totalLessons = computed(() =>
           </div>
         </div>
       </div>
+    </div>
   </AppLayout>
 </template>

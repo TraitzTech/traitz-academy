@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
 
-import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 interface OrderItem {
@@ -40,8 +39,6 @@ const props = defineProps<Props>()
 
 defineOptions({ layout: AppLayout })
 
-const toast = useToast()
-
 const formatMoney = (amount: number) =>
     new Intl.NumberFormat('en-CM', { style: 'currency', currency: 'XAF' }).format(amount)
 
@@ -57,7 +54,7 @@ const getImageUrl = (path: string | null): string | undefined => {
 const updateStatus = (status: string) => {
     router.patch(`/admin/ai-forge/orders/${props.order.id}/status`, { status }, {
         preserveState: true,
-        onSuccess: () => toast.success(`Order marked as ${status}!`),
+        // Flash message handled by global watcher (AiForgeOrderController::updateStatus flashes 'success')
     })
 }
 
@@ -70,7 +67,7 @@ const statusColors: Record<string, string> = {
 </script>
 
 <template>
-    <div>
+    <div class="mx-auto max-w-5xl">
         <Head :title="`Order ${order.order_number} - AI Forge`" />
 
         <div class="mb-8">

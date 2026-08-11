@@ -67,14 +67,14 @@ watch([search, category], applyFilters)
 const toggleActive = (swag: Swag) => {
     router.post(`/admin/ai-forge/swags/${swag.slug}/toggle-active`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success(`${swag.name} ${swag.is_active ? 'deactivated' : 'activated'}!`),
+        // Flash message handled by global watcher (AiForgeSwagController::toggleActive flashes 'success')
     })
 }
 
 const toggleFeatured = (swag: Swag) => {
     router.post(`/admin/ai-forge/swags/${swag.slug}/toggle-featured`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success(`${swag.name} ${swag.is_featured ? 'unfeatured' : 'featured'}!`),
+        // Flash message handled by global watcher (AiForgeSwagController::toggleFeatured flashes 'success')
     })
 }
 
@@ -87,7 +87,7 @@ const confirmDelete = () => {
     if (!swagToDelete.value) return
     router.delete(`/admin/ai-forge/swags/${swagToDelete.value.slug}`, {
         onSuccess: () => {
-            toast.success('Swag deleted!')
+            // Flash message handled by global watcher (AiForgeSwagController::destroy flashes 'success')
             showDeleteModal.value = false
             swagToDelete.value = null
         },

@@ -61,7 +61,7 @@ watch([search, statusFilter], applyFilters)
 const updateStatus = (reg: Registration, status: string) => {
     router.patch(`/admin/ai-forge/registrations/${reg.id}`, { status }, {
         preserveState: true,
-        onSuccess: () => toast.success(`Registration ${status}!`),
+        // Flash message handled by global watcher (AiForgeRegistrationController::updateStatus flashes 'success')
     })
 }
 
@@ -74,7 +74,7 @@ const confirmDelete = () => {
     if (!regToDelete.value) return
     router.delete(`/admin/ai-forge/registrations/${regToDelete.value.id}`, {
         onSuccess: () => {
-            toast.success('Registration deleted!')
+            // Flash message handled by global watcher (AiForgeRegistrationController::destroy flashes 'success')
             showDeleteModal.value = false
             regToDelete.value = null
         },
@@ -96,7 +96,7 @@ const confirmBulk = () => {
         status: bulkAction.value,
     }, {
         onSuccess: () => {
-            toast.success(`${selectedIds.value.length} registration(s) ${bulkAction.value}!`)
+            // Flash message handled by global watcher (AiForgeRegistrationController::bulkUpdateStatus flashes 'success')
             selectedIds.value = []
             showBulkModal.value = false
         },
@@ -106,7 +106,7 @@ const confirmBulk = () => {
 const sendReminder = (reg: Registration) => {
     router.post(`/admin/ai-forge/registrations/${reg.id}/send-reminder`, {}, {
         preserveState: true,
-        onSuccess: () => toast.success(`Reminder sent to ${reg.full_name}!`),
+        // Flash message handled by global watcher (AiForgeRegistrationController::sendReminder flashes 'success')
     })
 }
 

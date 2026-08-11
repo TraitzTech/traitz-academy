@@ -27,7 +27,7 @@ const chat = useLiveChat(props.liveClass.messages ?? [], {
   eventName: 'live-class.message.sent',
 })
 
-async function postJson(url: string, payload: Record<string, any> = {}) {
+async function postJson(url: string, payload: Record<string, any> = {}, keepalive = false) {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -37,6 +37,8 @@ async function postJson(url: string, payload: Record<string, any> = {}) {
     },
     body: JSON.stringify(payload),
     credentials: 'same-origin',
+    // keepalive lets the request complete even as the page is unloading.
+    keepalive,
   })
 
   if (!response.ok) {
@@ -141,10 +143,12 @@ onMounted(async () => {
     setupJitsi()
   }
   window.addEventListener('beforeunload', leaveClass)
+  // pagehide is more reliable than beforeunload (esp. on mobile).
+  window.addEventListener('pagehide', leaveClass)
 })
 
 async function leaveClass() {
-  await postJson(`/dashboard/live-classes/${props.liveClass.id}/attendance/leave`)
+  await postJson(`/dashboard/live-classes/${props.liveClass.id}/attendance/leave`, {}, true).catch(() => {})
 }
 
 async function toggleRecording() {
@@ -174,6 +178,7 @@ onBeforeUnmount(async () => {
   if (endRedirectTimer) window.clearTimeout(endRedirectTimer)
   chat.stop()
   window.removeEventListener('beforeunload', leaveClass)
+  window.removeEventListener('pagehide', leaveClass)
   if (jitsiApi.value) {
     jitsiApi.value.dispose()
     jitsiApi.value = null

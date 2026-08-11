@@ -6,17 +6,17 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
 
-interface CourseStudent {
+interface GroupStudent {
   id: number
   name: string
   email: string
 }
 
-interface CourseRow {
+interface GroupRow {
   id: number
   title: string
   student_count: number
-  students: CourseStudent[]
+  students: GroupStudent[]
 }
 
 interface AssignmentRow {
@@ -24,7 +24,8 @@ interface AssignmentRow {
   title: string
   instructions: string
   audience: 'all_course_students' | 'selected_students'
-  course: {
+  attachable: {
+    type: 'course' | 'cohort' | 'program' | null
     id: number | null
     title: string | null
   }
@@ -36,14 +37,16 @@ interface AssignmentRow {
 }
 
 defineProps<{
-  courses: CourseRow[]
+  courses: GroupRow[]
+  cohorts: GroupRow[]
+  programs: GroupRow[]
   assignments: AssignmentRow[]
 }>()
 </script>
 
 <template>
   <div>
-    <Head title="LMS Assignments" />
-    <AssignmentManager :courses="courses" :assignments="assignments" submit-url="/admin/lms/assignments" />
+    <Head title="LMS Tasks" />
+    <AssignmentManager :courses="courses" :cohorts="cohorts" :programs="programs" :assignments="assignments" submit-url="/admin/lms/assignments" />
   </div>
 </template>

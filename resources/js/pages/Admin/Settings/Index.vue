@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
-import { ref, computed, watch } from 'vue'
+import { CreditCard, FileText, Image as ImageIcon, Link2, Loader2, Mail, MapPin, SlidersHorizontal, Trash2, Upload, X } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -36,12 +37,38 @@ const processing = ref(false)
 const uploadingKey = ref<string | null>(null)
 
 const tabs = [
-  { key: 'branding', label: 'Branding', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { key: 'content', label: 'Content', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  { key: 'contact', label: 'Contact', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-  { key: 'social', label: 'Social Media', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
-  { key: 'payments', label: 'Payments', icon: 'M17 9V7a5 5 0 00-10 0v2m-2 0h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2z' },
+  { key: 'branding', label: 'Branding', icon: ImageIcon },
+  { key: 'content', label: 'Content', icon: FileText },
+  { key: 'contact', label: 'Contact', icon: Mail },
+  { key: 'social', label: 'Social Media', icon: Link2 },
+  { key: 'payments', label: 'Payments', icon: CreditCard },
+  { key: 'internship', label: 'Internship', icon: MapPin },
 ]
+
+const locating = ref(false)
+
+// Capture the admin's live location (they run this at the office) and store it
+// as the office coordinates. Server verifies distance from these on clock-in.
+const useMyLocation = () => {
+  if (!navigator.geolocation) {
+    toast.error('Your browser does not support location.')
+    return
+  }
+  locating.value = true
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      formData.value['office_latitude'] = pos.coords.latitude.toFixed(7)
+      formData.value['office_longitude'] = pos.coords.longitude.toFixed(7)
+      locating.value = false
+      toast.success('Location captured. Remember to Save.')
+    },
+    () => {
+      locating.value = false
+      toast.error('Could not get your location. Allow location access and ensure you are on HTTPS.')
+    },
+    { enableHighAccuracy: true, timeout: 10000 },
+  )
+}
 
 const currentSettings = computed(() => {
   const settings = props.settings?.[activeTab.value as keyof typeof props.settings]
@@ -53,7 +80,7 @@ const formData = ref<Record<string, string | null>>({})
 
 // Initialize form data from settings
 const initFormData = () => {
-  const groups = ['branding', 'content', 'contact', 'social', 'payments'] as const
+  const groups = ['branding', 'content', 'contact', 'social', 'payments', 'internship'] as const
   groups.forEach(group => {
     const settings = props.settings?.[group]
     if (Array.isArray(settings)) {
@@ -73,9 +100,9 @@ const saveSettings = async () => {
   router.put('/admin/settings', { settings: formData.value }, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Settings saved successfully!')
+      // Flash message handled by global watcher (SettingsController::update flashes 'success')
     },
-    onError: (errors) => {
+    onError: () => {
       toast.error('Failed to save settings. Please try again.')
     },
     onFinish: () => {
@@ -103,7 +130,7 @@ const uploadImage = async (event: Event, setting: Setting) => {
         formData.value[setting.key] = e.target?.result as string
       }
       reader.readAsDataURL(file)
-      toast.success('Image uploaded successfully!')
+      // Flash message handled by global watcher (SettingsController::uploadImage flashes 'success')
     },
     onError: () => {
       toast.error('Failed to upload image. Please try again.')
@@ -121,7 +148,7 @@ const deleteImage = (setting: Setting) => {
     preserveScroll: true,
     onSuccess: () => {
       formData.value[setting.key] = null
-      toast.success('Image deleted successfully!')
+      // Flash message handled by global watcher (SettingsController::deleteImage flashes 'success')
     },
     onError: () => {
       toast.error('Failed to delete image. Please try again.')
@@ -137,111 +164,122 @@ const getImageUrl = (value: string | null) => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-6xl">
     <Head title="Site Settings" />
 
     <!-- Header -->
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Site Settings</h2>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">Manage your site branding, content, and configuration</p>
+        <h1 class="text-2xl font-bold text-[#000928] dark:text-white lg:text-3xl">Site Settings</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage your site branding, content, and configuration</p>
       </div>
       <button
         @click="saveSettings"
         :disabled="processing"
-        class="inline-flex items-center px-4 py-2 bg-[#42b6c5] text-white font-medium rounded-lg hover:bg-[#35919e] transition-colors disabled:opacity-50"
+        class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#42b6c5] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#35919e] disabled:opacity-50"
       >
-        <svg v-if="processing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        {{ processing ? 'Saving...' : 'Save Changes' }}
+        <Loader2 v-if="processing" class="h-4 w-4 animate-spin" />
+        {{ processing ? 'Saving…' : 'Save Changes' }}
       </button>
     </div>
 
-    <!-- Tabs -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-      <div class="border-b border-gray-200 dark:border-gray-700">
-        <nav class="flex -mb-px overflow-x-auto">
+    <!-- Card -->
+    <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div class="h-1.5 bg-gradient-to-r from-[#381998] via-[#42b6c5] to-[#000928]"></div>
+
+      <!-- Tabs: segmented-control style, not plain underlined links -->
+      <div class="border-b border-gray-100 p-3 dark:border-gray-700">
+        <nav class="flex flex-wrap gap-1.5">
           <button
             v-for="tab in tabs"
             :key="tab.key"
             @click="activeTab = tab.key"
             :class="[
-              'group inline-flex items-center px-6 py-4 border-b-2 font-medium text-sm whitespace-nowrap',
+              'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition-colors',
               activeTab === tab.key
-                ? 'border-[#42b6c5] text-[#42b6c5]'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                ? 'bg-[#381998]/10 text-[#381998] dark:bg-[#42b6c5]/15 dark:text-[#7ee8f9]'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200'
             ]"
           >
-            <svg
-              :class="[
-                'mr-2 h-5 w-5',
-                activeTab === tab.key ? 'text-[#42b6c5]' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
-              ]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="tab.icon" />
-            </svg>
+            <component :is="tab.icon" class="h-4 w-4" />
             {{ tab.label }}
           </button>
         </nav>
       </div>
 
       <!-- Settings Content -->
-      <div class="p-6">
-        <div class="space-y-6">
-          <div v-for="setting in currentSettings" :key="setting.key">
+      <div class="p-6 sm:p-8">
+        <!-- Internship: capture office location -->
+        <div v-if="activeTab === 'internship'" class="mb-6 rounded-xl border border-dashed border-[#42b6c5]/50 bg-[#42b6c5]/[0.05] p-4">
+          <p class="text-sm font-semibold text-[#000928] dark:text-white">Office location (attendance geofence)</p>
+          <p class="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+            Interns can only clock in from the office. Stand at the office and tap the button to capture its coordinates, then Save. A ~100m safety buffer is added automatically so interns aren't rejected by GPS drift.
+          </p>
+          <button
+            type="button"
+            :disabled="locating"
+            class="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#42b6c5] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#35919e] disabled:opacity-60"
+            @click="useMyLocation"
+          >
+            <Loader2 v-if="locating" class="h-4 w-4 animate-spin" />
+            {{ locating ? 'Getting location…' : 'Use my current location' }}
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            v-for="setting in currentSettings"
+            :key="setting.key"
+            :class="['text', 'email', 'image'].includes(setting.type) ? '' : 'sm:col-span-2 lg:col-span-3'"
+          >
             <!-- Text Input -->
             <div v-if="setting.type === 'text'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label :for="setting.key" class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="text"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
+                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- Textarea -->
             <div v-else-if="setting.type === 'textarea'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label :for="setting.key" class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ setting.label }}
               </label>
               <textarea
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 rows="4"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
+                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               ></textarea>
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- URL Input -->
             <div v-else-if="setting.type === 'url'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label :for="setting.key" class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="url"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
+                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                 placeholder="https://..."
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
-              
+              <p v-if="setting.description" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+
               <!-- YouTube Preview -->
-              <div v-if="setting.key === 'youtube_video_url' && formData[setting.key]" class="mt-4 max-w-xl">
-                <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <div v-if="setting.key === 'youtube_video_url' && formData[setting.key]" class="mt-4">
+                <div class="aspect-video overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-700">
                   <iframe
                     :src="streamingEmbedSrc(formData[setting.key] ?? null) ?? ''"
-                    class="w-full h-full"
+                    class="h-full w-full"
                     frameborder="0"
                     referrerpolicy="strict-origin-when-cross-origin"
                     :allow="STREAMING_IFRAME_ALLOW"
@@ -253,51 +291,44 @@ const getImageUrl = (value: string | null) => {
 
             <!-- Email Input -->
             <div v-else-if="setting.type === 'email'">
-              <label :for="setting.key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label :for="setting.key" class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ setting.label }}
               </label>
               <input
                 :id="setting.key"
                 v-model="formData[setting.key]"
                 type="email"
-                class="w-full max-w-xl px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent bg-white dark:bg-gray-700 dark:text-gray-100"
+                class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 focus:border-[#42b6c5] focus:ring-2 focus:ring-[#42b6c5]/20 focus:outline-none dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               />
-              <p v-if="setting.description" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+              <p v-if="setting.description" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
             </div>
 
             <!-- Image Upload -->
             <div v-else-if="setting.type === 'image'">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {{ setting.label }}
               </label>
               <div class="flex items-start gap-4">
                 <!-- Image Preview -->
-                <div v-if="formData[setting.key]" class="relative">
+                <div v-if="formData[setting.key]" class="relative shrink-0">
                   <img
                     :src="getImageUrl(formData[setting.key])"
                     :alt="setting.label"
-                    class="h-20 w-auto object-contain border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2"
+                    class="h-20 w-auto rounded-xl border border-gray-200 bg-gray-50 object-contain p-2 dark:border-gray-600 dark:bg-gray-700"
                   />
                   <button
                     @click="deleteImage(setting)"
-                    class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    class="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600"
                     type="button"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <X class="h-4 w-4" />
                   </button>
                 </div>
                 <!-- Upload Button -->
                 <div>
-                  <label class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">
-                    <svg v-if="uploadingKey === setting.key" class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <svg v-else class="w-5 h-5 mr-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                  <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-600 transition-colors hover:border-[#42b6c5] hover:bg-[#42b6c5]/[0.04] hover:text-[#42b6c5] dark:border-gray-600 dark:text-gray-300">
+                    <Loader2 v-if="uploadingKey === setting.key" class="h-4 w-4 animate-spin" />
+                    <Upload v-else class="h-4 w-4" />
                     <span>{{ formData[setting.key] ? 'Change Image' : 'Upload Image' }}</span>
                     <input
                       type="file"
@@ -306,22 +337,31 @@ const getImageUrl = (value: string | null) => {
                       @change="uploadImage($event, setting)"
                     />
                   </label>
-                  <p v-if="setting.description" class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
+                  <p v-if="setting.description" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ setting.description }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Empty State -->
-          <div v-if="currentSettings.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
-            <svg class="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <p>No settings found in this category.</p>
-            <p class="text-sm mt-1 dark:text-gray-500">Settings will be added automatically when needed.</p>
+          <div v-if="currentSettings.length === 0" class="py-12 text-center">
+            <SlidersHorizontal class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
+            <p class="text-sm text-gray-500 dark:text-gray-400">No settings found in this category.</p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Settings will be added automatically when needed.</p>
           </div>
         </div>
+      </div>
+
+      <!-- Sticky footer save (mirrors the top action so long forms don't lose it) -->
+      <div class="flex justify-end border-t border-gray-100 bg-gray-50/60 px-6 py-4 dark:border-gray-700 dark:bg-gray-900/30 sm:px-8">
+        <button
+          @click="saveSettings"
+          :disabled="processing"
+          class="inline-flex items-center gap-2 rounded-xl bg-[#381998] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#000928] disabled:opacity-60"
+        >
+          <Loader2 v-if="processing" class="h-4 w-4 animate-spin" />
+          {{ processing ? 'Saving…' : 'Save Changes' }}
+        </button>
       </div>
     </div>
   </div>

@@ -1,33 +1,13 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3'
+import { debounce } from 'lodash-es'
 import { Edit2, PlusCircle, Trash2, X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
-
-const ICON_OPTIONS = [
-  // Technology
-  '💻', '🖥️', '📱', '⌨️', '🖱️', '🖨️', '💾', '💿', '📡', '🔌',
-  // Data / AI
-  '🤖', '🧠', '📊', '📈', '📉', '🗃️', '🔢', '⚙️', '🔬', '🧪',
-  // Design
-  '🎨', '✏️', '🖊️', '🖌️', '📐', '📏', '🎭', '🖼️', '✂️', '🎬',
-  // Business
-  '💼', '📋', '📌', '🗂️', '📝', '🤝', '🏆', '💡', '🎯', '📣',
-  // Finance
-  '💰', '💵', '💳', '🏦', '📑', '🪙', '💹', '🏧', '💲', '🤑',
-  // Security
-  '🔐', '🔒', '🛡️', '🔑', '🗝️', '🚨', '👁️', '🔍', '🕵️', '⚠️',
-  // Cloud / DevOps
-  '☁️', '🌐', '🚀', '🛠️', '🔧', '🔩', '📦', '🏗️', '🔄', '⚡',
-  // Marketing
-  '📢', '📲', '🌟', '✨', '🎪', '📸', '🎙️', '📰', '🗣️', '👥',
-  // Education
-  '🎓', '📚', '📖', '🏫', '✍️', '🧑‍💻', '👨‍🏫', '📓', '🏅', '🎖️',
-]
-import { debounce } from 'lodash-es'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { CATEGORY_ICON_GROUPS as ICON_GROUPS, categoryIconFor as iconFor } from '@/utils/categoryIcons'
 
 interface Category {
   id: number
@@ -224,10 +204,10 @@ function doDelete() {
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center gap-3">
                   <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg shadow-sm"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm"
                     :style="{ backgroundColor: cat.color ?? '#381998', opacity: cat.is_active ? 1 : 0.5 }"
                   >
-                    <span v-if="cat.icon">{{ cat.icon }}</span>
+                    <component :is="iconFor(cat.icon)" v-if="iconFor(cat.icon)" class="h-5 w-5 text-white" />
                     <span v-else class="text-xs font-bold text-white">{{ cat.name.charAt(0).toUpperCase() }}</span>
                   </div>
                   <div>
@@ -396,14 +376,14 @@ function doDelete() {
                   <!-- Selected preview badge -->
                   <div class="mb-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-700">
                     <div
-                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl shadow-sm"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-sm"
                       :style="{ backgroundColor: form.color || '#381998' }"
                     >
-                      <span v-if="form.icon">{{ form.icon }}</span>
+                      <component :is="iconFor(form.icon)" v-if="iconFor(form.icon)" class="h-5 w-5 text-white" />
                       <span v-else class="text-sm font-bold text-white/50">?</span>
                     </div>
                     <span class="flex-1 text-sm text-gray-600 dark:text-gray-300">
-                      {{ form.icon ? 'Selected: ' + form.icon : 'No icon selected' }}
+                      {{ form.icon ? 'Icon selected' : 'No icon selected' }}
                     </span>
                     <button
                       v-if="form.icon"
@@ -415,21 +395,24 @@ function doDelete() {
                     </button>
                   </div>
 
-                  <!-- Scrollable emoji grid -->
+                  <!-- Scrollable icon grid, grouped -->
                   <div class="h-40 overflow-y-auto rounded-lg border border-gray-300 bg-gray-50 p-2 dark:border-gray-600 dark:bg-gray-700">
-                    <div class="grid grid-cols-9 gap-1">
-                      <button
-                        v-for="emoji in ICON_OPTIONS"
-                        :key="emoji"
-                        type="button"
-                        @click="form.icon = emoji"
-                        :class="[
-                          'flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-600',
-                          form.icon === emoji ? 'bg-[#381998]/15 ring-2 ring-[#381998] dark:ring-purple-400 scale-110' : '',
-                        ]"
-                      >
-                        {{ emoji }}
-                      </button>
+                    <div v-for="group in ICON_GROUPS" :key="group.label" class="mb-2 last:mb-0">
+                      <p class="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{{ group.label }}</p>
+                      <div class="grid grid-cols-9 gap-1">
+                        <button
+                          v-for="opt in group.icons"
+                          :key="opt.key"
+                          type="button"
+                          @click="form.icon = opt.key"
+                          :class="[
+                            'flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 transition-all hover:bg-gray-200 dark:hover:bg-gray-600',
+                            form.icon === opt.key ? 'bg-[#381998]/15 text-[#381998] ring-2 ring-[#381998] dark:ring-purple-400 scale-110' : '',
+                          ]"
+                        >
+                          <component :is="opt.component" class="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -478,10 +461,10 @@ function doDelete() {
                 <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Live Preview</p>
                 <div class="flex items-center gap-4">
                   <div
-                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow"
+                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow"
                     :style="{ backgroundColor: form.color || '#381998' }"
                   >
-                    <span v-if="form.icon">{{ form.icon }}</span>
+                    <component :is="iconFor(form.icon)" v-if="iconFor(form.icon)" class="h-6 w-6 text-white" />
                     <span v-else class="text-sm font-bold text-white">{{ (form.name || 'C').charAt(0).toUpperCase() }}</span>
                   </div>
                   <div>

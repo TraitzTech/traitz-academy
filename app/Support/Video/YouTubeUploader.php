@@ -12,6 +12,18 @@ use Google\Service\YouTube\VideoSnippet;
 use Google\Service\YouTube\VideoStatus;
 use RuntimeException;
 
+/**
+ * Uploads lesson videos to YouTube via the Data API.
+ *
+ * NOTE (host choice): YouTube is the current video host. A dedicated host such
+ * as Bunny Stream / Cloudflare Stream is the planned upgrade — it avoids two
+ * YouTube limitations: (1) API-uploaded videos are forced to `private` until
+ * the Google Cloud project passes YouTube's API compliance audit (private
+ * videos can't be embedded for learners), and (2) residual YouTube branding on
+ * the embed. When we switch, add a sibling uploader with the same
+ * upload()/delete() shape and swap it in at CourseLessonVideoController — the
+ * lesson already stores a generic `video_url`, so the player needs little else.
+ */
 class YouTubeUploader
 {
     private const UPLOAD_CHUNK_BYTES = 5 * 1024 * 1024;
@@ -159,7 +171,11 @@ class YouTubeUploader
         $client->setClientId($clientId);
         $client->setClientSecret($clientSecret);
         $client->setAccessType('offline');
-        $client->setScopes([YouTube::YOUTUBE_UPLOAD]);
+        // YOUTUBE_UPLOAD lets us upload; YOUTUBE_FORCE_SSL is additionally
+        // required to delete videos (e.g. when replacing a lesson's video).
+        // NOTE: the OAuth refresh token must be regenerated with BOTH scopes —
+        // adding a scope here does not widen an already-issued token.
+        $client->setScopes([YouTube::YOUTUBE_UPLOAD, YouTube::YOUTUBE_FORCE_SSL]);
 
         $token = $client->fetchAccessTokenWithRefreshToken($refreshToken);
         if (! isset($token['access_token'])) {

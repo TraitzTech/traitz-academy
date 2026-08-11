@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Lms\Concerns\InteractsWithCourseContent;
 use App\Models\Course;
 use App\Models\CourseCategory;
 use App\Models\CourseLesson;
-use App\Models\Enrollment;
 use App\Models\LessonNote;
-use App\Models\LessonCompletion;
 use App\Models\LessonVideoProgress;
+use App\Support\Lms\CourseProgress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +17,8 @@ use Inertia\Response;
 
 class CourseCatalogueController extends Controller
 {
+    use InteractsWithCourseContent;
+
     public function index(Request $request): Response
     {
         $courses = Course::query()
@@ -68,12 +70,7 @@ class CourseCatalogueController extends Controller
             ->orderBy('sort_order')
             ->get(['id', 'course_section_id', 'title', 'type']);
 
-        $isEnrolled = auth()->check()
-            && Enrollment::query()
-                ->where('user_id', auth()->id())
-                ->where('course_id', $course->id)
-                ->whereNotIn('access_status', ['suspended', 'revoked'])
-                ->exists();
+        $isEnrolled = $course->grantsAccessTo(auth()->user());
 
         $requiresCheckout = auth()->check() && ! $isEnrolled && $course->effectivePrice() > 0;
 
@@ -119,8 +116,7 @@ class CourseCatalogueController extends Controller
 
     public function preview(Course $course, CourseLesson $lesson): Response
     {
-        abort_unless($course->status === 'published', 404);
-        abort_unless($lesson->course_id === $course->id, 404);
+        $this->assertLessonInPublishedCourse($course, $lesson);
         abort_unless($lesson->is_free, 403);
 
         $lesson->load('section:id,title', 'attachments');
@@ -153,25 +149,8 @@ class CourseCatalogueController extends Controller
 
     public function lesson(Course $course, CourseLesson $lesson): Response|RedirectResponse
     {
-        abort_unless($course->status === 'published', 404);
-        abort_unless((int) $lesson->course_id === (int) $course->id, 404);
-
-        $user = auth()->user();
-
-        $enrollment = Enrollment::query()
-            ->where('user_id', auth()->id())
-            ->where('course_id', $course->id)
-            ->whereNotIn('access_status', ['suspended', 'revoked'])
-            ->first();
-
-        $canModerateCourse = $user !== null && (
-            $user->canAccessAdminPanel()
-            || ($user->isTutor() && (int) $course->instructor_id === (int) $user->id)
-        );
-
-        $hasAccess = $lesson->is_free || $enrollment !== null || $canModerateCourse;
-
-        abort_unless($hasAccess, 403);
+        $this->assertLessonInPublishedCourse($course, $lesson);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
         $course->load([
             'sections' => fn ($q) => $q->orderBy('sort_order')->with([
@@ -188,37 +167,13 @@ class CourseCatalogueController extends Controller
             return redirect()->route('lms.quizzes.take', $lesson->quiz);
         }
 
-        $lessonIds = $course->sections
-            ->flatMap(fn ($section) => $section->lessons->pluck('id'))
-            ->map(fn ($id) => (int) $id)
-            ->values();
+        $completedLessonIds = CourseProgress::completedLessonIds((int) $course->id, (int) auth()->id());
+        $progressPercent = CourseProgress::percent((int) $course->id, (int) auth()->id());
 
-        $completedFromMarks = LessonCompletion::query()
+        $currentVideoProgress = LessonVideoProgress::query()
             ->where('user_id', auth()->id())
-            ->whereIn('course_lesson_id', $lessonIds)
-            ->pluck('course_lesson_id')
-            ->map(fn ($id) => (int) $id);
-
-        $videoProgressRows = LessonVideoProgress::query()
-            ->where('user_id', auth()->id())
-            ->whereIn('course_lesson_id', $lessonIds)
-            ->get(['course_lesson_id', 'watched_seconds', 'duration_seconds', 'percentage']);
-
-        $completedFromVideo = $videoProgressRows
-            ->filter(fn ($row) => (float) $row->percentage >= LessonVideoProgress::COMPLETION_PERCENT_THRESHOLD)
-            ->pluck('course_lesson_id')
-            ->map(fn ($id) => (int) $id);
-
-        $completedLessonIds = $completedFromMarks
-            ->merge($completedFromVideo)
-            ->unique()
-            ->values();
-
-        $currentVideoProgress = $videoProgressRows
-            ->firstWhere('course_lesson_id', $lesson->id);
-
-        $totalLessons = max(1, (int) $lessonIds->count());
-        $progressPercent = (int) min(100, round(($completedLessonIds->count() / $totalLessons) * 100));
+            ->where('course_lesson_id', $lesson->id)
+            ->first(['course_lesson_id', 'watched_seconds', 'duration_seconds', 'percentage']);
 
         $discussionPayload = LessonDiscussionController::discussionPayloadForLesson(
             $course,

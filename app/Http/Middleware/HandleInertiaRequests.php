@@ -55,17 +55,45 @@ class HandleInertiaRequests extends Middleware
             'pendingCoursesCount' => fn () => $request->user()?->role && in_array($request->user()->role, ['cto', 'ceo', 'program_coordinator', 'admin'])
                 ? Course::where('status', 'pending_review')->count()
                 : null,
+            'internshipAccess' => function () use ($request) {
+                $user = $request->user();
+                if (! $user || ! $this->tableExists('internships')) {
+                    return ['is_intern' => false, 'supervises' => false];
+                }
+
+                return [
+                    'is_intern' => \App\Models\Internship::query()
+                        ->where('user_id', $user->id)
+                        ->where('status', 'active')
+                        ->exists(),
+                    'supervises' => $user->canAccessAdminPanel()
+                        || \App\Models\Internship::query()->forSupervisor($user)->exists(),
+                ];
+            },
             'unreadNotificationsCount' => function () use ($request) {
                 $user = $request->user();
                 if (! $user) {
                     return 0;
                 }
-                if (! Schema::hasTable('notifications')) {
+                if (! $this->tableExists('notifications')) {
                     return 0;
                 }
 
                 return (int) $user->unreadNotifications()->count();
             },
         ];
+    }
+
+    /**
+     * Cached table-existence check. The schema is stable for a running app,
+     * so this avoids a slow information_schema query on every request.
+     */
+    protected function tableExists(string $table): bool
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "schema.has_table.{$table}",
+            now()->addDay(),
+            fn () => Schema::hasTable($table),
+        );
     }
 }

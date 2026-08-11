@@ -1,37 +1,39 @@
 <?php
 
-use App\Http\Controllers\CourseLessonVideoController;
-use App\Http\Controllers\CourseManualEnrollmentController;
-use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
 use App\Http\Controllers\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Admin\CoursePricingController;
+use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
 use App\Http\Controllers\Admin\LiveClassController as AdminLiveClassController;
 use App\Http\Controllers\Admin\LmsDiscussionController as AdminLmsDiscussionController;
 use App\Http\Controllers\Admin\LmsReportController as AdminLmsReportController;
 use App\Http\Controllers\Admin\QuizAttemptController as AdminQuizAttemptController;
+use App\Http\Controllers\CourseLessonVideoController;
+use App\Http\Controllers\CourseManualEnrollmentController;
 use App\Http\Controllers\Lms\AllCoursesController;
 use App\Http\Controllers\Lms\AssignmentController;
 use App\Http\Controllers\Lms\BroadcastNotificationController;
 use App\Http\Controllers\Lms\CourseCatalogueController;
 use App\Http\Controllers\Lms\CourseEnrollmentController;
-use App\Http\Controllers\Lms\DiscussionController as StudentDiscussionController;
-use App\Http\Controllers\Lms\LiveClassController as StudentLiveClassController;
-use App\Http\Controllers\Lms\ScheduleController;
-use App\Http\Controllers\Lms\StudentScheduleController;
 use App\Http\Controllers\Lms\CoursePaymentController;
 use App\Http\Controllers\Lms\CoursePlayerProgressController;
+use App\Http\Controllers\Lms\DiscussionController as StudentDiscussionController;
+use App\Http\Controllers\Lms\LearningResourceController as LmsLearningResourceController;
 use App\Http\Controllers\Lms\LessonDiscussionController;
 use App\Http\Controllers\Lms\LessonNoteController;
-use App\Http\Controllers\Lms\NoteController;
+use App\Http\Controllers\Lms\LiveClassController as StudentLiveClassController;
 use App\Http\Controllers\Lms\MyCoursesController;
+use App\Http\Controllers\Lms\NoteController;
 use App\Http\Controllers\Lms\QuizAttemptController as StudentQuizAttemptController;
+use App\Http\Controllers\Lms\ScheduleController;
+use App\Http\Controllers\Lms\StudentNotificationController;
+use App\Http\Controllers\Lms\StudentScheduleController;
 use App\Http\Controllers\Tutor\CourseController as TutorCourseController;
 use App\Http\Controllers\Tutor\CourseLessonController;
 use App\Http\Controllers\Tutor\CourseSectionController;
 use App\Http\Controllers\Tutor\DashboardController as TutorDashboardController;
+use App\Http\Controllers\Tutor\DiscussionController as TutorDiscussionController;
 use App\Http\Controllers\Tutor\LessonAttachmentController;
 use App\Http\Controllers\Tutor\LessonUploadController;
-use App\Http\Controllers\Tutor\DiscussionController as TutorDiscussionController;
 use App\Http\Controllers\Tutor\LiveClassController as TutorLiveClassController;
 use App\Http\Controllers\Tutor\QuizAttemptController as TutorQuizAttemptController;
 use App\Http\Controllers\Tutor\QuizBuilderController;
@@ -67,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/online-courses/{course}/enroll', [CourseEnrollmentController::class, 'store'])->name('lms.courses.enroll');
     Route::get('/dashboard/discussions', [StudentDiscussionController::class, 'index'])->name('lms.discussions.index');
     Route::get('/dashboard/assignments', [AssignmentController::class, 'studentIndex'])->name('lms.assignments.index');
+    Route::get('/dashboard/program-resources', [LmsLearningResourceController::class, 'studentIndex'])->name('lms.resources.index');
     Route::get('/dashboard/schedules', [StudentScheduleController::class, 'index'])->name('lms.schedules.index');
     Route::post('/dashboard/schedules/personal-events', [StudentScheduleController::class, 'storePersonal'])->name('lms.schedules.personal-events.store');
     Route::put('/dashboard/schedules/personal-events/{event}', [StudentScheduleController::class, 'updatePersonal'])->name('lms.schedules.personal-events.update');
@@ -75,12 +78,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/schedules/google/callback', [StudentScheduleController::class, 'googleCallback'])->name('lms.schedules.google.callback');
     Route::post('/dashboard/schedules/google/sync', [StudentScheduleController::class, 'syncGoogle'])->name('lms.schedules.google.sync');
     Route::get('/dashboard/notes', [NoteController::class, 'index'])->name('lms.notes.index');
+    Route::get('/dashboard/notifications', [StudentNotificationController::class, 'index'])->name('lms.notifications.index');
+    Route::post('/dashboard/notifications/read-all', [StudentNotificationController::class, 'markAllAsRead'])->name('lms.notifications.read-all');
     Route::get('/dashboard/live-classes', [StudentLiveClassController::class, 'index'])->name('lms.live-classes.index');
     Route::get('/dashboard/live-classes/recordings', [StudentLiveClassController::class, 'recordings'])->name('lms.live-classes.recordings');
     Route::get('/dashboard/live-classes/{liveClass}/details', [StudentLiveClassController::class, 'details'])->name('lms.live-classes.details');
     Route::get('/dashboard/live-classes/{liveClass}', [StudentLiveClassController::class, 'show'])->name('lms.live-classes.show');
     Route::get('/dashboard/live-classes/{liveClass}/messages', [StudentLiveClassController::class, 'messages'])->name('lms.live-classes.messages');
-    Route::post('/dashboard/live-classes/{liveClass}/messages', [StudentLiveClassController::class, 'sendMessage'])->name('lms.live-classes.messages.store');
+    Route::post('/dashboard/live-classes/{liveClass}/messages', [StudentLiveClassController::class, 'sendMessage'])
+        ->middleware('throttle:30,1')
+        ->name('lms.live-classes.messages.store');
     Route::post('/dashboard/live-classes/{liveClass}/attendance/join', [StudentLiveClassController::class, 'join'])->name('lms.live-classes.attendance.join');
     Route::post('/dashboard/live-classes/{liveClass}/attendance/ping', [StudentLiveClassController::class, 'ping'])->name('lms.live-classes.attendance.ping');
     Route::post('/dashboard/live-classes/{liveClass}/attendance/leave', [StudentLiveClassController::class, 'leave'])->name('lms.live-classes.attendance.leave');
@@ -143,22 +150,6 @@ Route::middleware(['auth', 'verified', 'tutor'])
 
         Route::get('students', [TutorStudentController::class, 'index'])->name('students.index');
         Route::get('discussions', [TutorDiscussionController::class, 'index'])->name('discussions.index');
-        Route::get('assignments', [AssignmentController::class, 'tutorIndex'])->name('assignments.index');
-        Route::post('assignments', [AssignmentController::class, 'tutorStore'])->name('assignments.store');
-        Route::put('schedules/{schedule}', [ScheduleController::class, 'tutorUpdate'])->name('schedules.update');
-        Route::delete('schedules/{schedule}', [ScheduleController::class, 'tutorDestroy'])->name('schedules.destroy');
-        Route::get('schedules', [ScheduleController::class, 'tutorIndex'])->name('schedules.index');
-        Route::post('schedules', [ScheduleController::class, 'tutorStore'])->name('schedules.store');
-        Route::get('notifications', [BroadcastNotificationController::class, 'tutorIndex'])->name('notifications.index');
-        Route::post('notifications', [BroadcastNotificationController::class, 'tutorSend'])->name('notifications.send');
-        Route::get('live-classes', [TutorLiveClassController::class, 'index'])->name('live-classes.index');
-        Route::get('live-classes/create', [TutorLiveClassController::class, 'create'])->name('live-classes.create');
-        Route::post('live-classes', [TutorLiveClassController::class, 'store'])->name('live-classes.store');
-        Route::get('live-classes/{liveClass}', [TutorLiveClassController::class, 'show'])->name('live-classes.show');
-        Route::get('live-classes/{liveClass}/edit', [TutorLiveClassController::class, 'edit'])->name('live-classes.edit');
-        Route::put('live-classes/{liveClass}', [TutorLiveClassController::class, 'update'])->name('live-classes.update');
-        Route::delete('live-classes/{liveClass}', [TutorLiveClassController::class, 'destroy'])->name('live-classes.destroy');
-        Route::post('live-classes/{liveClass}/recordings', [TutorLiveClassController::class, 'addRecording'])->name('live-classes.recordings.store');
 
         // Lesson upload
         Route::get('lessons/upload', [LessonUploadController::class, 'index'])->name('lessons.upload');
@@ -204,4 +195,31 @@ Route::middleware(['auth', 'verified', 'tutor'])
         Route::get('quizzes/{quiz}/attempts', [TutorQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
         Route::get('quizzes/{quiz}/attempts/{attempt}', [TutorQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
         Route::put('quizzes/{quiz}/attempts/{attempt}/grade', [TutorQuizAttemptController::class, 'grade'])->name('quizzes.attempts.grade');
+    });
+
+// Learning ops (assignments, schedules, notifications, live classes) span
+
+Route::middleware(['auth', 'verified', 'learning-ops'])
+    ->prefix('tutor')
+    ->name('tutor.')
+    ->group(function () {
+        Route::get('assignments', [AssignmentController::class, 'tutorIndex'])->name('assignments.index');
+        Route::post('assignments', [AssignmentController::class, 'tutorStore'])->name('assignments.store');
+        Route::get('resources', [LmsLearningResourceController::class, 'tutorIndex'])->name('resources.index');
+        Route::post('resources', [LmsLearningResourceController::class, 'tutorStore'])->name('resources.store');
+        Route::delete('resources/{learningResource}', [LmsLearningResourceController::class, 'tutorDestroy'])->name('resources.destroy');
+        Route::get('schedules', [ScheduleController::class, 'tutorIndex'])->name('schedules.index');
+        Route::post('schedules', [ScheduleController::class, 'tutorStore'])->name('schedules.store');
+        Route::put('schedules/{schedule}', [ScheduleController::class, 'tutorUpdate'])->name('schedules.update');
+        Route::delete('schedules/{schedule}', [ScheduleController::class, 'tutorDestroy'])->name('schedules.destroy');
+        Route::get('notifications', [BroadcastNotificationController::class, 'tutorIndex'])->name('notifications.index');
+        Route::post('notifications', [BroadcastNotificationController::class, 'tutorSend'])->name('notifications.send');
+        Route::get('live-classes', [TutorLiveClassController::class, 'index'])->name('live-classes.index');
+        Route::get('live-classes/create', [TutorLiveClassController::class, 'create'])->name('live-classes.create');
+        Route::post('live-classes', [TutorLiveClassController::class, 'store'])->name('live-classes.store');
+        Route::get('live-classes/{liveClass}', [TutorLiveClassController::class, 'show'])->name('live-classes.show');
+        Route::get('live-classes/{liveClass}/edit', [TutorLiveClassController::class, 'edit'])->name('live-classes.edit');
+        Route::put('live-classes/{liveClass}', [TutorLiveClassController::class, 'update'])->name('live-classes.update');
+        Route::delete('live-classes/{liveClass}', [TutorLiveClassController::class, 'destroy'])->name('live-classes.destroy');
+        Route::post('live-classes/{liveClass}/recordings', [TutorLiveClassController::class, 'addRecording'])->name('live-classes.recordings.store');
     });

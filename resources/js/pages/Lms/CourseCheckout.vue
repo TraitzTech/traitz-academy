@@ -67,7 +67,7 @@ const submit = () => {
   form.post(`/dashboard/courses/${props.course.id}/checkout`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Payment initiated successfully.')
+      // Flash message handled by global watcher (CoursePaymentController::store flashes 'success'/'error')
     },
     onError: () => {
       toast.error('Payment could not be completed. Please verify your details.')
@@ -81,7 +81,7 @@ const formatMoney = (amount: number) => {
 </script>
 
 <template>
-  <div class="lms-page">
+  <div class="lms-page mx-auto max-w-5xl">
     <Head :title="`Pay — ${course.title}`" />
 
     <div class="mb-8">

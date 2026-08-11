@@ -4,22 +4,28 @@ namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
+use App\Models\Cohort;
 use App\Models\Course;
 use App\Models\Enrollment;
-use App\Models\User;
+use App\Models\Internship;
+use App\Models\Program;
+use App\Services\LearningAudienceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AssignmentController extends Controller
 {
+    public function __construct(private readonly LearningAudienceService $audience) {}
+
     public function adminIndex(Request $request): Response
     {
         abort_unless($request->user()?->canAccessAdminPanel(), 403);
 
         return Inertia::render('Admin/Lms/Assignments/Index', [
-            'courses' => $this->coursesForAdmin(),
+            ...$this->audience->allGroups(),
             'assignments' => $this->assignmentRowsForAdmin(),
         ]);
     }
@@ -27,10 +33,10 @@ class AssignmentController extends Controller
     public function tutorIndex(Request $request): Response
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
 
         return Inertia::render('Tutor/Assignments/Index', [
-            'courses' => $this->coursesForTutor((int) $user->id),
+            ...$this->audience->managedGroupsFor($user),
             'assignments' => $this->assignmentRowsForTutor((int) $user->id),
         ]);
     }
@@ -44,19 +50,34 @@ class AssignmentController extends Controller
             ->where('access_status', '!=', 'revoked')
             ->pluck('course_id');
 
+        $internships = Internship::query()->where('user_id', $userId)->get(['cohort_id', 'program_id']);
+        $cohortIds = $internships->pluck('cohort_id')->filter()->unique();
+        $programIds = $internships->pluck('program_id')->filter()->unique();
+
         $assignments = Assignment::query()
-            ->where(function ($query) use ($userId, $enrolledCourseIds): void {
-                $query->where(function ($courseAudience) use ($enrolledCourseIds): void {
-                    $courseAudience
+            ->where(function ($query) use ($userId, $enrolledCourseIds, $cohortIds, $programIds): void {
+                $query->where(function ($groupAudience) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                    $groupAudience
                         ->where('audience', 'all_course_students')
-                        ->whereIn('course_id', $enrolledCourseIds);
+                        ->where(function ($attachables) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                            $attachables
+                                ->where(function ($q) use ($enrolledCourseIds) {
+                                    $q->where('attachable_type', Course::class)->whereIn('attachable_id', $enrolledCourseIds);
+                                })
+                                ->orWhere(function ($q) use ($cohortIds) {
+                                    $q->where('attachable_type', Cohort::class)->whereIn('attachable_id', $cohortIds);
+                                })
+                                ->orWhere(function ($q) use ($programIds) {
+                                    $q->where('attachable_type', Program::class)->whereIn('attachable_id', $programIds);
+                                });
+                        });
                 })->orWhere(function ($selectedAudience) use ($userId): void {
                     $selectedAudience
                         ->where('audience', 'selected_students')
                         ->whereHas('selectedStudents', fn ($selected) => $selected->where('users.id', $userId));
                 });
             })
-            ->with(['course:id,title', 'creator:id,name'])
+            ->with(['attachable', 'creator:id,name'])
             ->latest()
             ->get()
             ->map(fn (Assignment $assignment) => $this->mapAssignmentRow($assignment));
@@ -79,7 +100,7 @@ class AssignmentController extends Controller
     public function tutorStore(Request $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
 
         $payload = $this->validatePayload($request);
         $assignment = $this->storeAssignment($request, $payload, (int) $user->id, false);
@@ -93,7 +114,8 @@ class AssignmentController extends Controller
     private function validatePayload(Request $request): array
     {
         return $request->validate([
-            'course_id' => ['required', 'integer', 'exists:courses,id'],
+            'attachable_type' => ['required', 'in:course,cohort,program'],
+            'attachable_id' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'instructions' => ['required', 'string', 'max:30000'],
             'audience' => ['required', 'in:all_course_students,selected_students'],
@@ -109,30 +131,40 @@ class AssignmentController extends Controller
      */
     private function storeAssignment(Request $request, array $payload, ?int $tutorId, bool $isAdmin): Assignment
     {
-        $course = Course::query()->findOrFail((int) $payload['course_id']);
+        $attachable = $this->audience->resolveAttachable((string) $payload['attachable_type'], (int) $payload['attachable_id']);
 
         if (! $isAdmin) {
-            abort_unless((int) $course->instructor_id === (int) $tutorId, 403);
+            abort_unless($this->audience->userCanManage($attachable, (int) $tutorId), 403);
         }
 
-        $allowedStudentIds = Enrollment::query()
-            ->where('course_id', $course->id)
-            ->where('access_status', '!=', 'revoked')
-            ->pluck('user_id')
-            ->unique()
-            ->values();
+        $allowedStudentIds = $this->audience->manageableStudentIds($attachable, $tutorId, $isAdmin);
+
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
 
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds
                 ->filter(fn ($id) => $allowedStudentIds->contains($id))
                 ->values();
 
-            abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['student_ids' => 'Please select at least one valid student.']);
+            }
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            // A supervisor's program roster is scoped to the cohorts they
+            // supervise, but "everyone in the program" is resolved student-side
+            // by program membership alone — which would reach interns in other
+            // cohorts. Pin the audience to the supervisor's exact interns.
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['attachable_id' => 'You have no interns to assign in this program.']);
+            }
         } else {
             $selectedIds = collect();
         }
@@ -140,11 +172,13 @@ class AssignmentController extends Controller
         $attachmentPath = $request->file('attachment')?->store('assignments', 'public');
 
         $assignment = Assignment::query()->create([
-            'course_id' => $course->id,
+            'course_id' => $attachable instanceof Course ? $attachable->id : null,
+            'attachable_type' => $attachable->getMorphClass(),
+            'attachable_id' => $attachable->id,
             'created_by' => (int) $request->user()->id,
             'title' => (string) $payload['title'],
             'instructions' => (string) $payload['instructions'],
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'attachment_path' => $attachmentPath,
             'due_at' => $payload['due_at'] ?? null,
         ]);
@@ -155,67 +189,12 @@ class AssignmentController extends Controller
     }
 
     /**
-     * @return array<int, array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}>
-     */
-    private function coursesForAdmin(): array
-    {
-        return Course::query()
-            ->select('id', 'title')
-            ->with(['enrollments:id,course_id,user_id,access_status', 'enrollments.user:id,name,email,role'])
-            ->orderBy('title')
-            ->get()
-            ->map(fn (Course $course) => $this->mapCourseWithStudents($course))
-            ->all();
-    }
-
-    /**
-     * @return array<int, array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}>
-     */
-    private function coursesForTutor(int $tutorId): array
-    {
-        return Course::query()
-            ->where('instructor_id', $tutorId)
-            ->select('id', 'title')
-            ->with(['enrollments:id,course_id,user_id,access_status', 'enrollments.user:id,name,email,role'])
-            ->orderBy('title')
-            ->get()
-            ->map(fn (Course $course) => $this->mapCourseWithStudents($course))
-            ->all();
-    }
-
-    /**
-     * @return array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}
-     */
-    private function mapCourseWithStudents(Course $course): array
-    {
-        $students = $course->enrollments
-            ->filter(fn (Enrollment $enrollment) => $enrollment->access_status !== 'revoked')
-            ->map(fn (Enrollment $enrollment) => $enrollment->user)
-            ->filter(fn ($user) => $user && $user->role === 'user')
-            ->unique('id')
-            ->map(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ])
-            ->values()
-            ->all();
-
-        return [
-            'id' => $course->id,
-            'title' => $course->title,
-            'student_count' => count($students),
-            'students' => $students,
-        ];
-    }
-
-    /**
      * @return array<int, array<string,mixed>>
      */
     private function assignmentRowsForAdmin(): array
     {
         return Assignment::query()
-            ->with(['course:id,title', 'creator:id,name', 'selectedStudents:id'])
+            ->with(['attachable', 'creator:id,name', 'selectedStudents:id'])
             ->latest()
             ->limit(100)
             ->get()
@@ -230,7 +209,7 @@ class AssignmentController extends Controller
     {
         return Assignment::query()
             ->where('created_by', $tutorId)
-            ->with(['course:id,title', 'creator:id,name', 'selectedStudents:id'])
+            ->with(['attachable', 'creator:id,name', 'selectedStudents:id'])
             ->latest()
             ->limit(100)
             ->get()
@@ -243,14 +222,17 @@ class AssignmentController extends Controller
      */
     private function mapAssignmentRow(Assignment $assignment): array
     {
+        $attachable = $assignment->attachable;
+
         return [
             'id' => $assignment->id,
             'title' => $assignment->title,
             'instructions' => $assignment->instructions,
             'audience' => $assignment->audience,
-            'course' => [
-                'id' => $assignment->course?->id,
-                'title' => $assignment->course?->title,
+            'attachable' => [
+                'type' => $this->audience->typeKey($attachable),
+                'id' => $attachable?->id,
+                'title' => $attachable?->title ?? $attachable?->name,
             ],
             'created_by' => $assignment->creator?->name,
             'due_at' => $assignment->due_at?->toIso8601String(),

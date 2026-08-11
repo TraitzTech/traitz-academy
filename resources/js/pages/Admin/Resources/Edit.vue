@@ -43,14 +43,14 @@ const form = useForm({
 const submit = () => {
   form.post(`/admin/learning-resources/${props.resource.slug}`, {
     forceFormData: true,
-    onSuccess: () => toast.success('Resource updated successfully!'),
+    // Flash message handled by global watcher (LearningResourceController::update flashes 'success')
     onError: () => toast.error('Failed to update resource.'),
   })
 }
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit ${resource.title}`" />
 
     <div class="mb-8">

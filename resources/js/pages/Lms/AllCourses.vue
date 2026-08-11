@@ -4,6 +4,7 @@ import { BookOpen, Clock, Search, SlidersHorizontal, Star, Users, X } from 'luci
 import { computed, ref, watch } from 'vue';
 
 import AppLayout from '@/layouts/AppLayout.vue';
+import { categoryIconFor } from '@/utils/categoryIcons';
 
 interface Category {
   id: number;
@@ -229,7 +230,7 @@ function coverUrl(url: string | null) {
                   selectedCategory === cat.slug ? 'bg-[#42b6c5]/10 font-semibold text-[#42b6c5]' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
                 ]"
               >
-                <span v-if="cat.icon" class="text-base">{{ cat.icon }}</span>
+                <component :is="categoryIconFor(cat.icon)" v-if="categoryIconFor(cat.icon)" class="h-4 w-4 shrink-0" />
                 {{ cat.name }}
               </button>
             </div>

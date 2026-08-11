@@ -78,7 +78,7 @@ const toggleStatus = (story: SuccessStory) => {
   router.post(`/admin/success-stories/${story.id}/toggle-status`, {}, { 
     preserveState: true,
     onSuccess: () => {
-      toast.success(`Story ${story.is_active ? 'hidden' : 'published'} successfully!`)
+      // Flash message handled by global watcher (SuccessStoryController::toggleStatus flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update story status.')
@@ -96,7 +96,7 @@ const confirmDelete = () => {
   
   router.delete(`/admin/success-stories/${storyToDelete.value.id}`, {
     onSuccess: () => {
-      toast.success('Success story deleted successfully!')
+      // Flash message handled by global watcher (SuccessStoryController::destroy flashes 'success')
       showDeleteModal.value = false
       storyToDelete.value = null
     },
@@ -117,7 +117,7 @@ const openBulkDeleteModal = () => {
 const confirmBulkDelete = () => {
   router.post('/admin/success-stories/bulk-destroy', { ids: selectedIds.value }, {
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} story(ies) deleted successfully!`)
+      // Flash message handled by global watcher (SuccessStoryController::bulkDestroy flashes 'success')
       selectedIds.value = []
       showBulkDeleteModal.value = false
     },

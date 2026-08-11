@@ -91,6 +91,7 @@ const statusLabel = computed(() => {
   <AppLayout>
     <Head :title="`Attempt #${attempt.id}`" />
 
+    <div class="mx-auto max-w-3xl">
     <div v-if="flashSuccess" class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-200">
       {{ flashSuccess }}
     </div>
@@ -175,6 +176,7 @@ const statusLabel = computed(() => {
           <span class="font-medium">Answer key:</span> {{ formatCorrect(q) }}
         </p>
       </div>
+    </div>
     </div>
   </AppLayout>
 </template>

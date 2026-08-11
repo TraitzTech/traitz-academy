@@ -12,6 +12,13 @@ class Enrollment extends Model
     /** @use HasFactory<\Database\Factories\EnrollmentFactory> */
     use HasFactory;
 
+    /**
+     * Access statuses that grant a learner access to paid course content.
+     * Canonical definition — do not inline this list in queries; use
+     * {@see scopeGrantsAccess()} or {@see Course::grantsAccessTo()} instead.
+     */
+    public const ACCESS_GRANTING_STATUSES = ['active', 'completed'];
+
     protected $fillable = [
         'user_id',
         'course_id',
@@ -76,6 +83,15 @@ class Enrollment extends Model
     public function scopeSuspended($query)
     {
         return $query->where('access_status', 'suspended');
+    }
+
+    /**
+     * Enrollments that currently grant the learner access to course content.
+     * This is the single source of truth for "is this learner allowed in?".
+     */
+    public function scopeGrantsAccess($query)
+    {
+        return $query->whereIn('access_status', self::ACCESS_GRANTING_STATUSES);
     }
 
     /**

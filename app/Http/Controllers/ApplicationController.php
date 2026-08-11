@@ -14,8 +14,14 @@ use Inertia\Inertia;
 
 class ApplicationController extends Controller
 {
-    public function create(Program $program): \Inertia\Response
+    public function create(Program $program): \Inertia\Response|RedirectResponse
     {
+        if (! $program->applicationsOpen()) {
+            return redirect()
+                ->route('programs.show', $program->slug)
+                ->with('warning', $this->closedMessage($program));
+        }
+
         return Inertia::render('Applications/Create', [
             'program' => $program,
         ]);
@@ -25,6 +31,12 @@ class ApplicationController extends Controller
     {
         $validated = $request->validated();
         $program = Program::query()->findOrFail($validated['program_id']);
+
+        if (! $program->applicationsOpen()) {
+            return redirect()
+                ->route('programs.show', $program->slug)
+                ->with('warning', $this->closedMessage($program));
+        }
 
         $validated['user_id'] = auth()->id();
         $validated['application_type'] = match ($program->category) {
@@ -60,5 +72,14 @@ class ApplicationController extends Controller
             ->notify(new ApplicationConfirmation($application));
 
         return redirect('/dashboard')->with('success', 'Thank you for your application! We\'ve sent you a confirmation email. You can view its status in your dashboard.');
+    }
+
+    private function closedMessage(Program $program): string
+    {
+        if ($program->applicationStatus() === 'not_yet' && $program->applications_open_at) {
+            return 'Applications for this program open on '.$program->applications_open_at->format('d M Y').'.';
+        }
+
+        return 'Applications for this program are currently closed.';
     }
 }

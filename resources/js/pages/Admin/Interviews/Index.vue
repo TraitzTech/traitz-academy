@@ -4,7 +4,6 @@ import { debounce } from 'lodash-es'
 import { ref, watch } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
-import { useToast } from '@/composables/useToast'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 interface Program {
@@ -43,8 +42,6 @@ const props = defineProps<Props>()
 
 defineOptions({ layout: AppLayout })
 
-const toast = useToast()
-
 const search = ref(props.filters.search || '')
 const programFilter = ref(props.filters.program_id || '')
 
@@ -67,7 +64,7 @@ const toggleStatus = (interview: Interview) => {
   router.post(`/admin/interviews/${interview.id}/toggle-status`, {}, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success(`Interview ${interview.is_active ? 'deactivated' : 'activated'} successfully.`)
+      // Flash message handled by global watcher (InterviewController::toggleStatus flashes 'success')
     },
   })
 }
@@ -84,7 +81,7 @@ const confirmDelete = () => {
     onSuccess: () => {
       showDeleteModal.value = false
       interviewToDelete.value = null
-      toast.success('Interview deleted successfully.')
+      // Flash message handled by global watcher (InterviewController::destroy flashes 'success')
     },
   })
 }

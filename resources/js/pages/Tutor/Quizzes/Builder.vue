@@ -140,6 +140,7 @@ function toggleMultiSelectOption(index: number, checked: boolean) {
   ]">
     <Head :title="`Quiz Builder - ${lesson.title}`" />
 
+    <div class="mx-auto max-w-6xl">
     <div class="mb-6 flex items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold text-[#000928] dark:text-white">Quiz Builder</h1>
@@ -293,6 +294,7 @@ function toggleMultiSelectOption(index: number, checked: boolean) {
           </ul>
         </div>
       </div>
+    </div>
     </div>
   </AppLayout>
 </template>

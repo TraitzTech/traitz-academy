@@ -3,24 +3,32 @@
 namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cohort;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Internship;
 use App\Models\LmsSchedule;
+use App\Models\Program;
 use App\Models\User;
 use App\Notifications\Lms\SchedulePublishedNotification;
+use App\Services\LearningAudienceService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ScheduleController extends Controller
 {
+    public function __construct(private readonly LearningAudienceService $audience) {}
+
     public function adminIndex(Request $request): Response
     {
         abort_unless($request->user()?->canAccessAdminPanel(), 403);
 
         return Inertia::render('Admin/Lms/Schedules/Index', [
-            'courses' => $this->coursesForAdmin(),
+            ...$this->audience->allGroups(),
             'schedules' => $this->scheduleRowsForAdmin(),
         ]);
     }
@@ -28,10 +36,10 @@ class ScheduleController extends Controller
     public function tutorIndex(Request $request): Response
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
 
         return Inertia::render('Tutor/Schedules/Index', [
-            'courses' => $this->coursesForTutor((int) $user->id),
+            ...$this->audience->managedGroupsFor($user),
             'schedules' => $this->scheduleRowsForTutor((int) $user->id),
         ]);
     }
@@ -44,13 +52,28 @@ class ScheduleController extends Controller
             ->where('access_status', '!=', 'revoked')
             ->pluck('course_id');
 
+        $internships = Internship::query()->where('user_id', $userId)->get(['cohort_id', 'program_id']);
+        $cohortIds = $internships->pluck('cohort_id')->filter()->unique();
+        $programIds = $internships->pluck('program_id')->filter()->unique();
+
         $schedules = LmsSchedule::query()
-            ->where(function ($query) use ($userId, $enrolledCourseIds): void {
+            ->where(function ($query) use ($userId, $enrolledCourseIds, $cohortIds, $programIds): void {
                 $query->where('audience', 'all_students')
-                    ->orWhere(function ($courseAudience) use ($enrolledCourseIds): void {
-                        $courseAudience
+                    ->orWhere(function ($groupAudience) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                        $groupAudience
                             ->where('audience', 'course_students')
-                            ->whereIn('course_id', $enrolledCourseIds);
+                            ->where(function ($attachables) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                                $attachables
+                                    ->where(function ($q) use ($enrolledCourseIds) {
+                                        $q->where('attachable_type', Course::class)->whereIn('attachable_id', $enrolledCourseIds);
+                                    })
+                                    ->orWhere(function ($q) use ($cohortIds) {
+                                        $q->where('attachable_type', Cohort::class)->whereIn('attachable_id', $cohortIds);
+                                    })
+                                    ->orWhere(function ($q) use ($programIds) {
+                                        $q->where('attachable_type', Program::class)->whereIn('attachable_id', $programIds);
+                                    });
+                            });
                     })
                     ->orWhere(function ($selectedAudience) use ($userId): void {
                         $selectedAudience
@@ -58,7 +81,7 @@ class ScheduleController extends Controller
                             ->whereHas('selectedStudents', fn ($selected) => $selected->where('users.id', $userId));
                     });
             })
-            ->with(['course:id,title', 'creator:id,name'])
+            ->with(['attachable', 'creator:id,name'])
             ->orderBy('starts_at')
             ->limit(200)
             ->get()
@@ -82,7 +105,7 @@ class ScheduleController extends Controller
     public function tutorStore(Request $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
 
         $payload = $this->validatePayload($request, false);
         $schedule = $this->storeSchedule($request, $payload, false, (int) $user->id);
@@ -103,7 +126,7 @@ class ScheduleController extends Controller
     public function tutorUpdate(Request $request, LmsSchedule $schedule): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
         abort_unless((int) $schedule->created_by === (int) $user->id, 403);
 
         $payload = $this->validatePayload($request, false);
@@ -123,7 +146,7 @@ class ScheduleController extends Controller
     public function tutorDestroy(Request $request, LmsSchedule $schedule): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user?->isTutor(), 403);
+        abort_unless($user?->canManageLearningOps(), 403);
         abort_unless((int) $schedule->created_by === (int) $user->id, 403);
 
         $schedule->delete();
@@ -144,7 +167,8 @@ class ScheduleController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'course_id' => ['nullable', 'integer', 'exists:courses,id'],
+            'attachable_type' => ['nullable', 'in:course,cohort,program'],
+            'attachable_id' => ['nullable', 'integer'],
             'audience' => ['required', 'string', 'in:'.implode(',', $audiences)],
             'student_ids' => ['nullable', 'array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
@@ -157,48 +181,47 @@ class ScheduleController extends Controller
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function storeSchedule(Request $request, array $payload, bool $isAdmin, ?int $tutorId): LmsSchedule
+    private function storeSchedule(Request $request, array $payload, bool $isAdmin, ?int $userId): LmsSchedule
     {
-        $course = null;
-        if (! empty($payload['course_id'])) {
-            $course = Course::query()->findOrFail((int) $payload['course_id']);
-            if (! $isAdmin) {
-                abort_unless((int) $course->instructor_id === (int) $tutorId, 403);
-            }
-        }
+        $attachable = $this->resolveAttachable($payload, $isAdmin, $userId);
 
         if (! $isAdmin && $payload['audience'] === 'all_students') {
             abort(403);
         }
 
-        if (in_array($payload['audience'], ['course_students', 'selected_students'], true) && ! $course) {
-            abort(422, 'A course is required for this audience.');
+        if (in_array($payload['audience'], ['course_students', 'selected_students'], true) && ! $attachable) {
+            throw ValidationException::withMessages(['attachable_id' => 'A course, cohort, or program is required for this audience.']);
         }
 
-        $allowedStudentIds = collect();
-        if ($course) {
-            $allowedStudentIds = Enrollment::query()
-                ->where('course_id', $course->id)
-                ->where('access_status', '!=', 'revoked')
-                ->pluck('user_id')
-                ->unique()
-                ->values();
-        }
+        $allowedStudentIds = $attachable ? $this->audience->manageableStudentIds($attachable, $userId, $isAdmin) : collect();
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values();
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds->filter(fn ($id) => $allowedStudentIds->contains($id))->values();
-            abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['student_ids' => 'Please select at least one valid student.']);
+            }
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            // Scope a supervisor's program schedule to their exact interns (see
+            // AssignmentController): "course_students" resolves program-wide.
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['attachable_id' => 'You have no interns to schedule in this program.']);
+            }
         } else {
             $selectedIds = collect();
         }
 
         $schedule = LmsSchedule::query()->create([
             'created_by' => (int) $request->user()->id,
-            'course_id' => $course?->id,
+            'course_id' => $attachable instanceof Course ? $attachable->id : null,
+            'attachable_type' => $attachable ? get_class($attachable) : null,
+            'attachable_id' => $attachable?->id,
             'title' => (string) $payload['title'],
             'description' => $payload['description'] ?? null,
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'location' => $payload['location'] ?? null,
             'starts_at' => (string) $payload['starts_at'],
             'ends_at' => $payload['ends_at'] ?? null,
@@ -218,47 +241,44 @@ class ScheduleController extends Controller
         LmsSchedule $schedule,
         array $payload,
         bool $isAdmin,
-        ?int $tutorId
+        ?int $userId
     ): LmsSchedule {
-        $course = null;
-        if (! empty($payload['course_id'])) {
-            $course = Course::query()->findOrFail((int) $payload['course_id']);
-            if (! $isAdmin) {
-                abort_unless((int) $course->instructor_id === (int) $tutorId, 403);
-            }
-        }
+        $attachable = $this->resolveAttachable($payload, $isAdmin, $userId);
 
         if (! $isAdmin && $payload['audience'] === 'all_students') {
             abort(403);
         }
 
-        if (in_array($payload['audience'], ['course_students', 'selected_students'], true) && ! $course) {
-            abort(422, 'A course is required for this audience.');
+        if (in_array($payload['audience'], ['course_students', 'selected_students'], true) && ! $attachable) {
+            throw ValidationException::withMessages(['attachable_id' => 'A course, cohort, or program is required for this audience.']);
         }
 
-        $allowedStudentIds = collect();
-        if ($course) {
-            $allowedStudentIds = Enrollment::query()
-                ->where('course_id', $course->id)
-                ->where('access_status', '!=', 'revoked')
-                ->pluck('user_id')
-                ->unique()
-                ->values();
-        }
+        $allowedStudentIds = $attachable ? $this->audience->manageableStudentIds($attachable, $userId, $isAdmin) : collect();
+        $audienceValue = (string) $payload['audience'];
 
         $selectedIds = collect($payload['student_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values();
-        if ($payload['audience'] === 'selected_students') {
+        if ($audienceValue === 'selected_students') {
             $selectedIds = $selectedIds->filter(fn ($id) => $allowedStudentIds->contains($id))->values();
-            abort_if($selectedIds->isEmpty(), 422, 'Please select at least one valid student.');
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['student_ids' => 'Please select at least one valid student.']);
+            }
+        } elseif (! $isAdmin && $attachable instanceof Program) {
+            $audienceValue = 'selected_students';
+            $selectedIds = $allowedStudentIds->values();
+            if ($selectedIds->isEmpty()) {
+                throw ValidationException::withMessages(['attachable_id' => 'You have no interns to schedule in this program.']);
+            }
         } else {
             $selectedIds = collect();
         }
 
         $schedule->update([
-            'course_id' => $course?->id,
+            'course_id' => $attachable instanceof Course ? $attachable->id : null,
+            'attachable_type' => $attachable ? get_class($attachable) : null,
+            'attachable_id' => $attachable?->id,
             'title' => (string) $payload['title'],
             'description' => $payload['description'] ?? null,
-            'audience' => (string) $payload['audience'],
+            'audience' => $audienceValue,
             'location' => $payload['location'] ?? null,
             'starts_at' => (string) $payload['starts_at'],
             'ends_at' => $payload['ends_at'] ?? null,
@@ -267,62 +287,25 @@ class ScheduleController extends Controller
         $schedule->selectedStudents()->sync($selectedIds->all());
         $this->notifyAudience($schedule);
 
-        return $schedule->fresh(['course:id,title', 'creator:id,name', 'selectedStudents:id']);
+        return $schedule->fresh(['attachable', 'creator:id,name', 'selectedStudents:id']);
     }
 
     /**
-     * @return array<int, array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}>
+     * @param  array<string, mixed>  $payload
      */
-    private function coursesForAdmin(): array
+    private function resolveAttachable(array $payload, bool $isAdmin, ?int $userId): ?Model
     {
-        return Course::query()
-            ->select('id', 'title')
-            ->with(['enrollments:id,course_id,user_id,access_status', 'enrollments.user:id,name,email,role'])
-            ->orderBy('title')
-            ->get()
-            ->map(fn (Course $course) => $this->mapCourseWithStudents($course))
-            ->all();
-    }
+        if (empty($payload['attachable_type']) || empty($payload['attachable_id'])) {
+            return null;
+        }
 
-    /**
-     * @return array<int, array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}>
-     */
-    private function coursesForTutor(int $tutorId): array
-    {
-        return Course::query()
-            ->where('instructor_id', $tutorId)
-            ->select('id', 'title')
-            ->with(['enrollments:id,course_id,user_id,access_status', 'enrollments.user:id,name,email,role'])
-            ->orderBy('title')
-            ->get()
-            ->map(fn (Course $course) => $this->mapCourseWithStudents($course))
-            ->all();
-    }
+        $attachable = $this->audience->resolveAttachable((string) $payload['attachable_type'], (int) $payload['attachable_id']);
 
-    /**
-     * @return array{id:int,title:string,student_count:int,students:array<int,array{id:int,name:string,email:string}>}
-     */
-    private function mapCourseWithStudents(Course $course): array
-    {
-        $students = $course->enrollments
-            ->filter(fn (Enrollment $enrollment) => $enrollment->access_status !== 'revoked')
-            ->map(fn (Enrollment $enrollment) => $enrollment->user)
-            ->filter(fn ($user) => $user && $user->role === 'user')
-            ->unique('id')
-            ->map(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ])
-            ->values()
-            ->all();
+        if (! $isAdmin) {
+            abort_unless($this->audience->userCanManage($attachable, (int) $userId), 403);
+        }
 
-        return [
-            'id' => $course->id,
-            'title' => $course->title,
-            'student_count' => count($students),
-            'students' => $students,
-        ];
+        return $attachable;
     }
 
     /**
@@ -331,7 +314,7 @@ class ScheduleController extends Controller
     private function scheduleRowsForAdmin(): array
     {
         return LmsSchedule::query()
-            ->with(['course:id,title', 'creator:id,name', 'selectedStudents:id'])
+            ->with(['attachable', 'creator:id,name', 'selectedStudents:id'])
             ->orderByDesc('starts_at')
             ->limit(150)
             ->get()
@@ -346,7 +329,7 @@ class ScheduleController extends Controller
     {
         return LmsSchedule::query()
             ->where('created_by', $tutorId)
-            ->with(['course:id,title', 'creator:id,name', 'selectedStudents:id'])
+            ->with(['attachable', 'creator:id,name', 'selectedStudents:id'])
             ->orderByDesc('starts_at')
             ->limit(150)
             ->get()
@@ -359,6 +342,8 @@ class ScheduleController extends Controller
      */
     private function mapScheduleRow(LmsSchedule $schedule): array
     {
+        $attachable = $schedule->attachable;
+
         return [
             'id' => $schedule->id,
             'title' => $schedule->title,
@@ -369,9 +354,10 @@ class ScheduleController extends Controller
             'ends_at' => $schedule->ends_at?->toIso8601String(),
             'created_at' => $schedule->created_at?->toIso8601String(),
             'created_by' => $schedule->creator?->name,
-            'course' => [
-                'id' => $schedule->course?->id,
-                'title' => $schedule->course?->title,
+            'attachable' => [
+                'type' => $this->audience->typeKey($attachable),
+                'id' => $attachable?->id,
+                'title' => $attachable?->title ?? $attachable?->name,
             ],
             'selected_students_count' => $schedule->audience === 'selected_students'
                 ? $schedule->selectedStudents->count()
@@ -383,12 +369,9 @@ class ScheduleController extends Controller
     {
         $studentIds = match ($schedule->audience) {
             'all_students' => User::query()->where('role', 'user')->pluck('id'),
-            'course_students' => Enrollment::query()
-                ->where('course_id', $schedule->course_id)
-                ->where('access_status', '!=', 'revoked')
-                ->pluck('user_id')
-                ->unique()
-                ->values(),
+            'course_students' => $schedule->attachable
+                ? $this->audience->studentIds($schedule->attachable)
+                : collect(),
             default => $schedule->selectedStudents()->pluck('users.id'),
         };
 

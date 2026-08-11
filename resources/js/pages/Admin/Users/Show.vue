@@ -75,7 +75,7 @@ const formatRole = (role: string) => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`User - ${user.name}`" />
 
     <!-- Header -->

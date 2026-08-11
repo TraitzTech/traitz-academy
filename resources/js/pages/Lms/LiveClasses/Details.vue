@@ -22,7 +22,11 @@ const props = defineProps<{
   canJoinNow: boolean
   joinOpensAt: string
   hostOnline: boolean
+  driver?: string
+  meetingUrl?: string | null
 }>()
+
+const isMeet = props.driver === 'meet'
 
 function classWindowState(): 'not_open' | 'in_window' | 'ended' {
   const nowMs = new Date(props.now).getTime()
@@ -59,6 +63,9 @@ function startsInText(): string {
     <Head :title="`Live Class: ${liveClass.title}`" />
 
     <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <Link href="/dashboard/live-classes" class="mb-4 inline-flex rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+        Back to all live classes
+      </Link>
       <div class="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ liveClass.title }}</h1>
@@ -87,11 +94,16 @@ function startsInText(): string {
       </p>
 
       <div class="mt-6 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">
-        <p v-if="canJoinNow">You can now join this meeting.</p>
+        <template v-if="canJoinNow">
+          <p>You can now join this class.</p>
+          <p v-if="isMeet" class="mt-1 text-xs text-gray-500">
+            The class runs on Google Meet — it opens in a new tab. If the call ends after ~60 minutes, just click Join again to rejoin the same meeting.
+          </p>
+        </template>
         <p v-else-if="classWindowState() === 'ended'">
-          This class has ended. You can no longer join the live room.
+          This class has ended. You can no longer join the live session.
         </p>
-        <p v-else-if="!hostOnline">
+        <p v-else-if="!isMeet && classWindowState() === 'in_window' && !hostOnline">
           Waiting for tutor/admin to start the room. Join opens automatically once the host is inside.
         </p>
         <p v-else>
@@ -142,7 +154,19 @@ function startsInText(): string {
         <Link href="/dashboard/live-classes" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
           Back to classes
         </Link>
+        <!-- Google Meet: external link opened in a new tab -->
+        <a
+          v-if="isMeet"
+          :href="canJoinNow && meetingUrl ? meetingUrl : undefined"
+          target="_blank"
+          rel="noopener noreferrer"
+          :class="['rounded-lg px-4 py-2 text-sm font-semibold', canJoinNow && meetingUrl ? 'bg-[#381998] text-white hover:bg-[#000928]' : 'pointer-events-none cursor-not-allowed bg-gray-200 text-gray-500']"
+        >
+          {{ canJoinNow && !meetingUrl ? 'Link not ready' : 'Join Google Meet' }}
+        </a>
+        <!-- Jitsi (parked driver): in-app room -->
         <Link
+          v-else
           :href="`/dashboard/live-classes/${liveClass.id}`"
           :class="['rounded-lg px-4 py-2 text-sm font-semibold', canJoinNow ? 'bg-[#381998] text-white hover:bg-[#000928]' : 'cursor-not-allowed bg-gray-200 text-gray-500 pointer-events-none']"
         >

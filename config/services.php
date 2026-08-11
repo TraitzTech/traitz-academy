@@ -46,11 +46,30 @@ return [
         'course_product_category' => env('MESOMB_COURSE_PRODUCT_CATEGORY'),
     ],
 
+    'live_class' => [
+        // 'meet' = external Google Meet links (works on shared hosting, $0);
+        // 'jitsi' = the parked embedded-room driver.
+        'driver' => env('LIVE_CLASS_DRIVER', 'meet'),
+    ],
+
+    'google_meet' => [
+        // One central "academy" Google account creates every class's Meet link
+        // via the Calendar API. Reuses the YouTube OAuth client by default — the
+        // same Google Cloud project just needs the Calendar API enabled and a
+        // refresh token authorized with the calendar scope (see `meet:auth`).
+        'client_id' => env('GOOGLE_MEET_CLIENT_ID', env('YOUTUBE_CLIENT_ID')),
+        'client_secret' => env('GOOGLE_MEET_CLIENT_SECRET', env('YOUTUBE_CLIENT_SECRET')),
+        'redirect_uri' => env('GOOGLE_MEET_REDIRECT_URI', 'http://localhost'),
+        'refresh_token' => env('GOOGLE_MEET_REFRESH_TOKEN'),
+        'calendar_id' => env('GOOGLE_MEET_CALENDAR_ID', 'primary'),
+    ],
+
     'youtube' => [
         'enabled' => (bool) env('YOUTUBE_ENABLED', false),
         'channel_id' => env('YOUTUBE_CHANNEL_ID'),
         'client_id' => env('YOUTUBE_CLIENT_ID'),
         'client_secret' => env('YOUTUBE_CLIENT_SECRET'),
+        'redirect_uri' => env('YOUTUBE_REDIRECT_URI', 'http://localhost'),
         'refresh_token' => env('YOUTUBE_REFRESH_TOKEN'),
         'privacy_status' => env('YOUTUBE_PRIVACY_STATUS', 'unlisted'),
         'category_id' => env('YOUTUBE_DEFAULT_CATEGORY', '27'),

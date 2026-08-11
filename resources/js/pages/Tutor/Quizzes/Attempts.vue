@@ -12,6 +12,7 @@ defineProps<{
 <template>
   <AppLayout>
     <Head :title="`Attempts - ${quiz.title}`" />
+    <div class="mx-auto max-w-4xl">
     <div class="mb-6 flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-[#000928] dark:text-white">Quiz Attempts</h1>
@@ -42,6 +43,7 @@ defineProps<{
           </tr>
         </tbody>
       </table>
+    </div>
     </div>
   </AppLayout>
 </template>

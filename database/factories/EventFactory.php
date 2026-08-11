@@ -23,7 +23,7 @@ class EventFactory extends Factory
             'slug' => str(ucfirst($title))->slug(),
             'description' => fake()->paragraph(3),
             'event_date' => fake()->dateTimeBetween('now', '+6 months'),
-            'location' => fake()->city() . ', ' . fake()->country(),
+            'location' => fake()->city().', '.fake()->country(),
             'is_online' => fake()->boolean(40),
             'event_url' => fake()->boolean(40) ? fake()->url() : null,
             'capacity' => fake()->randomElement([50, 100, 200, 500]),

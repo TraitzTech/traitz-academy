@@ -17,6 +17,7 @@ import {
 import { computed, nextTick, ref } from 'vue'
 
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { categoryIconFor } from '@/utils/categoryIcons'
 import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
 
 interface LessonRow {
@@ -189,7 +190,7 @@ async function openCourseNotesTab() {
                 v-if="course.category"
                 class="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold"
               >
-                <span v-if="course.category.icon">{{ course.category.icon }}</span>
+                <component :is="categoryIconFor(course.category.icon)" v-if="categoryIconFor(course.category.icon)" class="h-3.5 w-3.5" />
                 {{ course.category.name }}
               </span>
               <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">

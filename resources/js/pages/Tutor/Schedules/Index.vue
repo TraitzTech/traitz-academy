@@ -8,6 +8,8 @@ defineOptions({ layout: AppLayout })
 
 defineProps<{
   courses: any[]
+  cohorts: any[]
+  programs: any[]
   schedules: any[]
 }>()
 </script>
@@ -15,6 +17,6 @@ defineProps<{
 <template>
   <div>
     <Head title="Tutor Schedule" />
-    <ScheduleManager mode="tutor" :courses="courses" :schedules="schedules" submit-url="/tutor/schedules" />
+    <ScheduleManager mode="tutor" :courses="courses" :cohorts="cohorts" :programs="programs" :schedules="schedules" submit-url="/tutor/schedules" />
   </div>
 </template>

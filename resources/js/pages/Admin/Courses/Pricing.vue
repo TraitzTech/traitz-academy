@@ -49,7 +49,7 @@ function savePricing() {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Pricing: ${course.title}`" />
 
     <div class="mb-6">

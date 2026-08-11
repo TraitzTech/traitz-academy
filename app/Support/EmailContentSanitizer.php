@@ -78,16 +78,19 @@ class EmailContentSanitizer
 
                 if (str_starts_with($attributeNameLower, 'on')) {
                     $node->removeAttribute($attributeName);
+
                     continue;
                 }
 
                 if (! isset($elementAllowedAttributes[$attributeNameLower])) {
                     $node->removeAttribute($attributeName);
+
                     continue;
                 }
 
                 if (in_array($attributeNameLower, ['href', 'src'], true) && ! self::isSafeUrl($tag, $value)) {
                     $node->removeAttribute($attributeName);
+
                     continue;
                 }
 

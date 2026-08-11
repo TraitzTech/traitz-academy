@@ -98,7 +98,7 @@ const toggleQuestion = (index: number) => {
 const submit = () => {
   form.post('/admin/interviews', {
     onSuccess: () => {
-      toast.success('Interview created successfully!')
+      // Flash message handled by global watcher (InterviewController::store flashes 'success')
     },
     onError: () => {
       toast.error('Failed to create interview. Please check the form.')
@@ -108,7 +108,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head title="Create Interview" />
 
     <!-- Header -->

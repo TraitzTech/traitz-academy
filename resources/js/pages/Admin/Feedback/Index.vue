@@ -48,7 +48,7 @@ const formToDelete = ref<FeedbackForm | null>(null)
 const toggleStatus = (form: FeedbackForm) => {
   router.post(`/admin/feedback/${form.id}/toggle-status`, {}, {
     preserveScroll: true,
-    onSuccess: () => toast.success(`Form ${form.is_active ? 'deactivated' : 'activated'}.`),
+    // Flash message handled by global watcher (FeedbackController::toggleStatus flashes 'success')
   })
 }
 
@@ -61,7 +61,7 @@ const confirmDelete = () => {
   if (!formToDelete.value) { return }
   router.delete(`/admin/feedback/${formToDelete.value.id}`, {
     onSuccess: () => {
-      toast.success('Form deleted.')
+      // Flash message handled by global watcher (FeedbackController::destroy flashes 'success')
       showDeleteModal.value = false
     },
   })

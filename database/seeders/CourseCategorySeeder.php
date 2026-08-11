@@ -12,60 +12,60 @@ class CourseCategorySeeder extends Seeder
     {
         $categories = [
             [
-                'name'        => 'Programming & Development',
+                'name' => 'Programming & Development',
                 'description' => 'Software development, web, mobile, and backend engineering.',
-                'icon'        => '💻',
-                'color'       => '#381998',
-                'sort_order'  => 1,
+                'icon' => 'code',
+                'color' => '#381998',
+                'sort_order' => 1,
             ],
             [
-                'name'        => 'Data Science & AI',
+                'name' => 'Data Science & AI',
                 'description' => 'Machine learning, data analysis, and artificial intelligence.',
-                'icon'        => '🤖',
-                'color'       => '#42b6c5',
-                'sort_order'  => 2,
+                'icon' => 'bot',
+                'color' => '#42b6c5',
+                'sort_order' => 2,
             ],
             [
-                'name'        => 'UI/UX & Design',
+                'name' => 'UI/UX & Design',
                 'description' => 'Product design, user experience, and graphic design.',
-                'icon'        => '🎨',
-                'color'       => '#7c3aed',
-                'sort_order'  => 3,
+                'icon' => 'palette',
+                'color' => '#7c3aed',
+                'sort_order' => 3,
             ],
             [
-                'name'        => 'Business & Management',
+                'name' => 'Business & Management',
                 'description' => 'Entrepreneurship, project management, and leadership skills.',
-                'icon'        => '📊',
-                'color'       => '#059669',
-                'sort_order'  => 4,
+                'icon' => 'bar-chart',
+                'color' => '#059669',
+                'sort_order' => 4,
             ],
             [
-                'name'        => 'Cybersecurity',
+                'name' => 'Cybersecurity',
                 'description' => 'Network security, ethical hacking, and digital forensics.',
-                'icon'        => '🔐',
-                'color'       => '#dc2626',
-                'sort_order'  => 5,
+                'icon' => 'shield',
+                'color' => '#dc2626',
+                'sort_order' => 5,
             ],
             [
-                'name'        => 'Cloud & DevOps',
+                'name' => 'Cloud & DevOps',
                 'description' => 'Cloud infrastructure, CI/CD pipelines, and deployment.',
-                'icon'        => '☁️',
-                'color'       => '#2563eb',
-                'sort_order'  => 6,
+                'icon' => 'cloud',
+                'color' => '#2563eb',
+                'sort_order' => 6,
             ],
             [
-                'name'        => 'Digital Marketing',
+                'name' => 'Digital Marketing',
                 'description' => 'SEO, social media, content marketing, and analytics.',
-                'icon'        => '📣',
-                'color'       => '#d97706',
-                'sort_order'  => 7,
+                'icon' => 'megaphone',
+                'color' => '#d97706',
+                'sort_order' => 7,
             ],
             [
-                'name'        => 'Finance & Accounting',
+                'name' => 'Finance & Accounting',
                 'description' => 'Financial literacy, accounting, and investment fundamentals.',
-                'icon'        => '💰',
-                'color'       => '#0891b2',
-                'sort_order'  => 8,
+                'icon' => 'wallet',
+                'color' => '#0891b2',
+                'sort_order' => 8,
             ],
         ];
 
@@ -76,6 +76,6 @@ class CourseCategorySeeder extends Seeder
             );
         }
 
-        $this->command->info('Course categories seeded (' . count($categories) . ' categories).');
+        $this->command->info('Course categories seeded ('.count($categories).' categories).');
     }
 }

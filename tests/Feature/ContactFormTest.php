@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\SiteSetting;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 
 describe('Contact Form', function () {

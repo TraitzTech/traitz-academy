@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
 
@@ -17,7 +17,7 @@ interface ScheduleRow {
   location: string | null
   starts_at: string | null
   ends_at: string | null
-  course: {
+  attachable: {
     title: string | null
   }
   can_edit: boolean
@@ -340,7 +340,7 @@ function syncGoogleCalendar() {
               <p class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ selectedEvent.title }}</p>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 <span class="capitalize">{{ sourceLabel(selectedEvent.source_type) }}</span>
-                <span v-if="selectedEvent.course.title"> · {{ selectedEvent.course.title }}</span>
+                <span v-if="selectedEvent.attachable.title"> · {{ selectedEvent.attachable.title }}</span>
               </p>
               <dl class="mt-3 space-y-1 text-xs text-gray-600 dark:text-gray-300">
                 <div class="flex flex-wrap gap-x-2">

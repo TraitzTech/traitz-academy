@@ -34,12 +34,32 @@ const form = useForm({
   capacity: 30,
   start_date: '',
   end_date: '',
+  applications_open_at: '',
+  applications_close_at: '',
   curriculum: '',
+  office_days: [] as number[],
 })
 
 const imagePreview = ref<string | null>(null)
 
 const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(form.category))
+const isInternship = computed(() => ['academic-internship', 'professional-internship'].includes(form.category))
+
+const weekdays = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 7, label: 'Sun' },
+]
+
+function toggleOfficeDay(day: number) {
+  form.office_days = form.office_days.includes(day)
+    ? form.office_days.filter((d) => d !== day)
+    : [...form.office_days, day].sort((a, b) => a - b)
+}
 
 const contentLabels = computed(() => {
   if (isCareerRole.value) {
@@ -84,7 +104,7 @@ const submit = () => {
   form.post('/admin/programs', {
     forceFormData: true,
     onSuccess: () => {
-      toast.success('Program created successfully!')
+      // Flash message handled by global watcher (ProgramController::store flashes 'success')
     },
     onError: () => {
       toast.error('Failed to create program. Please check the form for errors.')
@@ -94,7 +114,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head title="Create Program" />
 
     <!-- Header -->
@@ -199,7 +219,7 @@ const submit = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program start <span class="text-xs font-normal text-gray-400">(run/display)</span></label>
             <input
               v-model="form.start_date"
               type="date"
@@ -208,12 +228,29 @@ const submit = () => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program end <span class="text-xs font-normal text-gray-400">(run/display)</span></label>
             <input
               v-model="form.end_date"
               type="date"
               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent"
             />
+            <p class="mt-1 text-xs text-gray-400">When the program runs — separate from the application window below.</p>
+          </div>
+
+          <div class="md:col-span-2 rounded-lg border border-dashed border-gray-300 p-3 dark:border-gray-600">
+            <p class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Application window <span class="font-normal text-gray-400">(optional)</span></p>
+            <p class="mb-3 text-xs text-gray-500">Leave both blank for rolling intake (apply anytime). Set a window to open/close applications by date — students can't apply outside it.</p>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Applications open</label>
+                <input v-model="form.applications_open_at" type="date" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Applications close</label>
+                <input v-model="form.applications_close_at" type="date" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-[#42b6c5] focus:border-transparent" />
+                <p v-if="form.errors.applications_close_at" class="mt-1 text-sm text-red-600">{{ form.errors.applications_close_at }}</p>
+              </div>
+            </div>
           </div>
 
           <div class="md:col-span-2">
@@ -349,6 +386,30 @@ const submit = () => {
             />
             <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Require CV for applications</span>
           </label>
+        </div>
+      </div>
+
+      <!-- Office schedule (internship programs only) -->
+      <div v-if="isInternship" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Office schedule</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Which weekdays are interns in this program expected at the office? Leave blank if there's no fixed schedule — interns will pick office/remote each day themselves instead.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="day in weekdays"
+            :key="day.value"
+            type="button"
+            :class="[
+              'rounded-lg border-2 px-4 py-2 text-sm font-semibold transition-colors',
+              form.office_days.includes(day.value)
+                ? 'border-[#381998] bg-[#381998]/10 text-[#381998]'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-gray-600 dark:text-gray-400',
+            ]"
+            @click="toggleOfficeDay(day.value)"
+          >
+            {{ day.label }}
+          </button>
         </div>
       </div>
 

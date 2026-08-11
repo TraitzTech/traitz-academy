@@ -14,7 +14,7 @@ class LearningResourceController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = LearningResource::query();
+        $query = LearningResource::query()->global();
 
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();

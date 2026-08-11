@@ -22,6 +22,7 @@ class SettingsController extends Controller
             'contact' => SiteSetting::where('group', 'contact')->get()->values(),
             'social' => SiteSetting::where('group', 'social')->get()->values(),
             'payments' => SiteSetting::where('group', 'payments')->get()->values(),
+            'internship' => SiteSetting::where('group', 'internship')->get()->values(),
         ];
 
         return Inertia::render('Admin/Settings/Index', [

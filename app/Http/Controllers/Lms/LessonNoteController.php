@@ -3,18 +3,21 @@
 namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Lms\Concerns\InteractsWithCourseContent;
 use App\Models\Course;
 use App\Models\CourseLesson;
-use App\Models\Enrollment;
 use App\Models\LessonNote;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LessonNoteController extends Controller
 {
+    use InteractsWithCourseContent;
+
     public function upsertLessonNote(Request $request, Course $course, CourseLesson $lesson): JsonResponse
     {
-        abort_unless($this->canAccessLesson($request, $course, $lesson), 403);
+        $this->assertLessonInPublishedCourse($course, $lesson);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
         $payload = $request->validate([
             'content' => ['nullable', 'string', 'max:10000'],
@@ -60,7 +63,8 @@ class LessonNoteController extends Controller
 
     public function storeTimestampNote(Request $request, Course $course, CourseLesson $lesson): JsonResponse
     {
-        abort_unless($this->canAccessLesson($request, $course, $lesson), 403);
+        $this->assertLessonInPublishedCourse($course, $lesson);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
         $payload = $request->validate([
             'content' => ['required', 'string', 'max:10000'],
@@ -80,27 +84,6 @@ class LessonNoteController extends Controller
             'saved' => true,
             'note' => $this->mapNote($note),
         ], 201);
-    }
-
-    private function canAccessLesson(Request $request, Course $course, CourseLesson $lesson): bool
-    {
-        if ($course->status !== 'published') {
-            return false;
-        }
-
-        if ((int) $lesson->course_id !== (int) $course->id) {
-            return false;
-        }
-
-        if ($lesson->is_free) {
-            return true;
-        }
-
-        return Enrollment::query()
-            ->where('user_id', (int) $request->user()->id)
-            ->where('course_id', (int) $course->id)
-            ->whereIn('access_status', ['active', 'completed'])
-            ->exists();
     }
 
     private function formatTimestamp(int $seconds): string

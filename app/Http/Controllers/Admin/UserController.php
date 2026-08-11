@@ -213,7 +213,7 @@ class UserController extends Controller
                     $user->name,
                     $user->email,
                     $user->phone ?? '',
-                    $user->role,
+                    $user->role === 'user' ? 'Student' : $user->role,
                     $user->email_verified_at ? $user->email_verified_at->format('Y-m-d') : 'No',
                     $user->created_at->format('Y-m-d'),
                 ]);

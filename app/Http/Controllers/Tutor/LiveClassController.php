@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Tutor;
 
+use App\Concerns\SyncsLiveClassTargets;
+use App\Http\Controllers\Concerns\GeneratesLiveClassMeeting;
 use App\Http\Controllers\Controller;
 use App\Jobs\UploadLiveClassRecordingToYouTube;
 use App\Models\Course;
 use App\Models\LiveClass;
 use App\Models\LiveClassRecording;
+use App\Models\Program;
 use App\Models\User;
 use App\Notifications\Lms\LiveClassScheduledNotification;
+use App\Services\LearningAudienceService;
+use App\Support\LiveClass\GoogleMeetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -17,6 +22,11 @@ use Inertia\Response;
 
 class LiveClassController extends Controller
 {
+    use GeneratesLiveClassMeeting;
+    use SyncsLiveClassTargets;
+
+    public function __construct(private readonly LearningAudienceService $audience) {}
+
     public function index(Request $request): Response
     {
         $classes = LiveClass::query()
@@ -32,20 +42,14 @@ class LiveClassController extends Controller
 
     public function create(Request $request): Response
     {
-        $courses = Course::query()
-            ->where('instructor_id', $request->user()->id)
-            ->orderBy('title')
-            ->get(['id', 'title']);
-
-        $studentIds = $courses->flatMap(function (Course $course) {
-            return $course->enrollments()
-                ->whereIn('access_status', ['active', 'completed'])
-                ->pluck('user_id');
-        })->unique();
+        $userId = (int) $request->user()->id;
 
         return Inertia::render('Tutor/LiveClasses/Create', [
-            'courses' => $courses,
-            'students' => User::query()->whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'email']),
+            'courses' => $this->ownedCourses($userId),
+            // Supervisors target their program, not whole cohorts.
+            'cohorts' => collect(),
+            'programs' => $this->supervisedPrograms($userId),
+            'students' => $this->reachableStudents($userId),
         ]);
     }
 
@@ -57,8 +61,10 @@ class LiveClassController extends Controller
             'start_time' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:5', 'max:600'],
             'access_type' => ['required', 'in:course,custom'],
-            'course_ids' => ['array'],
-            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'meeting_url' => ['nullable', 'url', 'max:2048'],
+            'targets' => ['array'],
+            'targets.*.type' => ['required_with:targets', 'in:course,cohort,program'],
+            'targets.*.id' => ['required_with:targets', 'integer'],
             'student_ids' => ['array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
         ]);
@@ -74,7 +80,8 @@ class LiveClassController extends Controller
             'access_type' => $validated['access_type'],
         ]);
 
-        $this->syncAudience($request, $liveClass, $validated);
+        $this->ensureMeetingLink($liveClass, $validated['meeting_url'] ?? null);
+        $this->syncOwnedAudience($request, $liveClass, $validated);
         $this->notifyAudience($liveClass);
 
         return redirect()->route('tutor.live-classes.index')->with('success', 'Live class scheduled.');
@@ -93,6 +100,7 @@ class LiveClassController extends Controller
 
         return Inertia::render('Tutor/LiveClasses/Show', [
             'liveClass' => $liveClass,
+            'targets' => $this->targetRowsForDisplay($liveClass),
         ]);
     }
 
@@ -100,23 +108,17 @@ class LiveClassController extends Controller
     {
         $this->authorizeTutor($request, $liveClass);
 
-        $courses = Course::query()
-            ->where('instructor_id', $request->user()->id)
-            ->orderBy('title')
-            ->get(['id', 'title']);
+        $userId = (int) $request->user()->id;
 
         $liveClass->load(['courses:id,title', 'students:id,name,email']);
 
-        $studentIds = $courses->flatMap(function (Course $course) {
-            return $course->enrollments()
-                ->whereIn('access_status', ['active', 'completed'])
-                ->pluck('user_id');
-        })->unique();
-
         return Inertia::render('Tutor/LiveClasses/Edit', [
             'liveClass' => $liveClass,
-            'courses' => $courses,
-            'students' => User::query()->whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'email']),
+            'targets' => $this->targetRowsForDisplay($liveClass),
+            'courses' => $this->ownedCourses($userId),
+            'cohorts' => collect(),
+            'programs' => $this->supervisedPrograms($userId),
+            'students' => $this->reachableStudents($userId),
         ]);
     }
 
@@ -130,8 +132,10 @@ class LiveClassController extends Controller
             'start_time' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:5', 'max:600'],
             'access_type' => ['required', 'in:course,custom'],
-            'course_ids' => ['array'],
-            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'meeting_url' => ['nullable', 'url', 'max:2048'],
+            'targets' => ['array'],
+            'targets.*.type' => ['required_with:targets', 'in:course,cohort,program'],
+            'targets.*.id' => ['required_with:targets', 'integer'],
             'student_ids' => ['array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
         ]);
@@ -144,7 +148,8 @@ class LiveClassController extends Controller
             'access_type' => $validated['access_type'],
         ]);
 
-        $this->syncAudience($request, $liveClass, $validated);
+        $this->ensureMeetingLink($liveClass, $validated['meeting_url'] ?? null);
+        $this->syncOwnedAudience($request, $liveClass, $validated);
 
         return back()->with('success', 'Live class updated.');
     }
@@ -152,6 +157,7 @@ class LiveClassController extends Controller
     public function destroy(Request $request, LiveClass $liveClass): RedirectResponse
     {
         $this->authorizeTutor($request, $liveClass);
+        app(GoogleMeetService::class)->deleteMeeting($liveClass->meeting_event_id);
         $liveClass->delete();
 
         return back()->with('success', 'Live class deleted.');
@@ -182,38 +188,119 @@ class LiveClassController extends Controller
         abort_unless((int) $liveClass->tutor_id === (int) $request->user()->id, 403);
     }
 
-    private function syncAudience(Request $request, LiveClass $liveClass, array $validated): void
+    /**
+     * Same as syncTargets(), but drops any target the tutor doesn't own/supervise.
+     */
+    private function syncOwnedAudience(Request $request, LiveClass $liveClass, array $validated): void
     {
-        if ($liveClass->access_type === 'course') {
-            $allowedCourses = Course::query()
-                ->where('instructor_id', $request->user()->id)
-                ->whereIn('id', $validated['course_ids'] ?? [])
-                ->pluck('id');
-            $liveClass->courses()->sync($allowedCourses);
-            $liveClass->students()->sync([]);
-        } else {
-            $liveClass->students()->sync($validated['student_ids'] ?? []);
-            $liveClass->courses()->sync([]);
+        $userId = (int) $request->user()->id;
+        $isAdmin = (bool) $request->user()->canAccessAdminPanel();
+
+        if ($liveClass->access_type === 'custom') {
+            $studentIds = collect($validated['student_ids'] ?? [])->map(fn ($id) => (int) $id);
+
+            // A supervisor may only hand-pick their own reachable interns.
+            if (! $isAdmin) {
+                $reachable = $this->reachableStudentIds($userId);
+                $studentIds = $studentIds->filter(fn ($id) => $reachable->contains($id));
+            }
+
+            $liveClass->students()->sync($studentIds->unique()->values()->all());
+            $this->syncTargets($liveClass, []);
+
+            return;
         }
+
+        // access_type === 'course': keep only targets the user owns/supervises —
+        // same authorization the other learning-ops tools use.
+        $targets = collect($validated['targets'] ?? [])
+            ->filter(function ($target) use ($userId) {
+                $modelClass = LearningAudienceService::TYPES[$target['type'] ?? ''] ?? null;
+                $model = $modelClass ? $modelClass::find((int) $target['id']) : null;
+
+                return $model !== null && $this->audience->userCanManage($model, $userId);
+            })
+            ->values();
+
+        // A supervisor's program target resolves program-wide — across every
+        // cohort/batch — in resolveAudienceIds()/visibility, which would reach
+        // interns in cohorts owned by other supervisors. Pin the audience to
+        // the supervisor's exact interns by demoting to an explicit custom
+        // roster. Admins keep the broad program target.
+        if (! $isAdmin && $targets->contains(fn ($t) => $t['type'] === 'program')) {
+            $studentIds = $targets->flatMap(fn ($t) => match ($t['type']) {
+                'program' => $this->audience->supervisedProgramStudentIds($userId, Program::findOrFail((int) $t['id'])),
+                'course' => $this->audience->studentIds(Course::findOrFail((int) $t['id'])),
+                default => collect(),
+            })->unique()->values();
+
+            $liveClass->update(['access_type' => 'custom']);
+            $liveClass->students()->sync($studentIds->all());
+            $this->syncTargets($liveClass, []);
+
+            return;
+        }
+
+        $this->syncTargets($liveClass, $targets->all());
+        $liveClass->students()->sync([]);
     }
 
     private function notifyAudience(LiveClass $liveClass): void
     {
-        if ($liveClass->access_type === 'course') {
-            $studentIds = $liveClass->courses()
-                ->with('enrollments:user_id,course_id,access_status')
-                ->get()
-                ->flatMap(fn (Course $course) => $course->enrollments
-                    ->whereIn('access_status', ['active', 'completed'])
-                    ->pluck('user_id'))
-                ->unique()
-                ->values();
-        } else {
-            $studentIds = $liveClass->students()->pluck('users.id');
-        }
+        $studentIds = $liveClass->access_type === 'course'
+            ? $liveClass->resolveAudienceIds()
+            : $liveClass->students()->pluck('users.id');
 
         User::query()
             ->whereIn('id', $studentIds)
             ->each(fn (User $user) => $user->notify(new LiveClassScheduledNotification($liveClass)));
+    }
+
+    private function ownedCourses(int $tutorId): \Illuminate\Support\Collection
+    {
+        return Course::query()
+            ->where('instructor_id', $tutorId)
+            ->orderBy('title')
+            ->get(['id', 'title']);
+    }
+
+    private function supervisedPrograms(int $userId): \Illuminate\Support\Collection
+    {
+        return $this->audience->programsSupervisedBy($userId)->orderBy('title')->get(['id', 'title']);
+    }
+
+    /**
+     * Student/intern IDs this user may put in a custom-audience class: their
+     * course rosters plus the interns in the cohorts where they supervise each
+     * program (never program-wide across cohorts owned by others).
+     */
+    private function reachableStudentIds(int $userId): \Illuminate\Support\Collection
+    {
+        $courseStudentIds = $this->ownedCourses($userId)->flatMap(function (Course $course) {
+            return $course->enrollments()
+                ->whereIn('access_status', ['active', 'completed'])
+                ->pluck('user_id');
+        });
+
+        $programStudentIds = $this->supervisedPrograms($userId)
+            ->flatMap(fn (Program $program) => $this->audience->supervisedProgramStudentIds($userId, $program));
+
+        return $courseStudentIds->merge($programStudentIds)->unique()->values();
+    }
+
+    private function reachableStudents(int $userId): \Illuminate\Support\Collection
+    {
+        return User::query()
+            ->whereIn('id', $this->reachableStudentIds($userId))
+            ->with(['internships' => fn ($q) => $q->latest('id')])
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'cohort_id' => $u->internships->first()?->cohort_id,
+                'program_id' => $u->internships->first()?->program_id,
+            ]);
     }
 }

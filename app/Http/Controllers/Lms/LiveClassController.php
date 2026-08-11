@@ -22,10 +22,10 @@ class LiveClassController extends Controller
         $user = $request->user();
 
         $classes = LiveClass::query()
+            ->visibleTo($user)
             ->with(['tutor:id,name', 'courses:id,title'])
             ->latest('start_time')
             ->get()
-            ->filter(fn (LiveClass $liveClass) => $liveClass->canUserJoin($user))
             ->map(fn (LiveClass $liveClass) => [
                 'id' => $liveClass->id,
                 'title' => $liveClass->title,
@@ -47,6 +47,8 @@ class LiveClassController extends Controller
         $user = $request->user();
 
         $classes = LiveClass::query()
+            ->visibleTo($user)
+            ->whereHas('recordings', fn ($q) => $q->whereNotNull('youtube_url')->orWhereNotNull('file_path'))
             ->with([
                 'tutor:id,name',
                 'recordings' => fn ($query) => $query
@@ -58,7 +60,6 @@ class LiveClassController extends Controller
             ])
             ->latest('start_time')
             ->get()
-            ->filter(fn (LiveClass $liveClass) => $liveClass->canUserJoin($user))
             ->map(function (LiveClass $liveClass) {
                 return [
                     'id' => $liveClass->id,
@@ -75,7 +76,6 @@ class LiveClassController extends Controller
                     ])->values(),
                 ];
             })
-            ->filter(fn (array $row) => count($row['recordings']) > 0)
             ->values();
 
         return Inertia::render('Lms/LiveClasses/Recordings', [
@@ -86,11 +86,33 @@ class LiveClassController extends Controller
     public function show(Request $request, LiveClass $liveClass): Response|RedirectResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
-        if ($user->role === 'user' && ! $this->studentCanEnterRoom($liveClass)) {
+        $this->authorize('join', $liveClass);
+
+        // Under the Google Meet driver there is no in-app room — the details
+        // page hosts the external "Join" button.
+        if (config('services.live_class.driver') === 'meet') {
+            return redirect()->route('lms.live-classes.details', $liveClass);
+        }
+
+        if ($liveClass->isManageableBy($user) && $this->classIsFarOver($liveClass)) {
+            return redirect()
+                ->route('lms.live-classes.index')
+                ->with('warning', 'This live class has already ended, so the room is no longer available.');
+        }
+        if (! $liveClass->isManageableBy($user) && ! $this->studentCanEnterRoom($liveClass)) {
             return redirect()
                 ->route('lms.live-classes.details', $liveClass)
                 ->with('warning', 'You can join only when the class is open and a tutor/admin is already in the room.');
+        }
+
+        // Security guard: a public/unauthenticated Jitsi domain (e.g. meet.jit.si)
+        // can't enforce our access control — anyone with the room name could join
+        // directly. Refuse to open such a room in production.
+        $jwt = $this->issueJitsiJwt($liveClass, $user);
+        if (app()->isProduction() && $jwt === null) {
+            return redirect()
+                ->route('lms.live-classes.index')
+                ->with('error', 'Live video is not configured securely on this server. Please contact an administrator.');
         }
 
         $liveClass->load([
@@ -112,7 +134,7 @@ class LiveClassController extends Controller
                 'jitsi' => [
                     'domain' => config('services.jitsi.domain', 'meet.jit.si'),
                     'room_name' => $this->resolveJitsiRoomName($liveClass),
-                    'jwt' => $this->issueJitsiJwt($liveClass, $user),
+                    'jwt' => $jwt,
                 ],
                 'recordings' => $liveClass->recordings,
                 'messages' => $liveClass->messages->take(100)->reverse()->values()->map(fn ($msg) => [
@@ -135,7 +157,7 @@ class LiveClassController extends Controller
                 'name' => $user->name,
                 'role' => $user->role,
             ],
-            'canManage' => $user->canAccessAdminPanel() || (int) $liveClass->tutor_id === (int) $user->id,
+            'canManage' => $liveClass->isManageableBy($user),
             'manageRedirectUrl' => $user->canAccessAdminPanel()
                 ? route('admin.lms.live-classes.show', $liveClass)
                 : ((int) $liveClass->tutor_id === (int) $user->id ? route('tutor.live-classes.show', $liveClass) : null),
@@ -145,7 +167,7 @@ class LiveClassController extends Controller
     public function details(Request $request, LiveClass $liveClass): Response
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
+        $this->authorize('join', $liveClass);
 
         $liveClass->load('tutor:id,name', 'recordings');
 
@@ -166,17 +188,37 @@ class LiveClassController extends Controller
                 ])->values(),
             ],
             'now' => now()->toIso8601String(),
-            'canJoinNow' => $user->role !== 'user' || $this->studentCanEnterRoom($liveClass),
+            'driver' => config('services.live_class.driver'),
+            'meetingUrl' => $liveClass->meeting_url,
+            'canJoinNow' => $this->canJoinNow($liveClass, $user),
             'joinOpensAt' => optional($liveClass->studentJoinOpensAt())->toIso8601String(),
             'hostOnline' => $liveClass->hasHostOnline(),
         ]);
     }
 
+    /**
+     * Staff can always enter. Under 'meet', students join whenever the time
+     * window is open (no in-app host presence to gate on); under 'jitsi',
+     * students also need a host present in the room.
+     */
+    private function canJoinNow(LiveClass $liveClass, $user): bool
+    {
+        if ($liveClass->isManageableBy($user)) {
+            return true;
+        }
+
+        if (config('services.live_class.driver') === 'meet') {
+            return $liveClass->canStudentJoinNow();
+        }
+
+        return $this->studentCanEnterRoom($liveClass);
+    }
+
     public function messages(Request $request, LiveClass $liveClass): JsonResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
-        if ($user->role === 'user') {
+        $this->authorize('join', $liveClass);
+        if (! $liveClass->isManageableBy($user)) {
             abort_unless($this->studentCanEnterRoom($liveClass), 403);
         }
 
@@ -200,8 +242,8 @@ class LiveClassController extends Controller
     public function sendMessage(Request $request, LiveClass $liveClass): JsonResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
-        if ($user->role === 'user') {
+        $this->authorize('join', $liveClass);
+        if (! $liveClass->isManageableBy($user)) {
             abort_unless($this->studentCanEnterRoom($liveClass), 403);
         }
 
@@ -230,19 +272,21 @@ class LiveClassController extends Controller
     public function join(Request $request, LiveClass $liveClass): JsonResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
+        $this->authorize('join', $liveClass);
 
-        if ($user->role !== 'user') {
+        if ($liveClass->isManageableBy($user)) {
             $liveClass->markHostOnline();
+
             return response()->json(['ok' => true]);
         }
         abort_unless($this->studentCanEnterRoom($liveClass), 403);
 
-        LiveClassAttendance::query()->create([
-            'live_class_id' => $liveClass->id,
-            'student_id' => $user->id,
-            'joined_at' => now(),
-        ]);
+        // Idempotent: reuse the current open session so reconnects/refreshes
+        // don't spawn duplicate attendance rows.
+        LiveClassAttendance::query()->firstOrCreate(
+            ['live_class_id' => $liveClass->id, 'student_id' => $user->id, 'left_at' => null],
+            ['joined_at' => now()],
+        );
 
         return response()->json(['ok' => true]);
     }
@@ -250,10 +294,11 @@ class LiveClassController extends Controller
     public function ping(Request $request, LiveClass $liveClass): JsonResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
+        $this->authorize('join', $liveClass);
 
-        if ($user->role !== 'user') {
+        if ($liveClass->isManageableBy($user)) {
             $liveClass->markHostOnline();
+
             return response()->json(['ok' => true]);
         }
         abort_unless($this->studentCanEnterRoom($liveClass), 403);
@@ -261,6 +306,7 @@ class LiveClassController extends Controller
         $attendance = LiveClassAttendance::query()
             ->where('live_class_id', $liveClass->id)
             ->where('student_id', $user->id)
+            ->whereNull('left_at')
             ->latest('joined_at')
             ->first();
 
@@ -281,16 +327,18 @@ class LiveClassController extends Controller
     public function leave(Request $request, LiveClass $liveClass): JsonResponse
     {
         $user = $request->user();
-        abort_unless($liveClass->canUserJoin($user), 403);
+        $this->authorize('join', $liveClass);
 
-        if ($user->role !== 'user') {
+        if ($liveClass->isManageableBy($user)) {
             $liveClass->clearHostOnline();
+
             return response()->json(['ok' => true]);
         }
 
         $attendance = LiveClassAttendance::query()
             ->where('live_class_id', $liveClass->id)
             ->where('student_id', $user->id)
+            ->whereNull('left_at')
             ->latest('joined_at')
             ->first();
 
@@ -319,15 +367,19 @@ class LiveClassController extends Controller
             return null;
         }
 
-        $isModerator = $user->canAccessAdminPanel() || (int) $liveClass->tutor_id === (int) $user->id;
+        $isModerator = $liveClass->isManageableBy($user);
         $now = time();
+
+        // Scope the token to the class window (+1h grace), min 15 min, so a
+        // token isn't valid far beyond the session it was issued for.
+        $expiry = max($now + 900, $liveClass->endsAt()->getTimestamp() + 3600);
 
         $roomName = $this->resolveJitsiRoomName($liveClass);
         $baseRoomName = $liveClass->room_name;
 
         $basePayload = [
             'aud' => 'jitsi',
-            'exp' => $now + 7200,
+            'exp' => $expiry,
             'nbf' => $now - 10,
             'iat' => $now,
             'jti' => (string) Str::uuid(),
@@ -390,7 +442,24 @@ class LiveClassController extends Controller
     {
         $raw = (string) config('services.jitsi.private_key', '');
         if ($raw !== '') {
-            return str_replace('\n', PHP_EOL, trim($raw));
+            $normalized = str_replace('\n', PHP_EOL, trim($raw));
+
+            // Accept accidental "private key path" values in JITSI_PRIVATE_KEY.
+            if (! str_contains($normalized, 'BEGIN ') && ! str_contains($normalized, PHP_EOL)) {
+                $candidate = trim($normalized, " \t\n\r\0\x0B\"'");
+                $candidates = [$candidate];
+                if (! str_starts_with($candidate, '/')) {
+                    $candidates[] = base_path($candidate);
+                }
+
+                foreach ($candidates as $pathCandidate) {
+                    if (File::exists($pathCandidate)) {
+                        return (string) File::get($pathCandidate);
+                    }
+                }
+            }
+
+            return $normalized;
         }
 
         $path = (string) config('services.jitsi.private_key_path', '');
@@ -413,5 +482,15 @@ class LiveClassController extends Controller
     private function isJaasDomain(string $domain): bool
     {
         return str_contains($domain, '8x8.vc');
+    }
+
+    private function classIsFarOver(LiveClass $liveClass): bool
+    {
+        $endedAt = $liveClass->endsAt();
+        if (! $endedAt) {
+            return false;
+        }
+
+        return now()->greaterThan($endedAt->copy()->addMinutes(10));
     }
 }

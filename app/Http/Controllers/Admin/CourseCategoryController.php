@@ -25,19 +25,19 @@ class CourseCategoryController extends Controller
 
         return Inertia::render('Admin/CourseCategories/Index', [
             'categories' => $categories,
-            'filters'    => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status']),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100', 'unique:course_categories,name'],
+            'name' => ['required', 'string', 'max:100', 'unique:course_categories,name'],
             'description' => ['nullable', 'string', 'max:500'],
-            'icon'        => ['nullable', 'string', 'max:10'],
-            'color'       => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
-            'is_active'   => ['boolean'],
+            'icon' => ['nullable', 'string', 'max:10'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
         ]);
 
         $validated['slug'] = $this->uniqueSlug($validated['name']);
@@ -50,12 +50,12 @@ class CourseCategoryController extends Controller
     public function update(Request $request, CourseCategory $courseCategory): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100', "unique:course_categories,name,{$courseCategory->id}"],
+            'name' => ['required', 'string', 'max:100', "unique:course_categories,name,{$courseCategory->id}"],
             'description' => ['nullable', 'string', 'max:500'],
-            'icon'        => ['nullable', 'string', 'max:10'],
-            'color'       => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'sort_order'  => ['nullable', 'integer', 'min:0'],
-            'is_active'   => ['boolean'],
+            'icon' => ['nullable', 'string', 'max:10'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
         ]);
 
         if ($validated['name'] !== $courseCategory->name) {
@@ -64,7 +64,7 @@ class CourseCategoryController extends Controller
 
         $courseCategory->update($validated);
 
-        return back()->with('success', "Category updated.");
+        return back()->with('success', 'Category updated.');
     }
 
     public function destroy(CourseCategory $courseCategory): RedirectResponse
@@ -91,7 +91,7 @@ class CourseCategoryController extends Controller
     {
         $base = Str::slug($name);
         $slug = $base;
-        $i    = 1;
+        $i = 1;
 
         while (
             CourseCategory::where('slug', $slug)

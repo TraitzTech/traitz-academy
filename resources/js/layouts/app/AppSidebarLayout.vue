@@ -21,36 +21,37 @@ withDefaults(defineProps<Props>(), {
 const page = usePage();
 const toast = useToast();
 
-function showFlashToasts(): void {
-    const flash = page.props.flash as
-        | { success?: string; error?: string; info?: string; warning?: string }
-        | undefined;
-    if (!flash) {
-        return;
-    }
-    if (flash.success) {
-        toast.success(flash.success);
-    }
-    if (flash.error) {
-        toast.error(flash.error);
-    }
-    if (flash.warning) {
-        toast.warning(flash.warning);
-    }
-    if (flash.info) {
-        toast.info(flash.info);
-    }
-}
-
+// Show each server flash message exactly once. The flash object stays set on
+// page.props until the next navigation, so we dedupe by content to avoid
+// re-firing when other props (notification counts, cart, etc.) change.
+let lastFlashKey = '';
 watch(
-    () => [
-        page.props.flash?.success,
-        page.props.flash?.error,
-        page.props.flash?.info,
-        page.props.flash?.warning,
-    ],
-    () => showFlashToasts(),
-    { immediate: true },
+    () => page.props.flash,
+    (flash) => {
+        if (!flash) {
+            return;
+        }
+
+        const key = JSON.stringify([flash.success, flash.error, flash.warning, flash.info]);
+        if (key === lastFlashKey || key === '[null,null,null,null]') {
+            return;
+        }
+        lastFlashKey = key;
+
+        if (flash.success) {
+            toast.success(flash.success);
+        }
+        if (flash.error) {
+            toast.error(flash.error);
+        }
+        if (flash.warning) {
+            toast.warning(flash.warning);
+        }
+        if (flash.info) {
+            toast.info(flash.info);
+        }
+    },
+    { deep: true, immediate: true },
 );
 </script>
 
@@ -59,8 +60,10 @@ watch(
         <AppSidebar />
         <AppContent variant="sidebar" class="overflow-x-hidden">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <div class="px-4 sm:px-6 lg:px-8 py-6">
-                <slot />
+            <div class="px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+                <div class="mx-auto w-full max-w-[1400px]">
+                    <slot />
+                </div>
             </div>
         </AppContent>
     </AppShell>

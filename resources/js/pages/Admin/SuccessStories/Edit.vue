@@ -57,7 +57,7 @@ const submit = () => {
   })).post(`/admin/success-stories/${props.story.id}`, {
     forceFormData: true,
     onSuccess: () => {
-      toast.success('Success story updated successfully!')
+      // Flash message handled by global watcher (SuccessStoryController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update story. Please check the form for errors.')
@@ -67,7 +67,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head title="Edit Success Story" />
 
     <!-- Header -->

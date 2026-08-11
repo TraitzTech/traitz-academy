@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
-use App\Models\Enrollment;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
@@ -217,14 +216,10 @@ class QuizAttemptController extends Controller
     private function authorizeStudentAccess(Quiz $quiz): void
     {
         $quiz->loadMissing('course');
+        $course = $quiz->course;
 
-        $enrolled = Enrollment::query()
-            ->where('user_id', auth()->id())
-            ->where('course_id', $quiz->course_id)
-            ->whereIn('access_status', ['active', 'completed'])
-            ->exists();
-
-        abort_unless($enrolled, 403);
+        abort_unless($course !== null, 404);
+        $this->authorize('takeQuiz', $course);
     }
 
     private function authorizeAttempt(Quiz $quiz, QuizAttempt $attempt): void

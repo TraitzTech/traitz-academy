@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\SyncsLiveClassTargets;
+use App\Http\Controllers\Concerns\GeneratesLiveClassMeeting;
 use App\Http\Controllers\Controller;
 use App\Jobs\UploadLiveClassRecordingToYouTube;
+use App\Models\Cohort;
 use App\Models\Course;
 use App\Models\LiveClass;
 use App\Models\LiveClassRecording;
+use App\Models\Program;
 use App\Models\User;
 use App\Notifications\Lms\LiveClassScheduledNotification;
+use App\Support\LiveClass\GoogleMeetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -17,6 +22,9 @@ use Inertia\Response;
 
 class LiveClassController extends Controller
 {
+    use GeneratesLiveClassMeeting;
+    use SyncsLiveClassTargets;
+
     public function index(): Response
     {
         $classes = LiveClass::query()
@@ -32,9 +40,11 @@ class LiveClassController extends Controller
     public function create(): Response
     {
         return Inertia::render('Admin/Lms/LiveClasses/Create', [
-            'tutors' => User::query()->where('role', User::ROLE_TUTOR)->orderBy('name')->get(['id', 'name']),
+            'tutors' => User::query()->whereIn('role', [User::ROLE_TUTOR, User::ROLE_SUPERVISOR, User::ROLE_PROGRAM_COORDINATOR])->orderBy('name')->get(['id', 'name']),
             'courses' => Course::query()->orderBy('title')->get(['id', 'title']),
-            'students' => User::query()->where('role', User::ROLE_USER)->orderBy('name')->get(['id', 'name', 'email']),
+            'cohorts' => Cohort::query()->orderBy('name')->get(['id', 'name']),
+            'programs' => Program::query()->orderBy('title')->get(['id', 'title']),
+            'students' => $this->studentsWithInternship(),
         ]);
     }
 
@@ -47,8 +57,10 @@ class LiveClassController extends Controller
             'start_time' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:5', 'max:600'],
             'access_type' => ['required', 'in:course,custom'],
-            'course_ids' => ['array'],
-            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'meeting_url' => ['nullable', 'url', 'max:2048'],
+            'targets' => ['array'],
+            'targets.*.type' => ['required_with:targets', 'in:course,cohort,program'],
+            'targets.*.id' => ['required_with:targets', 'integer'],
             'student_ids' => ['array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
         ]);
@@ -64,10 +76,14 @@ class LiveClassController extends Controller
             'access_type' => $validated['access_type'],
         ]);
 
+        $this->ensureMeetingLink($liveClass, $validated['meeting_url'] ?? null);
+
         if ($liveClass->access_type === 'course') {
-            $liveClass->courses()->sync($validated['course_ids'] ?? []);
+            $this->syncTargets($liveClass, $validated['targets'] ?? []);
+            $liveClass->students()->sync([]);
         } else {
             $liveClass->students()->sync($validated['student_ids'] ?? []);
+            $this->syncTargets($liveClass, []);
         }
 
         $this->notifyAudience($liveClass);
@@ -87,6 +103,7 @@ class LiveClassController extends Controller
 
         return Inertia::render('Admin/Lms/LiveClasses/Show', [
             'liveClass' => $liveClass,
+            'targets' => $this->targetRowsForDisplay($liveClass),
         ]);
     }
 
@@ -96,9 +113,12 @@ class LiveClassController extends Controller
 
         return Inertia::render('Admin/Lms/LiveClasses/Edit', [
             'liveClass' => $liveClass,
-            'tutors' => User::query()->where('role', User::ROLE_TUTOR)->orderBy('name')->get(['id', 'name']),
+            'targets' => $this->targetRowsForDisplay($liveClass),
+            'tutors' => User::query()->whereIn('role', [User::ROLE_TUTOR, User::ROLE_SUPERVISOR, User::ROLE_PROGRAM_COORDINATOR])->orderBy('name')->get(['id', 'name']),
             'courses' => Course::query()->orderBy('title')->get(['id', 'title']),
-            'students' => User::query()->where('role', User::ROLE_USER)->orderBy('name')->get(['id', 'name', 'email']),
+            'cohorts' => Cohort::query()->orderBy('name')->get(['id', 'name']),
+            'programs' => Program::query()->orderBy('title')->get(['id', 'title']),
+            'students' => $this->studentsWithInternship(),
         ]);
     }
 
@@ -111,8 +131,10 @@ class LiveClassController extends Controller
             'start_time' => ['required', 'date'],
             'duration' => ['required', 'integer', 'min:5', 'max:600'],
             'access_type' => ['required', 'in:course,custom'],
-            'course_ids' => ['array'],
-            'course_ids.*' => ['integer', 'exists:courses,id'],
+            'meeting_url' => ['nullable', 'url', 'max:2048'],
+            'targets' => ['array'],
+            'targets.*.type' => ['required_with:targets', 'in:course,cohort,program'],
+            'targets.*.id' => ['required_with:targets', 'integer'],
             'student_ids' => ['array'],
             'student_ids.*' => ['integer', 'exists:users,id'],
         ]);
@@ -126,12 +148,14 @@ class LiveClassController extends Controller
             'access_type' => $validated['access_type'],
         ]);
 
+        $this->ensureMeetingLink($liveClass, $validated['meeting_url'] ?? null);
+
         if ($liveClass->access_type === 'course') {
-            $liveClass->courses()->sync($validated['course_ids'] ?? []);
+            $this->syncTargets($liveClass, $validated['targets'] ?? []);
             $liveClass->students()->sync([]);
         } else {
             $liveClass->students()->sync($validated['student_ids'] ?? []);
-            $liveClass->courses()->sync([]);
+            $this->syncTargets($liveClass, []);
         }
 
         return back()->with('success', 'Live class updated.');
@@ -139,6 +163,7 @@ class LiveClassController extends Controller
 
     public function destroy(LiveClass $liveClass): RedirectResponse
     {
+        app(GoogleMeetService::class)->deleteMeeting($liveClass->meeting_event_id);
         $liveClass->delete();
 
         return back()->with('success', 'Live class deleted.');
@@ -163,20 +188,31 @@ class LiveClassController extends Controller
         return back()->with('success', 'Recording upload queued.');
     }
 
+    /**
+     * All students, each tagged with their internship's cohort/program (if
+     * any) so the "custom students" picker can be filtered by cohort/program.
+     */
+    private function studentsWithInternship(): \Illuminate\Support\Collection
+    {
+        return User::query()
+            ->where('role', User::ROLE_USER)
+            ->with(['internships' => fn ($q) => $q->latest('id')])
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'cohort_id' => $u->internships->first()?->cohort_id,
+                'program_id' => $u->internships->first()?->program_id,
+            ]);
+    }
+
     private function notifyAudience(LiveClass $liveClass): void
     {
-        if ($liveClass->access_type === 'course') {
-            $studentIds = $liveClass->courses()
-                ->with('enrollments:user_id,course_id,access_status')
-                ->get()
-                ->flatMap(fn (Course $course) => $course->enrollments
-                    ->whereIn('access_status', ['active', 'completed'])
-                    ->pluck('user_id'))
-                ->unique()
-                ->values();
-        } else {
-            $studentIds = $liveClass->students()->pluck('users.id');
-        }
+        $studentIds = $liveClass->access_type === 'course'
+            ? $liveClass->resolveAudienceIds()
+            : $liveClass->students()->pluck('users.id');
 
         User::query()
             ->whereIn('id', $studentIds)

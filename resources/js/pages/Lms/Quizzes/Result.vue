@@ -62,7 +62,7 @@ function formatCorrect(question: any) {
   ]">
     <Head :title="`${quiz.title} - Result`" />
 
-    <div class="lms-page">
+    <div class="lms-page mx-auto max-w-3xl">
     <div class="mb-6 lms-panel">
       <h1 class="lms-title">{{ quiz.title }} — Result</h1>
       <div class="mt-3 flex flex-wrap items-center gap-3 text-sm">

@@ -56,7 +56,7 @@ const formatDate = (value: string | null) => {
 </script>
 
 <template>
-  <div class="lms-page">
+  <div class="lms-page mx-auto max-w-3xl">
     <Head title="Course payment receipt" />
 
     <div class="mb-8 flex flex-wrap items-center justify-between gap-3">

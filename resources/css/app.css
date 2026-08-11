@@ -229,3 +229,32 @@
 #nprogress .peg {
     box-shadow: 0 0 10px #42b6c5, 0 0 5px #42b6c5 !important;
 }
+
+/* Subtle, theme-aware thin scrollbar (used by the sidebar and other scroll areas) */
+.nice-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+.nice-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.nice-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.nice-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+}
+.nice-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.65);
+}
+.dark .nice-scrollbar {
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+.dark .nice-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.28);
+}
+.dark .nice-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(203, 213, 225, 0.5);
+}

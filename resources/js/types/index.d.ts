@@ -22,7 +22,13 @@ export interface NavItem {
 export interface NavGroup {
     label: string;
     icon?: LucideIcon;
-    items: NavItem[];
+    items?: NavItem[];
+    /** Opt this group into a collapsible dropdown (all other groups stay flat/always-expanded). */
+    collapsible?: boolean;
+    /** Collapsed by default unless the user has toggled it before or one of its items is active. */
+    defaultOpen?: boolean;
+    /** Nested collapsible groups rendered under this group's label (e.g. "Events" containing "AI Forge"). */
+    groups?: NavGroup[];
 }
 
 export type AppPageProps<

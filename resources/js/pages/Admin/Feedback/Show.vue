@@ -88,7 +88,7 @@ const displayName = (r: ResponseRow) => {
 const toggleStatus = () => {
   router.post(`/admin/feedback/${props.form.id}/toggle-status`, {}, {
     preserveScroll: true,
-    onSuccess: () => toast.success('Status updated.'),
+    // Flash message handled by global watcher (FeedbackController::toggleStatus flashes 'success')
   })
 }
 
@@ -99,7 +99,7 @@ const confirmDelete = () => {
   deleteProcessing.value = true
   router.delete(`/admin/feedback/${props.form.id}`, {
     onSuccess: () => {
-      toast.success('Feedback form deleted.')
+      // Flash message handled by global watcher (FeedbackController::destroy flashes 'success')
       showDeleteModal.value = false
     },
     onFinish: () => {
@@ -123,7 +123,7 @@ const confirmDeleteResponse = () => {
   router.delete(`/admin/feedback/${props.form.id}/responses/${deleteResponseId.value}`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Response deleted.')
+      // Flash message handled by global watcher (FeedbackController::destroyResponse flashes 'success')
       showDeleteResponseModal.value = false
       deleteResponseId.value = null
     },

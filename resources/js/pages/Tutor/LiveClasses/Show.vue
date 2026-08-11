@@ -66,10 +66,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-3xl">
     <Head :title="liveClass.title" />
     <div class="mb-6 flex items-center justify-between">
       <div>
+        <Link href="/tutor/live-classes" class="mb-2 inline-flex rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
+          Back to all live classes
+        </Link>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ liveClass.title }}</h1>
         <p class="text-sm text-gray-500">{{ liveClass.description || 'No description' }}</p>
       </div>

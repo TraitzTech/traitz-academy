@@ -57,7 +57,7 @@ const remove = (item: GalleryItem) => {
   if (!confirm(`Delete "${item.title}"?`)) return
 
   router.delete(`/admin/gallery/${item.slug}`, {
-    onSuccess: () => toast.success('Gallery item deleted successfully!'),
+    // Flash message handled by global watcher (GalleryItemController::destroy flashes 'success')
     onError: () => toast.error('Failed to delete gallery item.'),
   })
 }

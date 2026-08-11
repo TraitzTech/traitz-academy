@@ -49,7 +49,7 @@ function save() {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit Course: ${course.title}`" />
 
     <div class="mb-6">

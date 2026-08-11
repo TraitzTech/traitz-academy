@@ -49,7 +49,7 @@ const submit = () => {
   })).put(`/admin/applications/${props.application.id}`, {
     preserveScroll: true,
     onSuccess: () => {
-      toast.success('Application updated successfully.')
+      // Flash message handled by global watcher (ApplicationController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update application.')
@@ -59,7 +59,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit Application - ${application.first_name} ${application.last_name}`" />
 
     <div class="mb-8">

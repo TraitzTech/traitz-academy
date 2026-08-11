@@ -1,4 +1,35 @@
 <script setup lang="ts">
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Code,
+  Eraser,
+  Heading1,
+  Heading2,
+  Heading3,
+  Image as ImageIcon,
+  IndentDecrease,
+  IndentIncrease,
+  Italic,
+  Link as LinkIcon,
+  Link2Off,
+  List,
+  ListOrdered,
+  MoreHorizontal,
+  Minus,
+  Pilcrow,
+  Quote,
+  Redo2,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  Underline,
+  Undo2,
+  Upload,
+} from 'lucide-vue-next'
 import { nextTick, ref, watch } from 'vue'
 
 interface Props {
@@ -8,6 +39,8 @@ interface Props {
   disabled?: boolean
   /** Extra classes for the editable surface (e.g. taller min-height for lesson bodies). */
   bodyClass?: string
+  /** Start with just the essentials (bold/italic/list/image) behind a "more" toggle — for light, everyday writing rather than long-form content. */
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -15,7 +48,10 @@ const props = withDefaults(defineProps<Props>(), {
   uploadUrl: '/admin/emails/media',
   disabled: false,
   bodyClass: '',
+  compact: false,
 })
+
+const showFullToolbar = ref(!props.compact)
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -194,53 +230,89 @@ const uploadMedia = async (event: Event) => {
 </script>
 
 <template>
-  <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
-    <div class="border-b border-gray-200 dark:border-gray-600 p-2 flex flex-wrap items-center gap-2">
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('bold')"><strong>B</strong></button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('italic')"><em>I</em></button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('underline')"><u>U</u></button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('strikeThrough')"><s>S</s></button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('subscript')">X₂</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('superscript')">X²</button>
+  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white transition-colors focus-within:border-[#42b6c5] focus-within:ring-2 focus-within:ring-[#42b6c5]/20 dark:border-gray-600 dark:bg-gray-700">
+    <div class="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-gray-50/80 p-1.5 dark:border-gray-600 dark:bg-gray-800/60">
+      <!-- Always-visible essentials -->
+      <div class="flex items-center gap-0.5">
+        <button type="button" class="editor-btn" title="Bold" :disabled="disabled" @mousedown.prevent="runCommand('bold')"><Bold class="h-3.5 w-3.5" /></button>
+        <button type="button" class="editor-btn" title="Italic" :disabled="disabled" @mousedown.prevent="runCommand('italic')"><Italic class="h-3.5 w-3.5" /></button>
+        <button type="button" class="editor-btn" title="Bullet list" :disabled="disabled" @mousedown.prevent="runCommand('insertUnorderedList')"><List class="h-3.5 w-3.5" /></button>
+        <button
+          type="button"
+          class="editor-btn"
+          :title="isUploading ? 'Uploading…' : 'Upload image'"
+          :disabled="disabled || isUploading"
+          @mousedown.prevent="triggerMediaUpload"
+        >
+          <Upload :class="['h-3.5 w-3.5', isUploading ? 'animate-pulse' : '']" />
+        </button>
+      </div>
 
-      <div class="h-6 w-px bg-gray-300 dark:bg-gray-500"></div>
-
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="formatLargeHeading">H1</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="formatHeading('h2')">H2</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="formatHeading('h3')">H3</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="formatHeading('p')">P</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="formatCodeBlock">Code</button>
-
-      <div class="h-6 w-px bg-gray-300 dark:bg-gray-500"></div>
-
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('insertUnorderedList')">• List</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('insertOrderedList')">1. List</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('indent')">Indent</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('outdent')">Outdent</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('formatBlock', '<blockquote>')">Quote</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="insertHorizontalRule">HR</button>
-
-      <div class="h-6 w-px bg-gray-300 dark:bg-gray-500"></div>
-
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="align('left')">Left</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="align('center')">Center</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="align('right')">Right</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="align('justify')">Justify</button>
-
-      <div class="h-6 w-px bg-gray-300 dark:bg-gray-500"></div>
-
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="insertLink">Link</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="unlink">Unlink</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="insertImageUrl">Image URL</button>
-      <button type="button" class="editor-btn" :disabled="disabled || isUploading" @mousedown.prevent="triggerMediaUpload">
-        {{ isUploading ? 'Uploading...' : 'Upload Image' }}
+      <button
+        v-if="compact"
+        type="button"
+        class="editor-btn"
+        :title="showFullToolbar ? 'Fewer options' : 'More formatting options'"
+        @mousedown.prevent="showFullToolbar = !showFullToolbar"
+      >
+        <MoreHorizontal class="h-3.5 w-3.5" />
       </button>
 
-      <div class="h-6 w-px bg-gray-300 dark:bg-gray-500"></div>
+      <template v-if="showFullToolbar">
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
 
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('removeFormat')">Clear</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('undo')">Undo</button>
-      <button type="button" class="editor-btn" :disabled="disabled" @mousedown.prevent="runCommand('redo')">Redo</button>
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Underline" :disabled="disabled" @mousedown.prevent="runCommand('underline')"><Underline class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Strikethrough" :disabled="disabled" @mousedown.prevent="runCommand('strikeThrough')"><Strikethrough class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Subscript" :disabled="disabled" @mousedown.prevent="runCommand('subscript')"><Subscript class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Superscript" :disabled="disabled" @mousedown.prevent="runCommand('superscript')"><Superscript class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
+
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Heading 1" :disabled="disabled" @mousedown.prevent="formatLargeHeading"><Heading1 class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Heading 2" :disabled="disabled" @mousedown.prevent="formatHeading('h2')"><Heading2 class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Heading 3" :disabled="disabled" @mousedown.prevent="formatHeading('h3')"><Heading3 class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Paragraph" :disabled="disabled" @mousedown.prevent="formatHeading('p')"><Pilcrow class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Code block" :disabled="disabled" @mousedown.prevent="formatCodeBlock"><Code class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
+
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Numbered list" :disabled="disabled" @mousedown.prevent="runCommand('insertOrderedList')"><ListOrdered class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Indent" :disabled="disabled" @mousedown.prevent="runCommand('indent')"><IndentIncrease class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Outdent" :disabled="disabled" @mousedown.prevent="runCommand('outdent')"><IndentDecrease class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Quote" :disabled="disabled" @mousedown.prevent="runCommand('formatBlock', '<blockquote>')"><Quote class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Horizontal rule" :disabled="disabled" @mousedown.prevent="insertHorizontalRule"><Minus class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
+
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Align left" :disabled="disabled" @mousedown.prevent="align('left')"><AlignLeft class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Align center" :disabled="disabled" @mousedown.prevent="align('center')"><AlignCenter class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Align right" :disabled="disabled" @mousedown.prevent="align('right')"><AlignRight class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Justify" :disabled="disabled" @mousedown.prevent="align('justify')"><AlignJustify class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
+
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Insert link" :disabled="disabled" @mousedown.prevent="insertLink"><LinkIcon class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Remove link" :disabled="disabled" @mousedown.prevent="unlink"><Link2Off class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Insert image from URL" :disabled="disabled" @mousedown.prevent="insertImageUrl"><ImageIcon class="h-3.5 w-3.5" /></button>
+        </div>
+
+        <div class="mx-1 h-5 w-px shrink-0 bg-gray-300 dark:bg-gray-500"></div>
+
+        <div class="flex items-center gap-0.5">
+          <button type="button" class="editor-btn" title="Clear formatting" :disabled="disabled" @mousedown.prevent="runCommand('removeFormat')"><Eraser class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Undo" :disabled="disabled" @mousedown.prevent="runCommand('undo')"><Undo2 class="h-3.5 w-3.5" /></button>
+          <button type="button" class="editor-btn" title="Redo" :disabled="disabled" @mousedown.prevent="runCommand('redo')"><Redo2 class="h-3.5 w-3.5" /></button>
+        </div>
+      </template>
     </div>
 
     <div class="relative">
@@ -277,32 +349,45 @@ const uploadMedia = async (event: Event) => {
 
 <style scoped>
 .editor-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 0.375rem;
-  border: 1px solid rgb(209 213 219);
-  color: rgb(55 65 81);
+  border: 1px solid transparent;
+  color: rgb(75 85 99);
   background: transparent;
-  transition: background-color 150ms ease, opacity 150ms ease;
+  transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
 }
 
 .editor-btn:hover:not(:disabled) {
-  background-color: rgb(243 244 246);
+  background-color: rgb(255 255 255);
+  border-color: rgb(209 213 219);
+  color: #381998;
+}
+
+.editor-btn:active:not(:disabled) {
+  background-color: rgb(237 233 254);
 }
 
 .editor-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 :global(.dark) .editor-btn {
-  border-color: rgb(107 114 128);
-  color: rgb(229 231 235);
+  color: rgb(209 213 219);
 }
 
 :global(.dark) .editor-btn:hover:not(:disabled) {
-  background-color: rgb(75 85 99);
+  background-color: rgb(55 65 81);
+  border-color: rgb(107 114 128);
+  color: #7fe0ec;
+}
+
+:global(.dark) .editor-btn:active:not(:disabled) {
+  background-color: rgb(67 56 202 / 0.35);
 }
 
 :deep(.rich-editor h1),

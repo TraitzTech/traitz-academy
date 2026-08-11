@@ -4,6 +4,7 @@ import { BookOpen, ChevronDown, Clock, Layers, Lock, PlayCircle, User, Users } f
 import { computed, ref } from 'vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'
+import { categoryIconFor } from '@/utils/categoryIcons'
 import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
 
 interface LessonRow {
@@ -107,7 +108,10 @@ const firstLessonId = computed(() => props.course.sections[0]?.lessons[0]?.id ??
       <div class="grid gap-6 lg:grid-cols-5 lg:items-start">
         <div class="lg:col-span-3">
           <div class="mb-3 flex flex-wrap items-center gap-2 text-xs">
-            <span v-if="course.category" class="rounded-full bg-white/15 px-3 py-1 font-semibold">{{ course.category.icon }} {{ course.category.name }}</span>
+            <span v-if="course.category" class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 font-semibold">
+              <component :is="categoryIconFor(course.category.icon)" v-if="categoryIconFor(course.category.icon)" class="h-3.5 w-3.5" />
+              {{ course.category.name }}
+            </span>
             <span class="rounded-full bg-white/15 px-3 py-1 font-semibold">{{ course.level }}</span>
           </div>
           <h1 class="text-3xl font-bold">{{ course.title }}</h1>

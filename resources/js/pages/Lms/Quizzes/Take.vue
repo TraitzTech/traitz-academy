@@ -110,7 +110,7 @@ function submitQuiz() {
   ]">
     <Head :title="quiz.title" />
 
-    <div class="lms-page">
+    <div class="lms-page mx-auto max-w-3xl">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="lms-title">{{ quiz.title }}</h1>

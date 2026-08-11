@@ -25,6 +25,8 @@ class User extends Authenticatable
 
     public const ROLE_PROGRAM_COORDINATOR = 'program_coordinator';
 
+    public const ROLE_SUPERVISOR = 'supervisor';
+
     public const ROLE_ADMIN_LEGACY = 'admin';
 
     /**
@@ -196,6 +198,7 @@ class User extends Authenticatable
         return [
             self::ROLE_USER,
             self::ROLE_TUTOR,
+            self::ROLE_SUPERVISOR,
             self::ROLE_CTO,
             self::ROLE_CEO,
             self::ROLE_PROGRAM_COORDINATOR,
@@ -215,6 +218,68 @@ class User extends Authenticatable
     public function isProgramCoordinator(): bool
     {
         return $this->role === self::ROLE_PROGRAM_COORDINATOR;
+    }
+
+    public function isSupervisor(): bool
+    {
+        return $this->role === self::ROLE_SUPERVISOR;
+    }
+
+    /**
+     * Whether this user actually supervises any interns — via a per-intern
+     * supervisor override or as the supervisor of a program within a cohort.
+     * Capability-based (not role-based), so a tutor or even a plain user who
+     * was deliberately assigned as a supervisor qualifies.
+     */
+    public function supervisesInterns(): bool
+    {
+        return Internship::query()->forSupervisor($this)->exists();
+    }
+
+    /**
+     * Who may create "learning ops" work (assignments, schedule items,
+     * broadcast notifications) for the audiences they own: tutors and admins
+     * as before, plus anyone who actually supervises interns.
+     */
+    public function canManageLearningOps(): bool
+    {
+        return $this->isTutor()
+            || $this->canAccessAdminPanel()
+            || $this->isSupervisor()
+            || $this->supervisesInterns();
+    }
+
+    /**
+     * A plain learner/applicant account (no staff privileges).
+     */
+    public function isStudent(): bool
+    {
+        return $this->role === self::ROLE_USER;
+    }
+
+    /**
+     * Any non-student (staff) account — tutor, supervisor, coordinator, exec.
+     */
+    public function isStaff(): bool
+    {
+        return ! $this->isStudent();
+    }
+
+    /**
+     * Internships where this user is the intern.
+     */
+    public function internships(): HasMany
+    {
+        return $this->hasMany(Internship::class, 'user_id');
+    }
+
+    /**
+     * Internships where this user is the directly-assigned supervisor
+     * (does not include cohort-inherited supervision — use Internship::forSupervisor).
+     */
+    public function supervisedInternships(): HasMany
+    {
+        return $this->hasMany(Internship::class, 'supervisor_id');
     }
 
     public function canAccessAdminPanel(): bool
@@ -244,6 +309,20 @@ class User extends Authenticatable
     public function canManageUsers(): bool
     {
         return $this->isExecutive();
+    }
+
+    /**
+     * Whether this user may moderate the given course (view any lesson, manage
+     * discussions, etc.). Admins/coordinators may moderate any course; tutors
+     * may moderate only courses they own.
+     */
+    public function canModerateCourse(Course $course): bool
+    {
+        if ($this->canAccessAdminPanel()) {
+            return true;
+        }
+
+        return $this->isTutor() && (int) $course->instructor_id === (int) $this->id;
     }
 
     public function canManagePaymentRecord(Payment $payment): bool

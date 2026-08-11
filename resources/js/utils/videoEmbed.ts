@@ -91,7 +91,11 @@ export function vimeoPlayerEmbedSrc(url: string | null | undefined): string | nu
   if (!id) {
     return null
   }
-  return `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0&badge=0&dnt=1`
+  // title/byline/portrait/badge=0 strip the top overlay + corner badge; dnt=1
+  // is privacy (do-not-track); pip=0 removes the picture-in-picture surface so
+  // no secondary Vimeo-branded UI appears. Vimeo's own logo cannot be removed
+  // on free/Basic plans.
+  return `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0&badge=0&dnt=1&pip=0`
 }
 
 function vimeoEmbedSrc(raw: string): string | null {

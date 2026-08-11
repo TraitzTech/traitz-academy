@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
+use App\Models\Cohort;
 use App\Models\Enrollment;
+use App\Models\Internship;
 use App\Models\LiveClass;
 use App\Models\LmsSchedule;
+use App\Models\Program;
 use App\Models\StudentScheduleEvent;
 use App\Support\Lms\GoogleCalendarSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,15 +25,12 @@ class StudentScheduleController extends Controller
         $user = $request->user();
         $userId = (int) $user->id;
 
-        $enrolledCourseIds = Enrollment::query()
-            ->where('user_id', $userId)
-            ->where('access_status', '!=', 'revoked')
-            ->pluck('course_id');
+        [$enrolledCourseIds, $cohortIds, $programIds] = $this->studentGroupIds($userId);
 
         $items = collect()
-            ->merge($this->lmsSchedules($userId, $enrolledCourseIds))
-            ->merge($this->assignmentItems($userId, $enrolledCourseIds))
-            ->merge($this->liveClassItems($user, $enrolledCourseIds))
+            ->merge($this->lmsSchedules($userId, $enrolledCourseIds, $cohortIds, $programIds))
+            ->merge($this->assignmentItems($userId, $enrolledCourseIds, $cohortIds, $programIds))
+            ->merge($this->liveClassItems($user))
             ->merge($this->personalItems($userId))
             ->sortBy('starts_at')
             ->values();
@@ -110,15 +111,13 @@ class StudentScheduleController extends Controller
     {
         $user = $request->user();
         $userId = (int) $user->id;
-        $enrolledCourseIds = Enrollment::query()
-            ->where('user_id', $userId)
-            ->where('access_status', '!=', 'revoked')
-            ->pluck('course_id');
+
+        [$enrolledCourseIds, $cohortIds, $programIds] = $this->studentGroupIds($userId);
 
         $items = collect()
-            ->merge($this->lmsSchedules($userId, $enrolledCourseIds))
-            ->merge($this->assignmentItems($userId, $enrolledCourseIds))
-            ->merge($this->liveClassItems($user, $enrolledCourseIds))
+            ->merge($this->lmsSchedules($userId, $enrolledCourseIds, $cohortIds, $programIds))
+            ->merge($this->assignmentItems($userId, $enrolledCourseIds, $cohortIds, $programIds))
+            ->merge($this->liveClassItems($user))
             ->merge($this->personalItems($userId))
             ->values()
             ->all();
@@ -128,20 +127,59 @@ class StudentScheduleController extends Controller
         return back()->with('success', 'Schedule synced to Google Calendar.');
     }
 
-    private function lmsSchedules(int $userId, $enrolledCourseIds)
+    /**
+     * @return array{0: Collection<int, int>, 1: Collection<int, int>, 2: Collection<int, int>}
+     */
+    private function studentGroupIds(int $userId): array
+    {
+        $enrolledCourseIds = Enrollment::query()
+            ->where('user_id', $userId)
+            ->where('access_status', '!=', 'revoked')
+            ->pluck('course_id');
+
+        $internships = Internship::query()->where('user_id', $userId)->get(['cohort_id', 'program_id']);
+
+        return [
+            $enrolledCourseIds,
+            $internships->pluck('cohort_id')->filter()->unique()->values(),
+            $internships->pluck('program_id')->filter()->unique()->values(),
+        ];
+    }
+
+    private function attachableAudienceQuery($query, Collection $enrolledCourseIds, Collection $cohortIds, Collection $programIds): void
+    {
+        $query
+            ->where(function ($q) use ($enrolledCourseIds) {
+                $q->where('attachable_type', \App\Models\Course::class)->whereIn('attachable_id', $enrolledCourseIds);
+            })
+            ->orWhere(function ($q) use ($cohortIds) {
+                $q->where('attachable_type', Cohort::class)->whereIn('attachable_id', $cohortIds);
+            })
+            ->orWhere(function ($q) use ($programIds) {
+                $q->where('attachable_type', Program::class)->whereIn('attachable_id', $programIds);
+            });
+    }
+
+    private function attachableLabel($attachable): ?string
+    {
+        return $attachable?->title ?? $attachable?->name;
+    }
+
+    private function lmsSchedules(int $userId, Collection $enrolledCourseIds, Collection $cohortIds, Collection $programIds)
     {
         return LmsSchedule::query()
-            ->where(function ($query) use ($userId, $enrolledCourseIds): void {
+            ->where(function ($query) use ($userId, $enrolledCourseIds, $cohortIds, $programIds): void {
                 $query->where('audience', 'all_students')
-                    ->orWhere(function ($courseAudience) use ($enrolledCourseIds): void {
-                        $courseAudience->where('audience', 'course_students')->whereIn('course_id', $enrolledCourseIds);
+                    ->orWhere(function ($groupAudience) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                        $groupAudience->where('audience', 'course_students')
+                            ->where(fn ($q) => $this->attachableAudienceQuery($q, $enrolledCourseIds, $cohortIds, $programIds));
                     })
                     ->orWhere(function ($selectedAudience) use ($userId): void {
                         $selectedAudience->where('audience', 'selected_students')
                             ->whereHas('selectedStudents', fn ($selected) => $selected->where('users.id', $userId));
                     });
             })
-            ->with(['course:id,title', 'creator:id,name'])
+            ->with(['attachable', 'creator:id,name'])
             ->get()
             ->map(fn (LmsSchedule $s) => [
                 'id' => "schedule:{$s->id}",
@@ -153,24 +191,24 @@ class StudentScheduleController extends Controller
                 'location' => $s->location,
                 'starts_at' => $s->starts_at?->toIso8601String(),
                 'ends_at' => $s->ends_at?->toIso8601String(),
-                'course' => ['title' => $s->course?->title],
+                'attachable' => ['title' => $this->attachableLabel($s->attachable)],
                 'can_edit' => false,
             ]);
     }
 
-    private function assignmentItems(int $userId, $enrolledCourseIds)
+    private function assignmentItems(int $userId, Collection $enrolledCourseIds, Collection $cohortIds, Collection $programIds)
     {
         return Assignment::query()
-            ->where(function ($query) use ($userId, $enrolledCourseIds): void {
-                $query->where(function ($courseAudience) use ($enrolledCourseIds): void {
-                    $courseAudience->where('audience', 'course_students')
-                        ->whereIn('course_id', $enrolledCourseIds);
+            ->where(function ($query) use ($userId, $enrolledCourseIds, $cohortIds, $programIds): void {
+                $query->where(function ($groupAudience) use ($enrolledCourseIds, $cohortIds, $programIds): void {
+                    $groupAudience->where('audience', 'all_course_students')
+                        ->where(fn ($q) => $this->attachableAudienceQuery($q, $enrolledCourseIds, $cohortIds, $programIds));
                 })->orWhere(function ($selectedAudience) use ($userId): void {
                     $selectedAudience->where('audience', 'selected_students')
                         ->whereHas('selectedStudents', fn ($selected) => $selected->where('users.id', $userId));
                 });
             })
-            ->with('course:id,title')
+            ->with('attachable')
             ->whereNotNull('due_at')
             ->get()
             ->map(fn (Assignment $a) => [
@@ -183,12 +221,12 @@ class StudentScheduleController extends Controller
                 'location' => null,
                 'starts_at' => $a->due_at?->toIso8601String(),
                 'ends_at' => $a->due_at?->toIso8601String(),
-                'course' => ['title' => $a->course?->title],
+                'attachable' => ['title' => $this->attachableLabel($a->attachable)],
                 'can_edit' => false,
             ]);
     }
 
-    private function liveClassItems($user, $enrolledCourseIds)
+    private function liveClassItems($user)
     {
         return LiveClass::query()
             ->with(['courses:id,title'])
@@ -204,7 +242,7 @@ class StudentScheduleController extends Controller
                 'location' => 'Online (Jitsi)',
                 'starts_at' => $c->start_time?->toIso8601String(),
                 'ends_at' => $c->endsAt()?->toIso8601String(),
-                'course' => ['title' => $c->courses->first()?->title],
+                'attachable' => ['title' => $c->courses->first()?->title],
                 'can_edit' => false,
             ]);
     }
@@ -224,7 +262,7 @@ class StudentScheduleController extends Controller
                 'location' => $e->location,
                 'starts_at' => $e->starts_at?->toIso8601String(),
                 'ends_at' => $e->ends_at?->toIso8601String(),
-                'course' => ['title' => null],
+                'attachable' => ['title' => null],
                 'can_edit' => true,
                 'personal_event_id' => $e->id,
             ]);

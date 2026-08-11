@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Lms;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Lms\Concerns\InteractsWithCourseContent;
 use App\Models\Course;
 use App\Models\CourseLesson;
 use App\Models\Discussion;
 use App\Models\DiscussionUpvote;
-use App\Models\Enrollment;
 use App\Models\User;
 use App\Notifications\LessonDiscussionQuestionPosted;
 use App\Notifications\LessonDiscussionReplyPosted;
@@ -19,12 +19,14 @@ use Illuminate\Support\Facades\Notification;
 
 class LessonDiscussionController extends Controller
 {
+    use InteractsWithCourseContent;
+
     public function store(Request $request, Course $course, CourseLesson $lesson): RedirectResponse
     {
-        $this->assertPublishedCourseLesson($course, $lesson);
+        $this->assertLessonInPublishedCourse($course, $lesson);
         $user = $request->user();
         abort_unless($user !== null, 403);
-        $this->assertViewerCanAccessLesson($course, $lesson, $user);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
         $validated = $request->validate([
             'body' => ['required', 'string', 'max:10000'],
@@ -59,14 +61,14 @@ class LessonDiscussionController extends Controller
 
     public function destroy(Request $request, Course $course, CourseLesson $lesson, Discussion $discussion): RedirectResponse
     {
-        $this->assertPublishedCourseLesson($course, $lesson);
+        $this->assertLessonInPublishedCourse($course, $lesson);
         $user = $request->user();
         abort_unless($user !== null, 403);
         abort_unless((int) $discussion->lesson_id === (int) $lesson->id, 404);
 
-        $this->assertViewerCanAccessLesson($course, $lesson, $user);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
-        $canModerate = $this->canModerateCourse($user, $course);
+        $canModerate = $user->canModerateCourse($course);
         $isAuthor = (int) $discussion->user_id === (int) $user->id;
         abort_unless($isAuthor || $canModerate, 403);
 
@@ -82,13 +84,13 @@ class LessonDiscussionController extends Controller
 
     public function toggleUpvote(Request $request, Course $course, CourseLesson $lesson, Discussion $discussion): RedirectResponse
     {
-        $this->assertPublishedCourseLesson($course, $lesson);
+        $this->assertLessonInPublishedCourse($course, $lesson);
         $user = $request->user();
         abort_unless($user !== null, 403);
         abort_unless((int) $discussion->lesson_id === (int) $lesson->id, 404);
         abort_unless($discussion->isTopLevel(), 422);
 
-        $this->assertViewerCanAccessLesson($course, $lesson, $user);
+        $this->authorize('viewLesson', [$course, $lesson]);
 
         $existing = DiscussionUpvote::query()
             ->where('user_id', $user->id)
@@ -111,14 +113,14 @@ class LessonDiscussionController extends Controller
 
     public function acceptAnswer(Request $request, Course $course, CourseLesson $lesson, Discussion $discussion): RedirectResponse
     {
-        $this->assertPublishedCourseLesson($course, $lesson);
+        $this->assertLessonInPublishedCourse($course, $lesson);
         $user = $request->user();
         abort_unless($user !== null, 403);
         abort_unless((int) $discussion->lesson_id === (int) $lesson->id, 404);
         abort_unless($discussion->isReply(), 422);
 
-        $this->assertViewerCanAccessLesson($course, $lesson, $user);
-        abort_unless($this->canModerateCourse($user, $course), 403);
+        $this->authorize('viewLesson', [$course, $lesson]);
+        abort_unless($user->canModerateCourse($course), 403);
 
         $rootId = (int) $discussion->parent_id;
         DB::transaction(function () use ($discussion, $rootId): void {
@@ -166,42 +168,8 @@ class LessonDiscussionController extends Controller
         );
     }
 
-    private function assertPublishedCourseLesson(Course $course, CourseLesson $lesson): void
-    {
-        abort_unless($course->status === 'published', 404);
-        abort_unless((int) $lesson->course_id === (int) $course->id, 404);
-    }
-
-    private function assertViewerCanAccessLesson(Course $course, CourseLesson $lesson, User $user): void
-    {
-        if ($this->canModerateCourse($user, $course)) {
-            return;
-        }
-
-        $enrollment = Enrollment::query()
-            ->where('user_id', $user->id)
-            ->where('course_id', $course->id)
-            ->whereNotIn('access_status', ['suspended', 'revoked'])
-            ->first();
-
-        $hasAccess = $lesson->is_free || $enrollment !== null;
-        abort_unless($hasAccess, 403);
-    }
-
-    private function canModerateCourse(User $user, Course $course): bool
-    {
-        if ($user->canAccessAdminPanel()) {
-            return true;
-        }
-
-        return $user->isTutor() && (int) $course->instructor_id === (int) $user->id;
-    }
-
     public static function discussionPayloadForLesson(Course $course, CourseLesson $lesson, User $user): array
     {
-        $controller = new self;
-        $canModerate = $controller->canModerateCourse($user, $course);
-
-        return LessonDiscussionPresenter::forLesson($lesson, $user, $canModerate);
+        return LessonDiscussionPresenter::forLesson($lesson, $user, $user->canModerateCourse($course));
     }
 }

@@ -175,14 +175,14 @@ const submit = () => {
         return transformed
     }).post(`/admin/ai-forge/swags/${props.swag.slug}`, {
         forceFormData: true,
-        onSuccess: () => toast.success('Swag updated successfully!'),
+        // Flash message handled by global watcher (AiForgeSwagController::update flashes 'success')
         onError: () => toast.error('Failed to update swag. Please check the form.'),
     })
 }
 </script>
 
 <template>
-    <div>
+    <div class="mx-auto max-w-5xl">
         <Head :title="`Edit ${swag.name} - AI Forge`" />
 
         <div class="mb-8">

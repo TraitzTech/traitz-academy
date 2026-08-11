@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Course extends Model
 {
@@ -99,6 +99,37 @@ class Course extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(LmsSchedule::class);
+    }
+
+    /**
+     * The learner's access-granting enrollment for this course, if any.
+     * Returns null for guests or learners without an active/completed enrollment.
+     */
+    public function enrollmentFor(?User $user): ?Enrollment
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        return $this->enrollments()
+            ->where('user_id', $user->id)
+            ->grantsAccess()
+            ->first();
+    }
+
+    /**
+     * Whether the given user currently holds an access-granting enrollment.
+     */
+    public function grantsAccessTo(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->enrollments()
+            ->where('user_id', $user->id)
+            ->grantsAccess()
+            ->exists();
     }
 
     public function isFree(): bool

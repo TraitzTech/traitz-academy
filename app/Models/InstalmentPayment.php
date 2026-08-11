@@ -26,9 +26,9 @@ class InstalmentPayment extends Model
     {
         return [
             'instalment_number' => 'integer',
-            'amount'            => 'decimal:2',
-            'due_date'          => 'datetime',
-            'paid_at'           => 'datetime',
+            'amount' => 'decimal:2',
+            'due_date' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 

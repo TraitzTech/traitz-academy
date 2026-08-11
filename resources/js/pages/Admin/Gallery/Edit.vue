@@ -40,14 +40,14 @@ const form = useForm({
 const submit = () => {
   form.post(`/admin/gallery/${props.item.slug}`, {
     forceFormData: true,
-    onSuccess: () => toast.success('Gallery item updated successfully!'),
+    // Flash message handled by global watcher (GalleryItemController::update flashes 'success')
     onError: () => toast.error('Failed to update gallery item.'),
   })
 }
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit ${item.title}`" />
 
     <div class="mb-8">

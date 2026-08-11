@@ -40,19 +40,16 @@ class CourseLessonVideoController extends Controller
             'youtube_error' => null,
         ]);
 
-        try {
-            if ($lesson->youtube_video_id) {
+        // Best-effort cleanup of the previous video. If it can't be deleted
+        // (e.g. the OAuth token lacks the youtube.force-ssl scope), we log it
+        // and still proceed — replacing the lesson's video must not be blocked
+        // by a failure to tidy up the old upload.
+        if ($lesson->youtube_video_id) {
+            try {
                 $uploader->delete((string) $lesson->youtube_video_id);
+            } catch (Throwable $exception) {
+                report($exception);
             }
-        } catch (Throwable $exception) {
-            $lesson->update([
-                'youtube_status' => 'failed',
-                'youtube_error' => $exception->getMessage(),
-            ]);
-
-            return back()->withErrors([
-                'video_file' => 'Could not replace previous YouTube video: '.$exception->getMessage(),
-            ]);
         }
 
         try {

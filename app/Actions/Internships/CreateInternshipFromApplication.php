@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Actions\Internships;
+
+use App\Models\Application;
+use App\Models\Cohort;
+use App\Models\Internship;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
+
+/**
+ * Turns an accepted internship application into an Internship engagement.
+ *
+ * Supervisor precedence: an explicit supervisor wins, otherwise the cohort's
+ * lead supervisor is inherited (resolved lazily via Internship::effectiveSupervisorId,
+ * so we only persist an override when one is given). Idempotent — re-running for
+ * the same intern in the same cohort returns the existing record.
+ */
+class CreateInternshipFromApplication
+{
+    public function execute(Application $application, ?Cohort $cohort = null, ?int $supervisorId = null): Internship
+    {
+        $application->loadMissing('program');
+
+        if ($application->program === null || ! $application->program->isInternship()) {
+            throw new RuntimeException('Only internship-program applications can become internships.');
+        }
+
+        if ($application->user_id === null) {
+            throw new RuntimeException('The applicant must have a user account before an internship can be created.');
+        }
+
+        if ($cohort !== null && ! $cohort->hasProgram((int) $application->program_id)) {
+            throw new RuntimeException('The chosen cohort does not run this program.');
+        }
+
+        if ($cohort !== null && $cohort->isClosed()) {
+            throw new RuntimeException('The chosen cohort is closed — interns can no longer be added.');
+        }
+
+        // No cohort given → auto-place into the current intake cohort, provided it
+        // runs the applicant's program (so the intern inherits that program's
+        // supervisor). Falls back to standalone otherwise.
+        if ($cohort === null) {
+            $cohort = Cohort::query()
+                ->intake()
+                ->openForIntake()
+                ->whereHas('programs', fn ($q) => $q->where('programs.id', $application->program_id))
+                ->latest('id')
+                ->first();
+        }
+
+        return DB::transaction(function () use ($application, $cohort, $supervisorId) {
+            // A user may have re-applied and been accepted more than once for
+            // the same program — reuse their existing engagement in that
+            // program (regardless of cohort) rather than minting a second
+            // standalone Internship that would silently orphan the first.
+            $internship = Internship::query()
+                ->where('user_id', $application->user_id)
+                ->where('program_id', $application->program_id)
+                ->first()
+                ?? new Internship([
+                    'cohort_id' => $cohort?->id,
+                    'user_id' => $application->user_id,
+                ]);
+
+            // Preserve an existing record's data; only fill on first creation.
+            if (! $internship->exists) {
+                $internship->fill([
+                    'program_id' => $application->program_id,
+                    'application_id' => $application->id,
+                    'supervisor_id' => $supervisorId,
+                    'start_date' => $cohort?->start_date,
+                    // Logbook expectations begin at acceptance, so an intern
+                    // isn't retroactively behind if the cohort started earlier.
+                    'logbook_starts_on' => now()->toDateString(),
+                    'end_date' => $cohort?->end_date,
+                    'status' => Internship::STATUS_ACTIVE,
+                ]);
+                $internship->save();
+            } else {
+                $updates = [];
+
+                if ($supervisorId !== null && $internship->supervisor_id === null) {
+                    // Allow assigning a per-intern supervisor on a later pass.
+                    $updates['supervisor_id'] = $supervisorId;
+                }
+
+                if ($cohort !== null && $internship->cohort_id === null) {
+                    // A re-application accepted straight into a cohort should
+                    // actually place them, not leave the existing record standalone.
+                    $updates['cohort_id'] = $cohort->id;
+                    $updates['start_date'] = $internship->start_date ?? $cohort->start_date;
+                    $updates['end_date'] = $internship->end_date ?? $cohort->end_date;
+                }
+
+                if ($updates !== []) {
+                    $internship->update($updates);
+                }
+            }
+
+            return $internship;
+        });
+    }
+}

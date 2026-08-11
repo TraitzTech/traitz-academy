@@ -91,7 +91,7 @@ const toggleStatus = (program: Program) => {
   router.post(`/admin/programs/${program.id}/toggle-status`, {}, { 
     preserveState: true,
     onSuccess: () => {
-      toast.success(`Program ${program.is_active ? 'deactivated' : 'activated'} successfully!`)
+      // Flash message handled by global watcher (ProgramController::toggleStatus flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update program status.')
@@ -103,7 +103,7 @@ const toggleFeatured = (program: Program) => {
   router.post(`/admin/programs/${program.id}/toggle-featured`, {}, { 
     preserveState: true,
     onSuccess: () => {
-      toast.success(`Program ${program.is_featured ? 'removed from' : 'added to'} featured!`)
+      // Flash message handled by global watcher (ProgramController::toggleFeatured flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update featured status.')
@@ -121,7 +121,7 @@ const confirmDelete = () => {
   
   router.delete(`/admin/programs/${programToDelete.value.id}`, {
     onSuccess: () => {
-      toast.success('Program deleted successfully!')
+      // Flash message handled by global watcher (ProgramController::destroy flashes 'success')
       showDeleteModal.value = false
       programToDelete.value = null
     },
@@ -142,7 +142,7 @@ const openBulkDeleteModal = () => {
 const confirmBulkDelete = () => {
   router.post('/admin/programs/bulk-destroy', { ids: selectedIds.value }, {
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} program(s) deleted successfully!`)
+      // Flash message handled by global watcher (ProgramController::bulkDestroy flashes 'success')
       selectedIds.value = []
       showBulkDeleteModal.value = false
     },

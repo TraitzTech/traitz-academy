@@ -36,6 +36,9 @@ interface Application {
 interface Props {
   program: Program;
   userApplication?: Application | null;
+  applicationsOpen?: boolean;
+  applicationStatus?: string;
+  applicationsOpenAt?: string | null;
 }
 
 interface PageProps {
@@ -60,6 +63,15 @@ const isProfessional = (cat: string) => cat === 'professional-internship';
 const isJobOpportunity = (cat: string) => cat === 'job-opportunity';
 
 const isCareerRole = computed(() => ['job-opportunity', 'professional-internship'].includes(props.program.category));
+
+const canApply = computed(() => props.applicationsOpen !== false);
+const applyClosedLabel = computed(() => {
+  if (props.applicationStatus === 'not_yet' && props.applicationsOpenAt) {
+    const d = new Date(props.applicationsOpenAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return `Applications open ${d}`;
+  }
+  return 'Applications closed';
+});
 
 const labels = computed(() => {
   if (isCareerRole.value) {
@@ -157,11 +169,18 @@ const formatPrice = (price: number) => {
             <p class="text-xl text-gray-300">{{ program.description }}</p>
           </div>
           <Link
+            v-if="canApply"
             :href="`/programs/${program.id}/apply`"
             class="hidden md:inline-flex items-center px-8 py-3 bg-[#42b6c5] text-[#000928] rounded-lg font-bold text-lg hover:bg-white transition-all duration-200 transform hover:scale-105 whitespace-nowrap ml-4"
           >
             Apply Now
           </Link>
+          <span
+            v-else
+            class="hidden md:inline-flex items-center px-8 py-3 bg-white/10 text-white/80 rounded-lg font-bold text-lg whitespace-nowrap ml-4"
+          >
+            {{ applyClosedLabel }}
+          </span>
         </div>
       </div>
     </section>
@@ -298,12 +317,18 @@ const formatPrice = (price: number) => {
 
               <!-- Apply Button -->
               <Link
-                v-else
+                v-else-if="canApply"
                 :href="`/programs/${program.id}/apply`"
                 class="block w-full text-center px-6 py-3 bg-[#42b6c5] text-white rounded-lg font-bold text-lg hover:bg-[#35919e] transition-colors mb-3"
               >
                 Apply Now
               </Link>
+              <div
+                v-else
+                class="mb-3 block w-full rounded-lg bg-gray-100 px-6 py-3 text-center text-lg font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+              >
+                {{ applyClosedLabel }}
+              </div>
 
               <!-- Academic Internship Info -->
               <div v-if="isAcademic(program.category)" class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
@@ -335,11 +360,18 @@ const formatPrice = (price: number) => {
         <p class="text-xl text-gray-300 mb-8">Apply now and take the first step in your professional journey</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
+            v-if="canApply"
             :href="`/programs/${program.id}/apply`"
             class="inline-flex items-center justify-center px-8 py-3 bg-[#42b6c5] text-[#000928] rounded-lg font-bold text-lg hover:bg-white transition-all duration-200 transform hover:scale-105"
           >
             Apply Now
           </Link>
+          <span
+            v-else
+            class="inline-flex items-center justify-center px-8 py-3 bg-white/10 text-white/80 rounded-lg font-bold text-lg"
+          >
+            {{ applyClosedLabel }}
+          </span>
           <a
             v-if="whatsAppLink"
             :href="whatsAppLink"

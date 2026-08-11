@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Internships\CreateInternshipFromApplication;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Interview;
@@ -187,6 +188,7 @@ class ApplicationController extends Controller
 
         if (! $wasAccepted && $application->status === 'accepted') {
             $this->sendAcceptanceNotification($application);
+            $this->promoteToInternshipIfApplicable($application);
         }
 
         return redirect()
@@ -261,7 +263,29 @@ class ApplicationController extends Controller
             $this->sendAcceptanceNotification($application);
         }
 
+        $this->promoteToInternshipIfApplicable($application);
+
         return back()->with('success', 'Application accepted successfully.');
+    }
+
+    /**
+     * When an internship-program application is accepted, create the intern's
+     * Internship record (standalone; an admin later places them in a cohort and
+     * assigns a supervisor). Idempotent and never blocks the acceptance.
+     */
+    private function promoteToInternshipIfApplicable(Application $application): void
+    {
+        $application->loadMissing('program');
+
+        if ($application->user_id === null || $application->program === null || ! $application->program->isInternship()) {
+            return;
+        }
+
+        try {
+            app(CreateInternshipFromApplication::class)->execute($application);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 
     public function reject(Request $request, Application $application): RedirectResponse
@@ -307,6 +331,7 @@ class ApplicationController extends Controller
                 if (! $wasAccepted) {
                     $this->sendAcceptanceNotification($application);
                 }
+                $this->promoteToInternshipIfApplicable($application);
             } elseif ($validated['action'] === 'reject') {
                 $application->update(['status' => 'rejected', 'reviewed_at' => now()]);
                 if ($application->user) {

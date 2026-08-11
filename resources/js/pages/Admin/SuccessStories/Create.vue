@@ -33,7 +33,7 @@ const submit = () => {
   form.post('/admin/success-stories', {
     forceFormData: true,
     onSuccess: () => {
-      toast.success('Success story created successfully!')
+      // Flash message handled by global watcher (SuccessStoryController::store flashes 'success')
     },
     onError: () => {
       toast.error('Failed to create story. Please check the form for errors.')
@@ -43,7 +43,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head title="Add Success Story" />
 
     <!-- Header -->

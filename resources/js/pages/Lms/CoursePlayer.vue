@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { YoutubeIframe } from '@vue-youtube/component'
 import { CheckCircle2, Circle, Download, FileText, MessageCircle, NotebookPen, PlayCircle, ThumbsUp, Trash2 } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, withDefaults } from 'vue'
-import { YoutubeIframe } from '@vue-youtube/component'
 
 import AppLayout from '@/layouts/AppLayout.vue'
 import { lessonBodyHtml } from '@/utils/lessonContentHtml'
@@ -756,7 +756,7 @@ onMounted(async () => {
             <!-- YouTube: custom iframe + custom controls -->
             <template v-if="youtubeId">
               <div ref="ytContainerRef" class="overflow-hidden rounded-xl border border-gray-200 bg-black shadow-sm">
-                <div class="yt-crop-shell aspect-video min-h-[200px] w-full overflow-hidden">
+                <div class="yt-crop-shell relative aspect-video min-h-[200px] w-full overflow-hidden">
                   <YoutubeIframe
                     :video-id="youtubeId"
                     class="yt-crop-inner h-full w-full"
@@ -765,10 +765,30 @@ onMounted(async () => {
                       rel: 0,
                       playsinline: 1,
                       disablekb: 1,
+                      fs: 0,
+                      modestbranding: 1,
                       iv_load_policy: 3,
                     }"
                     @ready="onYoutubeReady"
                     @state-change="onYoutubeStateChange"
+                  />
+                  <!--
+                    Click shield: covers the iframe so pointer interaction is
+                    handled by our own controls instead of YouTube's. This keeps
+                    YouTube's native overlays ("Watch on YouTube", pause cards,
+                    title/channel bar, end screens) from ever surfacing on click.
+                    Playback is driven through the IFrame API, so blocking clicks
+                    here does not affect play/pause/seek. Kept out of tab order
+                    (tabindex=-1) since the visible Play button below is the
+                    keyboard-accessible control.
+                  -->
+                  <button
+                    type="button"
+                    tabindex="-1"
+                    aria-hidden="true"
+                    class="absolute inset-0 z-10 h-full w-full cursor-pointer bg-transparent"
+                    @click="toggleYoutubePlayback"
+                    @dblclick="requestYoutubeFullscreen"
                   />
                 </div>
               </div>

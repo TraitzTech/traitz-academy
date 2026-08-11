@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasAttachable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,11 +10,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Assignment extends Model
 {
+    use HasAttachable;
+
     /** @use HasFactory<\Database\Factories\AssignmentFactory> */
     use HasFactory;
 
     protected $fillable = [
         'course_id',
+        'attachable_type',
+        'attachable_id',
         'created_by',
         'title',
         'instructions',

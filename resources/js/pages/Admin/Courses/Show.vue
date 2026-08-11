@@ -4,6 +4,7 @@ import { ref } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { categoryIconFor } from '@/utils/categoryIcons'
 import { courseDescriptionHtml } from '@/utils/lessonContentHtml'
 import { STREAMING_IFRAME_ALLOW, streamingEmbedSrc } from '@/utils/videoEmbed'
 
@@ -101,6 +102,9 @@ const expandedSections = ref<Set<number>>(new Set(props.course.sections.map(s =>
 const enrollForm = useForm({ email: '' })
 const videoUploadForm = useForm({ video_file: null as File | null })
 
+const showReplaceVideoModal = ref(false)
+const pendingVideoUpload = ref<{ sectionId: number; lessonId: number; file: File; input: HTMLInputElement } | null>(null)
+
 function submitEnrollStudent() {
   enrollForm.post(`/admin/courses/${props.course.id}/enroll-student`, { preserveScroll: true })
 }
@@ -120,16 +124,34 @@ function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number
   const file = input.files?.[0] ?? null
   if (!file) return
 
+  // Overwriting an existing video is destructive — confirm via modal first.
   if (shouldConfirmVideoReplacement(sectionId, lessonId)) {
-    const shouldReplace = window.confirm(
-      'Replace this video? The current YouTube video will be deleted and replaced with the new upload.'
-    )
-    if (!shouldReplace) {
-      input.value = ''
-      return
-    }
+    pendingVideoUpload.value = { sectionId, lessonId, file, input }
+    showReplaceVideoModal.value = true
+    return
   }
 
+  performVideoUpload(sectionId, lessonId, file, input)
+}
+
+function confirmReplaceVideo() {
+  const pending = pendingVideoUpload.value
+  showReplaceVideoModal.value = false
+  pendingVideoUpload.value = null
+  if (pending) {
+    performVideoUpload(pending.sectionId, pending.lessonId, pending.file, pending.input)
+  }
+}
+
+function cancelReplaceVideo() {
+  if (pendingVideoUpload.value?.input) {
+    pendingVideoUpload.value.input.value = ''
+  }
+  pendingVideoUpload.value = null
+  showReplaceVideoModal.value = false
+}
+
+function performVideoUpload(sectionId: number, lessonId: number, file: File, input: HTMLInputElement) {
   videoUploadForm.video_file = file
 
   videoUploadForm.post(`/admin/courses/${props.course.id}/sections/${sectionId}/lessons/${lessonId}/video`, {
@@ -137,6 +159,9 @@ function onLessonVideoSelected(event: Event, sectionId: number, lessonId: number
     preserveScroll: true,
     onSuccess: () => {
       videoUploadForm.reset()
+    },
+    onFinish: () => {
+      input.value = ''
     },
   })
 }
@@ -149,13 +174,18 @@ function toggleSection(id: number) {
   }
 }
 
-function lessonEmbedUrl(url: string | null | undefined): string | null {
-  return streamingEmbedSrc(url ?? null)
+function lessonEmbedUrl(lesson: Lesson): string | null {
+  // Prefer the YouTube id (same source of truth the learner player uses) so the
+  // preview never falls back to embedding a raw, non-embeddable URL.
+  if (lesson.youtube_video_id) {
+    return `https://www.youtube-nocookie.com/embed/${lesson.youtube_video_id}?controls=0&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&disablekb=1&fs=0`
+  }
+  return streamingEmbedSrc(lesson.video_url ?? null)
 }
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Review: ${course.title}`" />
 
     <!-- Back + header -->
@@ -231,8 +261,9 @@ function lessonEmbedUrl(url: string | null | undefined): string | null {
             <span class="rounded-full border border-gray-200 px-3 py-0.5 text-xs font-medium text-gray-600 dark:border-gray-600 dark:text-gray-300">
               {{ levelLabels[course.level] }}
             </span>
-            <span v-if="course.category" class="rounded-full px-3 py-0.5 text-xs font-semibold text-white" :style="{ backgroundColor: course.category.color || '#381998' }">
-              {{ course.category.icon }} {{ course.category.name }}
+            <span v-if="course.category" class="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-semibold text-white" :style="{ backgroundColor: course.category.color || '#381998' }">
+              <component :is="categoryIconFor(course.category.icon)" v-if="categoryIconFor(course.category.icon)" class="h-3.5 w-3.5" />
+              {{ course.category.name }}
             </span>
           </div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ course.title }}</h1>
@@ -353,12 +384,12 @@ function lessonEmbedUrl(url: string | null | undefined): string | null {
                   </span>
                 </div>
                 <div
-                  v-if="lesson.type === 'video' && lessonEmbedUrl(lesson.video_url)"
+                  v-if="lesson.type === 'video' && lessonEmbedUrl(lesson)"
                   class="mt-2 pl-11"
                 >
-                  <div class="aspect-video max-w-2xl overflow-hidden rounded-lg bg-black">
+                  <div class="yt-crop-shell aspect-video max-w-2xl overflow-hidden rounded-lg bg-black">
                     <iframe
-                      :src="lessonEmbedUrl(lesson.video_url) ?? undefined"
+                      :src="lessonEmbedUrl(lesson) ?? undefined"
                       class="h-full w-full"
                       referrerpolicy="strict-origin-when-cross-origin"
                       :allow="STREAMING_IFRAME_ALLOW"
@@ -513,5 +544,27 @@ function lessonEmbedUrl(url: string | null | undefined): string | null {
       @update:open="showRejectModal = $event"
       @confirm="confirmReject"
     />
+
+    <!-- Replace video confirmation -->
+    <ConfirmationModal
+      :open="showReplaceVideoModal"
+      title="Replace this video?"
+      description="The current video will be deleted and replaced with the new upload. This can't be undone."
+      confirm-text="Replace Video"
+      cancel-text="Keep Current"
+      variant="destructive"
+      @update:open="(v) => { if (!v) cancelReplaceVideo(); }"
+      @confirm="confirmReplaceVideo"
+    />
   </div>
 </template>
+
+<style scoped>
+/* Overscan the embed so YouTube's top title/branding bar is cropped out of view
+   (controls are already hidden via controls=0). Matches the student player. */
+.yt-crop-shell :deep(iframe) {
+  width: 112% !important;
+  height: 112% !important;
+  margin: -6% !important;
+}
+</style>

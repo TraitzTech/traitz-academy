@@ -106,7 +106,7 @@ const submitInterview = () => {
 
   form.post(`/interviews/${props.interview.id}/submit`, {
     onSuccess: () => {
-      toast.success('Interview submitted successfully!')
+      // Flash message handled by global watcher (InterviewController::submit flashes 'success'/'info')
     },
     onError: () => {
       toast.error('Failed to submit interview.')

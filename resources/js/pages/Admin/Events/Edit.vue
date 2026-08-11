@@ -67,8 +67,6 @@ const handleImageChange = (e: Event) => {
 }
 
 const submit = () => {
-  console.log('Submitting form with data:', form.data())
-
   form.transform((data) => ({
     ...data,
     _method: 'PUT',
@@ -78,11 +76,9 @@ const submit = () => {
     forceFormData: true,
     preserveScroll: true,
     onSuccess: () => {
-      console.log('Update successful!')
-      toast.success('Event updated successfully!')
+      // Flash message handled by global watcher (EventController::update flashes 'success')
     },
-    onError: (errors) => {
-      console.error('Update failed with errors:', errors)
+    onError: () => {
       toast.error('Failed to update event. Please check the form for errors.')
     },
     onFinish: () => {
@@ -93,7 +89,7 @@ const submit = () => {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <Head :title="`Edit ${event.title}`" />
 
     <!-- Header -->

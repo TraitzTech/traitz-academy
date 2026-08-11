@@ -30,6 +30,11 @@ class EnrollmentController extends Controller
             ->orderBy('title')
             ->get(['id', 'title', 'instructor_id']);
 
+        $students = User::query()
+            ->where('role', User::ROLE_USER)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
         $courseId = $requestedCourseId;
         if ($courseId && ! $courses->pluck('id')->contains($courseId)) {
             $courseId = null;
@@ -73,6 +78,7 @@ class EnrollmentController extends Controller
             'enrollments' => $enrollments,
             'tutors' => $tutors,
             'courses' => $courses,
+            'students' => $students,
             'filters' => [
                 'search' => $search !== '' ? $search : null,
                 'course' => $courseId,

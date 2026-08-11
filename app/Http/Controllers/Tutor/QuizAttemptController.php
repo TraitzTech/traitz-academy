@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Tutor;
 
 use App\Http\Controllers\Controller;
+use App\Models\LessonCompletion;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Notifications\Lms\QuizAttemptGradedNotification;
+use App\Support\Lms\CourseProgress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -67,6 +69,9 @@ class QuizAttemptController extends Controller
         ]);
 
         $quiz->loadMissing('course');
+
+        $this->syncQuizLessonCompletion($quiz, $attempt, (bool) $validated['passed']);
+
         if ($quiz->course) {
             $attempt->loadMissing('user');
             if ($attempt->user) {
@@ -77,6 +82,44 @@ class QuizAttemptController extends Controller
         return redirect()
             ->route('tutor.quizzes.attempts.show', [$quiz, $attempt])
             ->with('success', 'Attempt graded.');
+    }
+
+    /**
+     * Reflect a graded quiz attempt in the learner's lesson completions so a
+     * passed quiz lesson counts toward course progress (and un-passing recedes
+     * it). Only applies to lesson-bound quizzes for enrolled learners.
+     */
+    private function syncQuizLessonCompletion(Quiz $quiz, QuizAttempt $attempt, bool $passed): void
+    {
+        if ($quiz->lesson_id === null || $quiz->course === null) {
+            return;
+        }
+
+        $enrollment = $quiz->course->enrollmentFor($attempt->user);
+
+        if ($enrollment === null) {
+            return;
+        }
+
+        if ($passed) {
+            LessonCompletion::query()->firstOrCreate(
+                [
+                    'user_id' => $attempt->user_id,
+                    'course_lesson_id' => $quiz->lesson_id,
+                ],
+                [
+                    'enrollment_id' => $enrollment->id,
+                    'completed_at' => now(),
+                ]
+            );
+        } else {
+            LessonCompletion::query()
+                ->where('user_id', $attempt->user_id)
+                ->where('course_lesson_id', $quiz->lesson_id)
+                ->delete();
+        }
+
+        CourseProgress::sync($enrollment);
     }
 
     private function authorizeQuiz(Quiz $quiz): void

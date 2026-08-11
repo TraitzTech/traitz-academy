@@ -10,7 +10,8 @@ interface AssignmentRow {
   title: string
   instructions: string
   audience: 'all_course_students' | 'selected_students'
-  course: {
+  attachable: {
+    type: 'course' | 'cohort' | 'program' | null
     id: number | null
     title: string | null
   }
@@ -50,7 +51,7 @@ function formatDateTime(value: string | null) {
           <div>
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ assignment.title }}</h2>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {{ assignment.course.title }} • Assigned by {{ assignment.created_by ?? 'Instructor' }}
+              {{ assignment.attachable.title }} • Assigned by {{ assignment.created_by ?? 'Instructor' }}
             </p>
           </div>
           <div class="text-right text-xs text-gray-500 dark:text-gray-400">

@@ -6,12 +6,14 @@ import {
     BookMarked,
     Award,
     BarChart3,
+    Briefcase,
     Calendar,
     Clock,
     ClipboardList,
     Upload,
     Folder,
     Image,
+    Layers,
     MessageCircle,
     LayoutGrid,
     Library,
@@ -59,6 +61,7 @@ const executiveRoles = ['cto', 'ceo', 'admin']
 const isAdmin = computed(() => adminRoles.includes(String(user.value?.role ?? '')))
 const isExecutive = computed(() => executiveRoles.includes(String(user.value?.role ?? '')))
 const isTutor = computed(() => user.value?.role === 'tutor')
+const unreadNotificationsCount = computed(() => Number((page.props as Record<string, unknown>).unreadNotificationsCount ?? 0))
 
 // Admin standalone items (always visible at top)
 const adminStandaloneItems: NavItem[] = [
@@ -167,6 +170,9 @@ const contentGroup: NavGroup = {
 
 const aiForgeGroup: NavGroup = {
     label: 'AI Forge',
+    icon: Lightbulb,
+    collapsible: true,
+    defaultOpen: false,
     items: [
         {
             title: 'Settings',
@@ -189,6 +195,14 @@ const aiForgeGroup: NavGroup = {
             icon: Package,
         },
     ],
+};
+
+// Standalone programs/events (each its own collapsible dropdown) live here.
+// To add another one later (e.g. a future hackathon or bootcamp), build it
+// as its own NavGroup like aiForgeGroup and push it into this list.
+const eventsGroup: NavGroup = {
+    label: 'Events',
+    groups: [aiForgeGroup],
 };
 
 const pendingCoursesCount = computed(() => (page.props as Record<string, unknown>).pendingCoursesCount as number | null)
@@ -233,17 +247,26 @@ const lmsGroup = computed<NavGroup>(() => ({
             icon: UserCheck,
         },
         {
+            title: 'Discussions',
+            href: '/admin/lms/discussions',
+            icon: MessageCircle,
+        },
+    ],
+}));
+
+// Live Classes/Tasks/Schedule now span Courses, Internship Cohorts, and
+// Programs (see RosterResolver-backed generalization) — kept out of the
+// course-only LMS group so it doesn't read as course-management only.
+const learningOpsGroup: NavGroup = {
+    label: 'Learning Ops',
+    items: [
+        {
             title: 'Live Classes',
             href: '/admin/lms/live-classes',
             icon: Video,
         },
         {
-            title: 'Discussions',
-            href: '/admin/lms/discussions',
-            icon: MessageCircle,
-        },
-        {
-            title: 'Assignments',
+            title: 'Tasks',
             href: '/admin/lms/assignments',
             icon: ClipboardList,
         },
@@ -258,7 +281,7 @@ const lmsGroup = computed<NavGroup>(() => ({
             icon: Mail,
         },
     ],
-}));
+};
 
 const systemGroup: NavGroup = {
     label: 'System',
@@ -312,6 +335,41 @@ const userGroups: NavGroup[] = [
         ],
     },
     {
+        // Applies regardless of whether you're a course student or an
+        // intern — Tasks/Schedule/Live Classes now span both (see
+        // RosterResolver-backed generalization), so this group is not
+        // course-specific.
+        label: 'Learning',
+        items: [
+            {
+                title: 'Tasks',
+                href: '/dashboard/assignments',
+                icon: ClipboardList,
+            },
+            {
+                title: 'Schedule',
+                href: '/dashboard/schedules',
+                icon: Calendar,
+            },
+            {
+                title: 'Live Classes',
+                href: '/dashboard/live-classes',
+                icon: Video,
+            },
+            {
+                title: 'Recorded Live Classes',
+                href: '/dashboard/live-classes/recordings',
+                icon: Library,
+            },
+            {
+                title: 'Notifications',
+                href: '/dashboard/notifications',
+                icon: Mail,
+                badge: unreadNotificationsCount.value > 0 ? unreadNotificationsCount.value : undefined,
+            },
+        ],
+    },
+    {
         label: 'Courses',
         items: [
             {
@@ -330,34 +388,15 @@ const userGroups: NavGroup[] = [
                 icon: MessageCircle,
             },
             {
-                title: 'Assignments',
-                href: '/dashboard/assignments',
-                icon: ClipboardList,
-            },
-            {
-                title: 'Schedule',
-                href: '/dashboard/schedules',
-                icon: Calendar,
+                // Lesson notes are tied to course lessons, so they live with Courses.
+                title: 'My Notes',
+                href: '/dashboard/notes',
+                icon: NotebookPen,
             },
             {
                 title: 'My Certificates',
                 href: '/dashboard/certificates',
                 icon: Award,
-            },
-            {
-                title: 'Live Classes',
-                href: '/dashboard/live-classes',
-                icon: Video,
-            },
-            {
-                title: 'Recorded Live Classes',
-                href: '/dashboard/live-classes/recordings',
-                icon: Library,
-            },
-            {
-                title: 'My Notes',
-                href: '/dashboard/notes',
-                icon: NotebookPen,
             },
         ],
     },
@@ -395,6 +434,12 @@ const tutorGroups: NavGroup[] = [
                 icon: Upload,
                 activeMatch: 'prefix',
             },
+            {
+                title: 'Discussions',
+                href: '/tutor/discussions',
+                icon: MessageCircle,
+                activeMatch: 'prefix',
+            },
         ],
     },
     {
@@ -409,7 +454,9 @@ const tutorGroups: NavGroup[] = [
         ],
     },
     {
-        label: 'Live & Community',
+        // Live Classes/Tasks/Schedule now span Courses, Internship Cohorts,
+        // and Programs the tutor supervises — not course-only.
+        label: 'Learning Ops',
         items: [
             {
                 title: 'Live Classes',
@@ -418,13 +465,7 @@ const tutorGroups: NavGroup[] = [
                 activeMatch: 'prefix',
             },
             {
-                title: 'Discussions',
-                href: '/tutor/discussions',
-                icon: MessageCircle,
-                activeMatch: 'prefix',
-            },
-            {
-                title: 'Assignments',
+                title: 'Tasks',
                 href: '/tutor/assignments',
                 icon: ClipboardList,
                 activeMatch: 'prefix',
@@ -433,6 +474,12 @@ const tutorGroups: NavGroup[] = [
                 title: 'Schedule',
                 href: '/tutor/schedules',
                 icon: Calendar,
+                activeMatch: 'prefix',
+            },
+            {
+                title: 'Resources',
+                href: '/tutor/resources',
+                icon: Library,
                 activeMatch: 'prefix',
             },
             {
@@ -457,24 +504,103 @@ const tutorGroups: NavGroup[] = [
 ];
 
 // Computed navigation based on role
+const supervisorStandaloneItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: '/supervisor/dashboard',
+        icon: LayoutGrid,
+    },
+];
+
 const standaloneItems = computed<NavItem[]>(() => {
     if (isAdmin.value) return adminStandaloneItems;
     if (isTutor.value) return tutorStandaloneItems;
+    // Pure supervisors (staff, not learners) get their supervisor home.
+    if (internshipAccess.value?.supervises) return supervisorStandaloneItems;
     return userStandaloneItems;
+});
+
+const internshipAccess = computed(() => (page.props as Record<string, unknown>).internshipAccess as { is_intern?: boolean; supervises?: boolean } | undefined);
+
+const internshipGroup = computed<NavGroup | null>(() => {
+    const items: NavItem[] = [];
+    if (isAdmin.value) {
+        items.push({ title: 'Cohorts', href: '/admin/internships/cohorts', icon: Users });
+        items.push({ title: 'Intern Activity', href: '/supervisor/interns', icon: ClipboardList });
+    } else if (internshipAccess.value?.supervises) {
+        // Tutors who also supervise have their own (teaching) home, so give them
+        // a link into the supervisor overview. Pure supervisors already land
+        // there as their main Dashboard, so no duplicate link for them.
+        if (isTutor.value) {
+            items.push({ title: 'Supervisor Overview', href: '/supervisor/dashboard', icon: LayoutGrid });
+        } else {
+            // Pure supervisors get the learning-ops tools here (tutors already
+            // have them in their own Learning Ops group).
+            items.push({ title: 'Live Classes', href: '/tutor/live-classes', icon: Video, activeMatch: 'prefix' });
+            items.push({ title: 'Tasks', href: '/tutor/assignments', icon: ClipboardList, activeMatch: 'prefix' });
+            items.push({ title: 'Schedule', href: '/tutor/schedules', icon: Calendar, activeMatch: 'prefix' });
+            items.push({ title: 'Resources', href: '/tutor/resources', icon: Library, activeMatch: 'prefix' });
+            items.push({ title: 'Notifications', href: '/tutor/notifications', icon: Mail, activeMatch: 'prefix' });
+        }
+        items.push({ title: 'My Interns', href: '/supervisor/interns', icon: ClipboardList });
+        items.push({ title: 'Cohorts', href: '/supervisor/cohorts', icon: Layers, activeMatch: 'prefix' });
+    }
+    if (internshipAccess.value?.is_intern) {
+        items.push({ title: 'My Internship', href: '/dashboard/internship', icon: Briefcase });
+        items.push({ title: 'My Logbook', href: '/dashboard/internship/logbook', icon: NotebookPen });
+        items.push({ title: 'Program Resources', href: '/dashboard/program-resources', icon: Library });
+    }
+
+    return items.length ? { label: 'Internships', items } : null;
 });
 
 const navGroups = computed<NavGroup[]>(() => {
     if (isAdmin.value) {
-        const groups = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, aiForgeGroup, lmsGroup.value];
+        const groups: NavGroup[] = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, eventsGroup];
+        // Internships sits before Learning Ops/LMS.
+        if (internshipGroup.value) groups.push(internshipGroup.value);
+        groups.push(learningOpsGroup);
+        groups.push(lmsGroup.value);
         if (isExecutive.value) groups.push(systemGroup);
+
         return groups;
     }
-    if (isTutor.value) return tutorGroups;
-    return userGroups;
+
+    // Pure supervisors (staff who supervise interns but aren't themselves
+    // enrolled as a student) get their Tasks/Schedule/Live Classes/Notifications
+    // from internshipGroup already, and never went through an application/
+    // payment flow — the generic learner-facing "My Account", "Learning", and
+    // "Courses" groups would just show them empty/irrelevant pages.
+    const isPureSupervisor = !isTutor.value && internshipAccess.value?.supervises && !internshipAccess.value?.is_intern;
+
+    const groups: NavGroup[] = isTutor.value
+        ? [...tutorGroups]
+        : isPureSupervisor
+          ? userGroups.filter((g) => g.label !== 'My Account' && g.label !== 'Learning' && g.label !== 'Courses')
+          : [...userGroups];
+    if (internshipGroup.value) {
+        // Place Internships before the general Learning section if present,
+        // else before the course-management section.
+        let lmsIndex = groups.findIndex((g) => g.label === 'Learning' || g.label === 'Learning Ops');
+        if (lmsIndex < 0) {
+            lmsIndex = groups.findIndex((g) => g.label === 'Courses' || g.label === 'Course Management');
+        }
+        if (lmsIndex >= 0) {
+            groups.splice(lmsIndex, 0, internshipGroup.value);
+        } else {
+            groups.push(internshipGroup.value);
+        }
+    }
+
+    return groups;
 });
 
 // Home link based on role
-const homeLink = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard');
+const homeLink = computed(() => {
+    if (isAdmin.value) return '/admin/dashboard';
+    if (!isTutor.value && internshipAccess.value?.supervises) return '/supervisor/dashboard';
+    return '/dashboard';
+});
 
 const footerNavItems: NavItem[] = [
     {

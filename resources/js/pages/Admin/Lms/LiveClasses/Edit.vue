@@ -6,7 +6,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
 
-defineProps<{ liveClass: any; tutors: any[]; courses: any[]; students: any[] }>()
+defineProps<{ liveClass: any; targets: { type: string; id: number }[]; tutors: any[]; courses: any[]; cohorts: any[]; programs: any[]; students: any[] }>()
 </script>
 
 <template>
@@ -18,8 +18,11 @@ defineProps<{ liveClass: any; tutors: any[]; courses: any[]; students: any[] }>(
         :submit-url="`/admin/lms/live-classes/${liveClass.id}`"
         method="put"
         :initial="liveClass"
+        :initial-targets="targets"
         :tutors="tutors"
         :courses="courses"
+        :cohorts="cohorts"
+        :programs="programs"
         :students="students"
         :show-tutor-select="true"
       />

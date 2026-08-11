@@ -38,6 +38,9 @@ class ProgramController extends Controller
         return Inertia::render('Programs/Show', [
             'program' => $program,
             'userApplication' => $userApplication,
+            'applicationsOpen' => $program->applicationsOpen(),
+            'applicationStatus' => $program->applicationStatus(),
+            'applicationsOpenAt' => optional($program->applications_open_at)->toDateString(),
         ]);
     }
 }

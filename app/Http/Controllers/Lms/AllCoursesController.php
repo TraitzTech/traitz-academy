@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Lms;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseCategory;
-use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -66,11 +65,7 @@ class AllCoursesController extends Controller
             ->orderBy('sort_order')
             ->get(['id', 'course_section_id', 'title', 'type']);
 
-        $isEnrolled = Enrollment::query()
-            ->where('user_id', auth()->id())
-            ->where('course_id', $course->id)
-            ->whereNotIn('access_status', ['suspended', 'revoked'])
-            ->exists();
+        $isEnrolled = $course->grantsAccessTo(auth()->user());
 
         $requiresCheckout = ! $isEnrolled && $course->effectivePrice() > 0;
 

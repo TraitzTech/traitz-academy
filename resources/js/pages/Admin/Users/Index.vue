@@ -108,7 +108,7 @@ const createUser = () => {
     onSuccess: () => {
       showCreateModal.value = false
       createForm.reset()
-      toast.success('User created successfully!')
+      // Flash message handled by global watcher (UserController::store flashes 'success')
     },
     onError: () => {
       toast.error('Failed to create user. Please check the form for errors.')
@@ -133,7 +133,7 @@ const updateUser = () => {
     onSuccess: () => {
       showEditModal.value = false
       editingUser.value = null
-      toast.success('User updated successfully!')
+      // Flash message handled by global watcher (UserController::update flashes 'success')
     },
     onError: () => {
       toast.error('Failed to update user. Please check the form for errors.')
@@ -151,7 +151,7 @@ const confirmDelete = () => {
   
   router.delete(`/admin/users/${userToDelete.value.id}`, {
     onSuccess: () => {
-      toast.success('User deleted successfully!')
+      // Flash message handled by global watcher (UserController::destroy flashes 'success')
       showDeleteModal.value = false
       userToDelete.value = null
     },
@@ -172,7 +172,7 @@ const openBulkDeleteModal = () => {
 const confirmBulkDelete = () => {
   router.post('/admin/users/bulk-destroy', { ids: selectedIds.value }, {
     onSuccess: () => {
-      toast.success(`${selectedIds.value.length} user(s) deleted successfully!`)
+      // Flash message handled by global watcher (UserController::bulkDestroy flashes 'success')
       selectedIds.value = []
       showBulkDeleteModal.value = false
     },
@@ -204,6 +204,9 @@ const getRoleBadgeColor = (role: string) => {
 
 const formatRole = (role: string) => {
   if (role === 'admin') return 'CTO (Legacy)'
+  // The base "user" role is every applicant/learner — label it "Student" so
+  // it's unambiguous when filtering/exporting contacts.
+  if (role === 'user') return 'Student'
   return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
 

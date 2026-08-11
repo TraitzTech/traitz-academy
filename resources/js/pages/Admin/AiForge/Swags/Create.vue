@@ -128,14 +128,14 @@ const submit = () => {
         return transformed
     }).post('/admin/ai-forge/swags', {
         forceFormData: true,
-        onSuccess: () => toast.success('Swag item created successfully!'),
+        // Flash message handled by global watcher (AiForgeSwagController::store flashes 'success')
         onError: () => toast.error('Failed to create swag. Please check the form for errors.'),
     })
 }
 </script>
 
 <template>
-    <div>
+    <div class="mx-auto max-w-5xl">
         <Head title="Add Swag - AI Forge" />
 
         <div class="mb-8">

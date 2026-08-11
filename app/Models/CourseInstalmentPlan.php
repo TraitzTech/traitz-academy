@@ -24,8 +24,8 @@ class CourseInstalmentPlan extends Model
         return [
             'number_of_instalments' => 'integer',
             'amount_per_instalment' => 'decimal:2',
-            'interval_in_days'      => 'integer',
-            'is_active'             => 'boolean',
+            'interval_in_days' => 'integer',
+            'is_active' => 'boolean',
         ];
     }
 
