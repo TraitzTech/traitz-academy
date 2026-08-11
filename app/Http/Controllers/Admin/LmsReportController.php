@@ -116,7 +116,7 @@ class LmsReportController extends Controller
             ->withSum(['coursePayments as total_paid' => fn ($q) => $q->where('status', 'successful')], 'amount')
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (User $user) {
+            ->map(function (User $user) use ($status) {
                 $learningRecords = Enrollment::query()
                     ->where('user_id', $user->id)
                     ->when(in_array($status, ['active', 'completed', 'suspended', 'revoked'], true), fn ($q) => $q->where('access_status', $status))

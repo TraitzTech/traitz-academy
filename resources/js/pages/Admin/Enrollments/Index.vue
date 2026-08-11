@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { debounce } from 'lodash-es'
-import { Pencil, Search, Trash2, Users } from 'lucide-vue-next'
-import { ref, watch } from 'vue'
+import { Check, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import ConfirmationModal from '@/components/ConfirmationModal.vue'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,12 @@ interface UserBrief {
   email: string
 }
 
+interface StudentOption {
+  id: number
+  name: string
+  email: string
+}
+
 interface Enrollment {
   id: number
   user: UserBrief | null
@@ -58,6 +64,7 @@ const props = defineProps<{
   enrollments: Paginated<Enrollment>
   courses: CourseOption[]
   tutors: TutorOption[]
+  students: StudentOption[]
   filters: { search?: string | null; course?: number | null; tutor?: number | null; status?: string | null }
 }>()
 
@@ -167,17 +174,130 @@ function confirmDelete() {
     },
   })
 }
+
+// ─── Enrol a student ─────────────────────────────────────────────────────────
+
+const enrollOpen = ref(false)
+const enrollForm = useForm({
+  course_id: '',
+  email: '',
+})
+
+// --- Student search combobox state ---
+const studentSearchQuery = ref('')
+const studentSearchOpen = ref(false)
+const studentSearchRef = ref<HTMLElement | null>(null)
+const studentInputRef = ref<HTMLInputElement | null>(null)
+const studentHighlightedIndex = ref(-1)
+
+const filteredStudents = computed(() => {
+  const q = studentSearchQuery.value.trim().toLowerCase()
+  if (!q) return props.students
+  return props.students.filter((s) => {
+    return s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+  })
+})
+
+function selectStudent(student: StudentOption) {
+  enrollForm.email = student.email
+  studentSearchQuery.value = `${student.name} (${student.email})`
+  studentSearchOpen.value = false
+  studentHighlightedIndex.value = -1
+}
+
+function clearStudent() {
+  enrollForm.email = ''
+  studentSearchQuery.value = ''
+  studentSearchOpen.value = false
+  studentHighlightedIndex.value = -1
+  nextTick(() => studentInputRef.value?.focus())
+}
+
+function onStudentInputFocus() {
+  studentSearchOpen.value = true
+  if (enrollForm.email) {
+    studentSearchQuery.value = ''
+  }
+  studentHighlightedIndex.value = -1
+}
+
+function onStudentInputBlur() {
+  // Delay to allow click on dropdown item
+  setTimeout(() => {
+    studentSearchOpen.value = false
+    const current = props.students.find((s) => s.email === enrollForm.email)
+    if (current) {
+      studentSearchQuery.value = `${current.name} (${current.email})`
+    }
+  }, 150)
+}
+
+function onStudentKeydown(e: KeyboardEvent) {
+  if (!studentSearchOpen.value) {
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      studentSearchOpen.value = true
+    }
+    return
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    studentHighlightedIndex.value = Math.min(studentHighlightedIndex.value + 1, filteredStudents.value.length - 1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    studentHighlightedIndex.value = Math.max(studentHighlightedIndex.value - 1, 0)
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (studentHighlightedIndex.value >= 0 && filteredStudents.value[studentHighlightedIndex.value]) {
+      selectStudent(filteredStudents.value[studentHighlightedIndex.value])
+    }
+  } else if (e.key === 'Escape') {
+    studentSearchOpen.value = false
+  }
+}
+// --- End combobox state ---
+
+function openEnroll() {
+  enrollForm.reset()
+  enrollForm.clearErrors()
+  studentSearchQuery.value = ''
+  studentSearchOpen.value = false
+  studentHighlightedIndex.value = -1
+  enrollOpen.value = true
+}
+
+function closeEnroll() {
+  enrollOpen.value = false
+  enrollForm.reset()
+  enrollForm.clearErrors()
+  studentSearchQuery.value = ''
+  studentSearchOpen.value = false
+  studentHighlightedIndex.value = -1
+}
+
+function submitEnroll() {
+  if (!enrollForm.course_id || !enrollForm.email) return
+  enrollForm.post(`/admin/courses/${enrollForm.course_id}/enroll-student`, {
+    preserveScroll: true,
+    onSuccess: () => closeEnroll(),
+  })
+}
 </script>
 
 <template>
   <div>
     <Head title="LMS Enrollments — Admin" />
 
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">LMS enrollments</h2>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        All online course enrollments ({{ enrollments.total }} record{{ enrollments.total === 1 ? '' : 's' }})
-      </p>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">LMS enrollments</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          All online course enrollments ({{ enrollments.total }} record{{ enrollments.total === 1 ? '' : 's' }})
+        </p>
+      </div>
+      <Button type="button" class="gap-2 bg-[#381998] hover:bg-[#2b1275]" @click="openEnroll">
+        <UserPlus class="h-4 w-4" />
+        Enrol a student
+      </Button>
     </div>
 
     <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -357,6 +477,111 @@ function confirmDelete() {
           </DialogClose>
           <Button type="button" :disabled="form.processing" @click="submitEdit">
             {{ form.processing ? 'Saving…' : 'Save' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Enrol a student -->
+    <Dialog :open="enrollOpen" @update:open="(v) => !v && closeEnroll()">
+      <DialogContent class="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle class="text-gray-900 dark:text-gray-100">Enrol a student</DialogTitle>
+          <DialogDescription class="text-gray-600 dark:text-gray-400">
+            Grant course access to a registered student.
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4 py-2">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Course</label>
+            <select
+              v-model="enrollForm.course_id"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="" disabled>Select a course…</option>
+              <option v-for="c in courses" :key="c.id" :value="String(c.id)">{{ c.title }}</option>
+            </select>
+            <p v-if="enrollForm.errors.course_id" class="mt-1 text-xs text-red-600">{{ enrollForm.errors.course_id }}</p>
+          </div>
+
+          <!-- Student search combobox -->
+          <div ref="studentSearchRef">
+            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Student</label>
+            <div class="relative">
+              <div class="relative flex items-center">
+                <Search class="pointer-events-none absolute left-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <input
+                  ref="studentInputRef"
+                  v-model="studentSearchQuery"
+                  type="text"
+                  autocomplete="off"
+                  :placeholder="enrollForm.email ? 'Type to search another…' : 'Search by name or email…'"
+                  class="w-full rounded-lg border py-2 pl-9 pr-8 text-sm transition focus:border-transparent focus:ring-2 focus:ring-[#42b6c5]"
+                  :class="[
+                    enrollForm.errors.email
+                      ? 'border-red-400 dark:border-red-500'
+                      : enrollForm.email
+                        ? 'border-[#42b6c5] dark:border-[#42b6c5]'
+                        : 'border-gray-300 dark:border-gray-600',
+                    'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500',
+                  ]"
+                  @focus="onStudentInputFocus"
+                  @blur="onStudentInputBlur"
+                  @keydown="onStudentKeydown"
+                />
+                <button
+                  v-if="enrollForm.email"
+                  type="button"
+                  tabindex="-1"
+                  class="absolute right-2 rounded p-0.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
+                  title="Clear selection"
+                  @mousedown.prevent="clearStudent"
+                >
+                  <X class="h-4 w-4" />
+                </button>
+              </div>
+
+              <div v-if="enrollForm.email && !studentSearchOpen" class="mt-1.5 flex items-center gap-1.5">
+                <span class="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-xs text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300">
+                  <Check class="h-3 w-3" />
+                  {{ enrollForm.email }} selected
+                </span>
+              </div>
+
+              <div
+                v-if="studentSearchOpen"
+                class="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800"
+              >
+                <div v-if="filteredStudents.length === 0" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No registered students match your search.
+                </div>
+                <button
+                  v-for="(student, index) in filteredStudents"
+                  :key="student.id"
+                  type="button"
+                  class="flex w-full flex-col gap-0.5 px-4 py-2.5 text-left text-sm transition-colors"
+                  :class="[
+                    index === studentHighlightedIndex
+                      ? 'bg-[#42b6c5]/10 text-gray-900 dark:bg-[#42b6c5]/20 dark:text-gray-100'
+                      : 'text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/50',
+                    student.email === enrollForm.email ? 'bg-cyan-50 dark:bg-cyan-900/20' : '',
+                  ]"
+                  @mousedown.prevent="selectStudent(student)"
+                >
+                  <span class="truncate font-medium">{{ student.name }}</span>
+                  <span class="truncate text-xs text-gray-400 dark:text-gray-500">{{ student.email }}</span>
+                </button>
+              </div>
+            </div>
+            <p v-if="enrollForm.errors.email" class="mt-1 text-xs text-red-600">{{ enrollForm.errors.email }}</p>
+          </div>
+        </div>
+        <DialogFooter class="gap-2 sm:justify-end">
+          <DialogClose as-child>
+            <Button type="button" variant="outline" @click="closeEnroll">Cancel</Button>
+          </DialogClose>
+          <Button type="button" :disabled="enrollForm.processing || !enrollForm.course_id || !enrollForm.email" @click="submitEnroll">
+            {{ enrollForm.processing ? 'Enrolling…' : 'Grant access' }}
           </Button>
         </DialogFooter>
       </DialogContent>
