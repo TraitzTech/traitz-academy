@@ -33,7 +33,7 @@ class TacWelcomeNotification extends Notification implements ShouldQueue
         $siteName = SettingHelper::get('site_name', config('app.name'));
         $reason = $this->reasonLine();
 
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject("You're now part of the Traitz Academy Community")
             ->greeting("Hello {$this->member->first_name},")
             ->line($reason)
@@ -43,7 +43,13 @@ class TacWelcomeNotification extends Notification implements ShouldQueue
             ->line('- A track of your choice, with mentors who work in it')
             ->line('- A path to grow into a mentor or lead yourself')
             ->line('- First word on new programs, internships and opportunities')
-            ->action('Explore the community', url('/community'))
+            ->action('Explore the community', url('/community'));
+
+        if ($whatsapp = SettingHelper::communityWhatsAppInvite()) {
+            $message->line("Join the community on WhatsApp too: {$whatsapp}");
+        }
+
+        return $message
             ->line('Pick your tracks and complete your profile so we can point the right opportunities your way.')
             ->salutation("See you inside,\nThe {$siteName} team");
     }

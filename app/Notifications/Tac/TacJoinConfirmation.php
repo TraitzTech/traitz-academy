@@ -37,12 +37,18 @@ class TacJoinConfirmation extends Notification implements ShouldQueue
             $message->line('**Your tracks:** '.$tracks->implode(', '));
         }
 
-        return $message
+        $message
             ->line('Here is what happens next:')
             ->line('- Watch the activities calendar for workshops, trainings, bootcamps and competitions')
             ->line('- Meet the mentors leading your track')
             ->line('- RSVP to anything that interests you — most activities are free')
-            ->action('Go to the community', url('/community'))
+            ->action('Go to the community', url('/community'));
+
+        if ($whatsapp = SettingHelper::communityWhatsAppInvite()) {
+            $message->line("Join the community on WhatsApp too: {$whatsapp}");
+        }
+
+        return $message
             ->line('TAC runs all year, every year. Take your time and get involved at your own pace.')
             ->salutation("Glad to have you,\nThe {$siteName} team");
     }

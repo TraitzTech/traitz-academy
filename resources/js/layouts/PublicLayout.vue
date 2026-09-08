@@ -466,7 +466,7 @@
                 >
                     <div
                         v-if="mobileMenuOpen"
-                        class="border-t border-gray-100 bg-white py-4 lg:hidden"
+                        class="max-h-[calc(100vh-5rem)] overflow-y-auto border-t border-gray-100 bg-white py-4 lg:hidden"
                     >
                         <div class="space-y-1 px-2">
                             <!-- Main Links -->

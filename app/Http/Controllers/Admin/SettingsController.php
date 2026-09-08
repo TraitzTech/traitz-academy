@@ -117,7 +117,7 @@ class SettingsController extends Controller
             'branding' => ['site_logo', 'site_logo_dark', 'favicon', 'site_name'],
             'content' => ['youtube_video_url', 'hero_title', 'hero_subtitle'],
             'contact' => ['contact_email', 'contact_phone', 'contact_whatsapp', 'contact_address'],
-            'social' => ['social_facebook', 'social_twitter', 'social_linkedin', 'social_instagram', 'social_youtube', 'social_whatsapp_community'],
+            'social' => ['social_facebook', 'social_twitter', 'social_linkedin', 'social_instagram', 'social_youtube', 'social_whatsapp_community', 'tac_join_whatsapp_link', 'tac_join_whatsapp_enabled'],
             'payments' => ['online_payment_surcharge_percentage'],
         ];
 

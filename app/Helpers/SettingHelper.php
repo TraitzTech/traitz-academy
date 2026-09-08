@@ -122,4 +122,20 @@ class SettingHelper
 
         return $phoneDigits !== '' ? "https://wa.me/{$phoneDigits}" : null;
     }
+
+    /**
+     * The official TAC community WhatsApp group invite link, for use in
+     * join/welcome emails — null when the admin has switched it off or left
+     * it blank, so callers can just check truthiness.
+     */
+    public static function communityWhatsAppInvite(): ?string
+    {
+        if (! filter_var(self::get('tac_join_whatsapp_enabled', true), FILTER_VALIDATE_BOOL)) {
+            return null;
+        }
+
+        $link = trim((string) self::get('tac_join_whatsapp_link', ''));
+
+        return $link !== '' ? $link : null;
+    }
 }

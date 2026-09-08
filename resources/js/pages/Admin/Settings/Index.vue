@@ -22,7 +22,7 @@ interface Setting {
     id: number;
     key: string;
     value: string | null;
-    type: 'text' | 'textarea' | 'url' | 'email' | 'image';
+    type: 'text' | 'textarea' | 'url' | 'email' | 'image' | 'boolean';
     group: string;
     label: string;
     description: string | null;
@@ -287,7 +287,7 @@ const getImageUrl = (value: string | null) => {
                         v-for="setting in currentSettings"
                         :key="setting.key"
                         :class="
-                            ['text', 'email', 'image'].includes(setting.type)
+                            ['text', 'email', 'image', 'boolean'].includes(setting.type)
                                 ? ''
                                 : 'sm:col-span-2 lg:col-span-3'
                         "
@@ -405,6 +405,48 @@ const getImageUrl = (value: string | null) => {
                             >
                                 {{ setting.description }}
                             </p>
+                        </div>
+
+                        <!-- Boolean Toggle -->
+                        <div
+                            v-else-if="setting.type === 'boolean'"
+                            class="flex items-start gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-600"
+                        >
+                            <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                                <input
+                                    :id="setting.key"
+                                    type="checkbox"
+                                    :checked="formData[setting.key] === '1' || formData[setting.key] === true"
+                                    class="peer sr-only"
+                                    @change="
+                                        formData[setting.key] = (
+                                            $event.target as HTMLInputElement
+                                        ).checked
+                                            ? '1'
+                                            : '0'
+                                    "
+                                />
+                                <div
+                                    class="h-6 w-11 rounded-full bg-gray-200 transition-colors peer-checked:bg-[#42b6c5] peer-focus:ring-2 peer-focus:ring-[#42b6c5]/30 dark:bg-gray-600"
+                                ></div>
+                                <div
+                                    class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"
+                                ></div>
+                            </label>
+                            <div>
+                                <label
+                                    :for="setting.key"
+                                    class="block cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200"
+                                >
+                                    {{ setting.label }}
+                                </label>
+                                <p
+                                    v-if="setting.description"
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
+                                    {{ setting.description }}
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Image Upload -->

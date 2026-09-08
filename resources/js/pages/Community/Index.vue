@@ -208,8 +208,8 @@ const benefits = [
                 <div class="grid gap-10 lg:grid-cols-2 lg:items-center">
                     <div class="overflow-hidden rounded-2xl">
                         <img
-                            src="/images/academy-community/classroom/mentor-teaching-session.jpg"
-                            alt="A TAC mentor guiding students through a session at Traitz Academy"
+                            src="/images/academy-community/classroom/cohort-classroom-wide.jpg"
+                            alt="TAC members learning together in a full classroom at Traitz Academy"
                             class="h-full max-h-[420px] w-full object-cover"
                             loading="lazy"
                         />

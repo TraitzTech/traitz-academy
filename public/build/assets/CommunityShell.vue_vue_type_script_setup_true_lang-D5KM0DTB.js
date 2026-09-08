@@ -1,1 +1,0 @@
-import{_ as a}from"./PublicLayout.vue_vue_type_script_setup_true_lang-CKfTUuzh.js";import{d as o,c as t,w as s,b as r,O as n,o as c}from"./app-FofOXZti.js";const _={class:"tac-page"},d=o({__name:"CommunityShell",props:{active:{},bare:{type:Boolean}},setup(l){return(e,p)=>(c(),t(a,null,{default:s(()=>[r("div",_,[n(e.$slots,"default")])]),_:3}))}});export{d as _};
