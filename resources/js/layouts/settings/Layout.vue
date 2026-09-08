@@ -45,7 +45,7 @@ const { urlIsActive } = useActiveUrl();
             description="Manage your profile and account settings"
         />
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
             <div class="flex flex-col lg:flex-row lg:space-x-12">
                 <aside class="w-full max-w-xl lg:w-48">
                     <nav

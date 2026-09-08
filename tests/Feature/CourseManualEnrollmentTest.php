@@ -147,7 +147,7 @@ it('does not duplicate or re-notify an already active enrollment', function () {
     $response->assertSessionHas('info');
 
     expect(Enrollment::query()->where('user_id', $student->id)->where('course_id', $course->id)->count())->toBe(1);
-    Notification::assertNothingSent();
+    Notification::assertNotSentTo($student, CourseEnrollmentConfirmedNotification::class);
 });
 
 it('reactivates a revoked enrollment and re-notifies the student', function () {

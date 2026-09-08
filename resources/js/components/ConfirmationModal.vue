@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -8,16 +8,16 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog'
+} from '@/components/ui/dialog';
 
 interface Props {
-    open: boolean
-    title: string
-    description?: string
-    confirmText?: string
-    cancelText?: string
-    variant?: 'destructive' | 'default'
-    processing?: boolean
+    open: boolean;
+    title: string;
+    description?: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'destructive' | 'default';
+    processing?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -26,12 +26,12 @@ withDefaults(defineProps<Props>(), {
     cancelText: 'Cancel',
     variant: 'destructive',
     processing: false,
-})
+});
 
 const emit = defineEmits<{
-    'update:open': [value: boolean]
-    confirm: []
-}>()
+    'update:open': [value: boolean];
+    confirm: [];
+}>();
 </script>
 
 <template>

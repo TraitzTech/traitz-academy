@@ -25,6 +25,15 @@ class DashboardController extends Controller
             return redirect()->route('supervisor.dashboard');
         }
 
+        // Same for a TAC leader (track mentor, school lead, etc.) who holds
+        // no other staff role — their home is the community they lead, not
+        // the applicant dashboard.
+        if (! $user->isTutor() && ! $user->canAccessAdminPanel()
+            && ! $user->isSupervisor() && ! $user->supervisesInterns()
+            && $user->canAccessTacAdmin()) {
+            return redirect()->route('admin.community.dashboard');
+        }
+
         $applications = $user->applications()->with(['program', 'interview'])->latest()->get();
         $registrations = $user->registrations()->with('event')->latest()->get();
 

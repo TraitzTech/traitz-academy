@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Certificate;
+use App\Models\User;
 use App\Observers\CertificateObserver;
+use App\Observers\Tac\RegistrationCommunityObserver;
+use App\Observers\Tac\UserCommunityObserver;
+use App\Services\Tac\RegistrationMemberMapper;
 use App\Support\Payments\Contracts\PaymentGateway;
 use App\Support\Payments\MesombPaymentGateway;
 use Carbon\CarbonImmutable;
@@ -30,6 +34,21 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         Certificate::observe(CertificateObserver::class);
+
+        $this->registerCommunityAutoJoin();
+    }
+
+    /**
+     * Anyone who registers for any Traitz Academy program, event, course or
+     * internship is automatically included in the Traitz Academy Community.
+     */
+    protected function registerCommunityAutoJoin(): void
+    {
+        foreach (RegistrationMemberMapper::OBSERVED_MODELS as $model) {
+            $model::observe(RegistrationCommunityObserver::class);
+        }
+
+        User::observe(UserCommunityObserver::class);
     }
 
     protected function configureDefaults(): void

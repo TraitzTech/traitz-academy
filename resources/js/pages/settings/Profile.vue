@@ -39,7 +39,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = page.props.auth.user;
-const phoneRequired = computed(() => page.props.flash?.status === 'phone-required' || !user.phone);
+const phoneRequired = computed(
+    () => page.props.flash?.status === 'phone-required' || !user.phone,
+);
 
 const terminateSession = (sessionId: string) => {
     router.delete(`/settings/sessions/${sessionId}`, {
@@ -62,17 +64,39 @@ const terminateOtherSessions = () => {
 
         <SettingsLayout>
             <!-- Phone Required Banner -->
-            <div v-if="phoneRequired && !user.phone" class="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-600 p-4">
+            <div
+                v-if="phoneRequired && !user.phone"
+                class="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 p-4 dark:border-amber-600 dark:bg-amber-950/30"
+            >
                 <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 mt-0.5">
-                        <svg class="h-6 w-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <div class="mt-0.5 flex-shrink-0">
+                        <svg
+                            class="h-6 w-6 text-amber-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z"
+                            />
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-semibold text-amber-800 dark:text-amber-300">Phone Number Required</h3>
-                        <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                            Please add your phone/WhatsApp number to continue using the platform. This helps us reach you for important updates about your applications and interviews.
+                        <h3
+                            class="font-semibold text-amber-800 dark:text-amber-300"
+                        >
+                            Phone Number Required
+                        </h3>
+                        <p
+                            class="mt-1 text-sm text-amber-700 dark:text-amber-400"
+                        >
+                            Please add your phone/WhatsApp number to continue
+                            using the platform. This helps us reach you for
+                            important updates about your applications and
+                            interviews.
                         </p>
                     </div>
                 </div>
@@ -119,19 +143,28 @@ const terminateOtherSessions = () => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="phone">Phone / WhatsApp Number <span class="text-red-500">*</span></Label>
+                        <Label for="phone"
+                            >Phone / WhatsApp Number
+                            <span class="text-red-500">*</span></Label
+                        >
                         <Input
                             id="phone"
                             type="tel"
                             class="mt-1 block w-full"
-                            :class="{ 'border-amber-400 ring-2 ring-amber-200': !user.phone }"
+                            :class="{
+                                'border-amber-400 ring-2 ring-amber-200':
+                                    !user.phone,
+                            }"
                             name="phone"
                             :default-value="user.phone || ''"
                             required
                             autocomplete="tel"
                             placeholder="+234xxxxxxxxxx"
                         />
-                        <p class="text-xs text-muted-foreground">Include country code (e.g., +234 for Nigeria). Used for offline calls and WhatsApp.</p>
+                        <p class="text-xs text-muted-foreground">
+                            Include country code (e.g., +234 for Nigeria). Used
+                            for offline calls and WhatsApp.
+                        </p>
                         <InputError class="mt-2" :message="errors.phone" />
                     </div>
 
@@ -182,22 +215,39 @@ const terminateOtherSessions = () => {
 
             <DeleteUser />
 
-            <div class="mt-10 border-t pt-8 border-gray-200 dark:border-gray-700">
+            <div
+                class="mt-10 border-t border-gray-200 pt-8 dark:border-gray-700"
+            >
                 <div class="space-y-6">
                     <HeadingSmall
                         title="Active Sessions"
                         description="Manage devices where your account is currently logged in"
                     />
 
-                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
-                        <div v-for="session in props.sessions" :key="session.id" class="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div
+                        class="divide-y divide-gray-200 rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700"
+                    >
+                        <div
+                            v-for="session in props.sessions"
+                            :key="session.id"
+                            class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
                             <div>
-                                <p class="font-medium text-gray-900 dark:text-gray-100">
+                                <p
+                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                >
                                     {{ session.device }}
-                                    <span v-if="session.is_current" class="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Current Device</span>
+                                    <span
+                                        v-if="session.is_current"
+                                        class="ml-2 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                        >Current Device</span
+                                    >
                                 </p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    IP: {{ session.ip_address || 'Unknown' }} • Last active {{ session.last_active }}
+                                <p
+                                    class="text-sm text-gray-500 dark:text-gray-400"
+                                >
+                                    IP: {{ session.ip_address || 'Unknown' }} •
+                                    Last active {{ session.last_active }}
                                 </p>
                             </div>
 
@@ -211,7 +261,10 @@ const terminateOtherSessions = () => {
                             </Button>
                         </div>
 
-                        <div v-if="props.sessions.length === 0" class="p-4 text-sm text-gray-500 dark:text-gray-400">
+                        <div
+                            v-if="props.sessions.length === 0"
+                            class="p-4 text-sm text-gray-500 dark:text-gray-400"
+                        >
                             No active sessions found.
                         </div>
                     </div>

@@ -50,7 +50,7 @@ it('does not remind anyone on a weekend', function () {
 
     $this->artisan('internship:send-logbook-reminders')->assertSuccessful();
 
-    Notification::assertNothingSent();
+    Notification::assertNotSentTo($user, LogbookReminderNotification::class);
 });
 
 it('computes missed logbook days as working days elapsed minus submitted days', function () {

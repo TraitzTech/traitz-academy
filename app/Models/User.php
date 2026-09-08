@@ -311,6 +311,112 @@ class User extends Authenticatable
         return $this->isExecutive();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Traitz Academy Community (TAC)
+    |--------------------------------------------------------------------------
+    | TAC leadership is a capability layer on top of the staff roles above: a
+    | track mentor or school lead may be a plain `user` account and still
+    | manage their own corner of the community.
+    */
+
+    /**
+     * The community leadership posts this account currently holds.
+     */
+    public function tacLeaderships(): HasMany
+    {
+        return $this->hasMany(TacLeader::class);
+    }
+
+    /** @var \Illuminate\Support\Collection<int, TacLeader>|null */
+    protected ?\Illuminate\Support\Collection $tacLeadershipCache = null;
+
+    /**
+     * Active leadership posts, memoised per request — authorization checks hit
+     * this repeatedly while rendering a single admin page.
+     *
+     * @return \Illuminate\Support\Collection<int, TacLeader>
+     */
+    public function activeTacLeaderships(): \Illuminate\Support\Collection
+    {
+        return $this->tacLeadershipCache ??= TacLeader::query()
+            ->active()
+            ->where('user_id', $this->id)
+            ->get();
+    }
+
+    /**
+     * May reach the community admin area at all.
+     */
+    public function canAccessTacAdmin(): bool
+    {
+        return $this->canAccessAdminPanel() || $this->activeTacLeaderships()->isNotEmpty();
+    }
+
+    /**
+     * Full authority over TAC — academy executives plus the community's own
+     * Lead, Co-Lead, Secretary and Technical Leads.
+     */
+    public function hasTacExecutiveAuthority(): bool
+    {
+        return $this->canAccessAdminPanel()
+            || $this->activeTacLeaderships()->contains(fn (TacLeader $l) => $l->hasTacExecutiveAuthority());
+    }
+
+    /**
+     * Track IDs this account mentors.
+     *
+     * @return array<int, int>
+     */
+    public function tacManagedTrackIds(): array
+    {
+        return $this->activeTacLeaderships()
+            ->where('role_type', TacLeader::ROLE_TRACK_MENTOR)
+            ->pluck('tac_track_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Schools this account leads TAC presence at.
+     *
+     * @return array<int, string>
+     */
+    public function tacManagedSchools(): array
+    {
+        return $this->activeTacLeaderships()
+            ->where('role_type', TacLeader::ROLE_SCHOOL_LEAD)
+            ->pluck('school')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function tacLeaderIds(): array
+    {
+        return $this->activeTacLeaderships()->pluck('id')->all();
+    }
+
+    public function isTacPartnershipLead(): bool
+    {
+        return $this->activeTacLeaderships()
+            ->contains(fn (TacLeader $l) => $l->role_type === TacLeader::ROLE_PARTNERSHIP_LEAD);
+    }
+
+    /**
+     * The community member record behind this account, if they have one.
+     */
+    public function communityMember(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CommunityMember::class);
+    }
+
     /**
      * Whether this user may moderate the given course (view any lesson, manage
      * discussions, etc.). Admins/coordinators may moderate any course; tutors

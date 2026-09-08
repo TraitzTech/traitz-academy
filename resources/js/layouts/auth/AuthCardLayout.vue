@@ -17,9 +17,17 @@ defineProps<{
 }>();
 
 const page = usePage();
-const siteSettings = computed(() => page.props.siteSettings as Record<string, string> | undefined);
-const logoUrl = computed(() => siteSettings.value?.logo_url || '/images/Tratz Academy-Horizontal Profile.svg');
-const siteName = computed(() => siteSettings.value?.site_title || 'Traitz Academy');
+const siteSettings = computed(
+    () => page.props.siteSettings as Record<string, string> | undefined,
+);
+const logoUrl = computed(
+    () =>
+        siteSettings.value?.logo_url ||
+        '/images/Tratz Academy-Horizontal Profile.svg',
+);
+const siteName = computed(
+    () => siteSettings.value?.site_title || 'Traitz Academy',
+);
 </script>
 
 <template>
@@ -32,9 +40,9 @@ const siteName = computed(() => siteSettings.value?.site_title || 'Traitz Academ
                 class="flex items-center gap-2 self-center font-medium"
             >
                 <div class="flex h-12 w-auto items-center justify-center">
-                    <img 
-                        :src="logoUrl" 
-                        :alt="siteName" 
+                    <img
+                        :src="logoUrl"
+                        :alt="siteName"
                         class="h-12 w-auto object-contain"
                     />
                 </div>

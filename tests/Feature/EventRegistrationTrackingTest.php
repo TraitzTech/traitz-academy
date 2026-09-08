@@ -3,6 +3,7 @@
 use App\Models\Event;
 use App\Models\EventRegistration;
 use App\Models\User;
+use App\Notifications\EventReminderNotification;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -89,7 +90,7 @@ it('allows admin to send event reminders to all registrants', function () {
         ->assertRedirect()
         ->assertSessionHas('success');
 
-    Notification::assertCount(3);
+    Notification::assertSentTimes(EventReminderNotification::class, 3);
 });
 
 it('returns error when sending reminder to event with no registrations', function () {

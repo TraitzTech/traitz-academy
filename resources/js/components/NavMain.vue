@@ -26,7 +26,12 @@ const props = defineProps<{
 const { urlIsActive } = useActiveUrl();
 
 function isGroupActive(group: NavGroup): boolean {
-    if (group.items?.some((item) => urlIsActive(item.href, undefined, item.activeMatch ?? 'exact'))) return true;
+    if (
+        group.items?.some((item) =>
+            urlIsActive(item.href, undefined, item.activeMatch ?? 'exact'),
+        )
+    )
+        return true;
     return group.groups?.some(isGroupActive) ?? false;
 }
 
@@ -47,15 +52,23 @@ const stored = loadStoredState();
 const openState = reactive<Record<string, boolean>>({});
 function registerOpenState(group: NavGroup) {
     if (group.collapsible) {
-        openState[group.label] = stored[group.label] ?? isGroupActive(group) ?? group.defaultOpen ?? true;
+        openState[group.label] =
+            stored[group.label] ??
+            isGroupActive(group) ??
+            group.defaultOpen ??
+            true;
     }
     group.groups?.forEach(registerOpenState);
 }
 props.groups.forEach(registerOpenState);
 
-watch(openState, (value) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-}, { deep: true });
+watch(
+    openState,
+    (value) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    },
+    { deep: true },
+);
 </script>
 
 <template>
@@ -65,7 +78,13 @@ watch(openState, (value) => {
             <SidebarMenuItem v-for="item in standalone" :key="item.title">
                 <SidebarMenuButton
                     as-child
-                    :is-active="urlIsActive(item.href, undefined, item.activeMatch ?? 'exact')"
+                    :is-active="
+                        urlIsActive(
+                            item.href,
+                            undefined,
+                            item.activeMatch ?? 'exact',
+                        )
+                    "
                     :tooltip="item.title"
                 >
                     <Link :href="item.href">
@@ -85,7 +104,13 @@ watch(openState, (value) => {
             <SidebarMenuItem v-for="item in group.items" :key="item.title">
                 <SidebarMenuButton
                     as-child
-                    :is-active="urlIsActive(item.href, undefined, item.activeMatch ?? 'exact')"
+                    :is-active="
+                        urlIsActive(
+                            item.href,
+                            undefined,
+                            item.activeMatch ?? 'exact',
+                        )
+                    "
                     :tooltip="item.title"
                 >
                     <Link :href="item.href">
@@ -106,8 +131,14 @@ watch(openState, (value) => {
         <SidebarMenu v-if="group.groups?.length">
             <SidebarMenuItem v-for="sub in group.groups" :key="sub.label">
                 <Collapsible v-model:open="openState[sub.label]">
-                    <CollapsibleTrigger class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/50">
-                        <component :is="sub.icon" v-if="sub.icon" class="size-4 shrink-0 text-sidebar-foreground/70" />
+                    <CollapsibleTrigger
+                        class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/50"
+                    >
+                        <component
+                            :is="sub.icon"
+                            v-if="sub.icon"
+                            class="size-4 shrink-0 text-sidebar-foreground/70"
+                        />
                         <span class="text-sm font-medium">{{ sub.label }}</span>
                         <ChevronRight
                             class="ml-auto size-4 shrink-0 text-sidebar-foreground/50 transition-transform duration-200"
@@ -116,10 +147,19 @@ watch(openState, (value) => {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                         <SidebarMenu>
-                            <SidebarMenuItem v-for="item in sub.items" :key="item.title">
+                            <SidebarMenuItem
+                                v-for="item in sub.items"
+                                :key="item.title"
+                            >
                                 <SidebarMenuButton
                                     as-child
-                                    :is-active="urlIsActive(item.href, undefined, item.activeMatch ?? 'exact')"
+                                    :is-active="
+                                        urlIsActive(
+                                            item.href,
+                                            undefined,
+                                            item.activeMatch ?? 'exact',
+                                        )
+                                    "
                                     :tooltip="item.title"
                                 >
                                     <Link :href="item.href">

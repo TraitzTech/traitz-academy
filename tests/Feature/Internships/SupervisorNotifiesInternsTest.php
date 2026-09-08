@@ -57,7 +57,7 @@ it('forbids a supervisor from notifying a whole cohort', function () {
         ])
         ->assertStatus(403);
 
-    Notification::assertNothingSent();
+    Notification::assertSentTimes(ManualLmsAnnouncementNotification::class, 0);
 });
 
 it('forbids a supervisor from notifying a program they do not supervise', function () {
@@ -81,5 +81,5 @@ it('forbids a supervisor from notifying a program they do not supervise', functi
         ])
         ->assertStatus(403);
 
-    Notification::assertNothingSent();
+    Notification::assertSentTimes(ManualLmsAnnouncementNotification::class, 0);
 });

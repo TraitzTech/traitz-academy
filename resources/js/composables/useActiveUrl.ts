@@ -20,11 +20,16 @@ export function useActiveUrl() {
         currentUrl?: string,
         matchMode: 'exact' | 'prefix' = 'exact',
     ) {
-        const currentPath = normalizePath(currentUrl ?? currentUrlReactive.value);
+        const currentPath = normalizePath(
+            currentUrl ?? currentUrlReactive.value,
+        );
         const targetPath = normalizePath(toUrl(urlToCheck));
 
         if (matchMode === 'prefix') {
-            return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
+            return (
+                currentPath === targetPath ||
+                currentPath.startsWith(`${targetPath}/`)
+            );
         }
 
         return targetPath === currentPath;

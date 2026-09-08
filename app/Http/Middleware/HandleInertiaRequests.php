@@ -70,6 +70,42 @@ class HandleInertiaRequests extends Middleware
                         || \App\Models\Internship::query()->forSupervisor($user)->exists(),
                 ];
             },
+            // TAC leadership is a capability, not a role: a track mentor or
+            // school lead may be a plain `user` account and still need the
+            // community admin in their sidebar.
+            'tacAccess' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user || ! $this->tableExists('tac_leaders')) {
+                    return ['can_admin' => false, 'is_executive' => false, 'is_partnership_lead' => false];
+                }
+
+                return [
+                    'can_admin' => $user->canAccessTacAdmin(),
+                    'is_executive' => $user->hasTacExecutiveAuthority(),
+                    'is_partnership_lead' => $user->isTacPartnershipLead(),
+                ];
+            },
+
+            // Powers the "Member Area" nav link: only shown to signed-in
+            // users who actually have a TAC membership record (most people
+            // pick one up automatically the moment they register for
+            // anything — see CommunityEnrollmentService).
+            'communityMembership' => function () use ($request) {
+                $user = $request->user();
+
+                if (! $user || ! $this->tableExists('community_members')) {
+                    return ['is_member' => false];
+                }
+
+                return [
+                    'is_member' => \App\Models\CommunityMember::query()
+                        ->where('user_id', $user->id)
+                        ->orWhere('email', mb_strtolower($user->email))
+                        ->exists(),
+                ];
+            },
+
             'unreadNotificationsCount' => function () use ($request) {
                 $user = $request->user();
                 if (! $user) {

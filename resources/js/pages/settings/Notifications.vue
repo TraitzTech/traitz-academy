@@ -50,7 +50,10 @@ watch(
     { deep: true },
 );
 
-function setPreferenceChecked(key: string, value: boolean | 'indeterminate'): void {
+function setPreferenceChecked(
+    key: string,
+    value: boolean | 'indeterminate',
+): void {
     preferences.value[key] = value === true;
 }
 
@@ -109,17 +112,25 @@ const breadcrumbItems: BreadcrumbItem[] = [
                             :key="row.key"
                             class="flex flex-row items-center justify-between gap-4 rounded-lg border p-4"
                         >
-                            <Label :for="`pref-${row.key}`" class="text-base leading-snug">{{ row.label }}</Label>
+                            <Label
+                                :for="`pref-${row.key}`"
+                                class="text-base leading-snug"
+                                >{{ row.label }}</Label
+                            >
                             <Checkbox
                                 :id="`pref-${row.key}`"
                                 :checked="preferences[row.key]"
                                 class="size-5"
-                                @update:checked="setPreferenceChecked(row.key, $event)"
+                                @update:checked="
+                                    setPreferenceChecked(row.key, $event)
+                                "
                             />
                         </div>
                     </div>
 
-                    <Button type="submit" :disabled="processing">Save preferences</Button>
+                    <Button type="submit" :disabled="processing"
+                        >Save preferences</Button
+                    >
                 </form>
             </div>
         </SettingsLayout>

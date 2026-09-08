@@ -6,7 +6,9 @@ use App\Helpers\SettingHelper;
 use App\Http\Requests\ContactFormRequest;
 use App\Models\AiForgeEvent;
 use App\Models\Application;
+use App\Models\Cohort;
 use App\Models\Event;
+use App\Models\GalleryItem;
 use App\Models\Program;
 use App\Models\SuccessStory;
 use App\Notifications\ContactFormConfirmation;
@@ -51,13 +53,41 @@ class PageController extends Controller
             ->withCount('registrations')
             ->first();
 
+        // The cohort currently running, if any — the site should always be
+        // able to say "here's what's happening right now" without an admin
+        // hand-editing copy every intake.
+        $currentCohort = Cohort::query()
+            ->where('status', Cohort::STATUS_ACTIVE)
+            ->with('programs:id,title,slug')
+            ->orderByDesc('start_date')
+            ->first();
+
+        $pastCohorts = Cohort::query()
+            ->where('status', Cohort::STATUS_COMPLETED)
+            ->orderByDesc('end_date')
+            ->limit(6)
+            ->get(['id', 'name', 'slug', 'start_date', 'end_date']);
+
+        $galleryHighlights = GalleryItem::query()
+            ->active()
+            ->where('type', 'image')
+            ->ordered()
+            ->limit(8)
+            ->get(['id', 'title', 'slug', 'image_path', 'description']);
+
         return Inertia::render('Home', [
-            'stats' => $stats,
+            'stats' => [
+                ...$stats,
+                'cohorts_run' => Cohort::query()->whereIn('status', [Cohort::STATUS_ACTIVE, Cohort::STATUS_COMPLETED])->count(),
+            ],
             'featuredPrograms' => $featuredPrograms,
             'upcomingEvents' => $upcomingEvents,
             'successStories' => $successStories,
             'careerOpenings' => $careerOpenings,
             'aiForgeEvent' => $aiForgeEvent,
+            'currentCohort' => $currentCohort,
+            'pastCohorts' => $pastCohorts,
+            'galleryHighlights' => $galleryHighlights,
         ]);
     }
 

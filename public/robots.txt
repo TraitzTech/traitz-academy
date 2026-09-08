@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /supervisor
+Disallow: /tutor
+Disallow: /settings
+Disallow: /dashboard
+
+Sitemap: https://academy.traitz.tech/sitemap.xml

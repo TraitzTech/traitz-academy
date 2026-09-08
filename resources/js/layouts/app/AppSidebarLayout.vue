@@ -32,7 +32,12 @@ watch(
             return;
         }
 
-        const key = JSON.stringify([flash.success, flash.error, flash.warning, flash.info]);
+        const key = JSON.stringify([
+            flash.success,
+            flash.error,
+            flash.warning,
+            flash.info,
+        ]);
         if (key === lastFlashKey || key === '[null,null,null,null]') {
             return;
         }

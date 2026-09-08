@@ -2,23 +2,26 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowDownToLine,
-    BookOpen,
-    BookMarked,
     Award,
     BarChart3,
+    BookMarked,
+    BookOpen,
     Briefcase,
     Calendar,
-    Clock,
     ClipboardList,
-    Upload,
+    Clock,
+    FileText,
     Folder,
+    GraduationCap,
+    Handshake,
+    Home,
     Image,
     Layers,
-    MessageCircle,
     LayoutGrid,
     Library,
     Lightbulb,
     Mail,
+    MessageCircle,
     MessageSquare,
     NotebookPen,
     Package,
@@ -27,13 +30,12 @@ import {
     Search,
     Settings,
     ShoppingBag,
+    Sparkles,
+    Star,
+    Upload,
     UserCheck,
     Users,
-    GraduationCap,
-    FileText,
     Video,
-    Home,
-    Star,
     Wallet,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -56,12 +58,20 @@ import AppLogo from './AppLogo.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
-const adminRoles = ['cto', 'ceo', 'program_coordinator', 'admin']
-const executiveRoles = ['cto', 'ceo', 'admin']
-const isAdmin = computed(() => adminRoles.includes(String(user.value?.role ?? '')))
-const isExecutive = computed(() => executiveRoles.includes(String(user.value?.role ?? '')))
-const isTutor = computed(() => user.value?.role === 'tutor')
-const unreadNotificationsCount = computed(() => Number((page.props as Record<string, unknown>).unreadNotificationsCount ?? 0))
+const adminRoles = ['cto', 'ceo', 'program_coordinator', 'admin'];
+const executiveRoles = ['cto', 'ceo', 'admin'];
+const isAdmin = computed(() =>
+    adminRoles.includes(String(user.value?.role ?? '')),
+);
+const isExecutive = computed(() =>
+    executiveRoles.includes(String(user.value?.role ?? '')),
+);
+const isTutor = computed(() => user.value?.role === 'tutor');
+const unreadNotificationsCount = computed(() =>
+    Number(
+        (page.props as Record<string, unknown>).unreadNotificationsCount ?? 0,
+    ),
+);
 
 // Admin standalone items (always visible at top)
 const adminStandaloneItems: NavItem[] = [
@@ -205,7 +215,68 @@ const eventsGroup: NavGroup = {
     groups: [aiForgeGroup],
 };
 
-const pendingCoursesCount = computed(() => (page.props as Record<string, unknown>).pendingCoursesCount as number | null)
+// The Traitz Academy Community (TAC) — a standing institution of its own, so
+// it gets a top-level group rather than living under Events. What shows up
+// depends on the leadership post held: a track mentor or school lead only
+// needs their own scope, while org-wide screens (the full leadership roster,
+// partner contacts) stay reserved for executives (and partnership leads, for
+// Partners).
+const communityGroup = computed<NavGroup>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Overview',
+            href: '/admin/community',
+            icon: Sparkles,
+        },
+        {
+            title: 'Members',
+            href: '/admin/community/members',
+            icon: Users,
+        },
+        {
+            title: 'Activities',
+            href: '/admin/community/activities',
+            icon: Calendar,
+        },
+    ];
+
+    if (tacAccess.value?.is_executive) {
+        items.push({
+            title: 'Leadership',
+            href: '/admin/community/leaders',
+            icon: Award,
+        });
+    }
+
+    items.push({
+        title: 'Tracks',
+        href: '/admin/community/tracks',
+        icon: Layers,
+    });
+
+    if (tacAccess.value?.is_executive || tacAccess.value?.is_partnership_lead) {
+        items.push({
+            title: 'Partners',
+            href: '/admin/community/partners',
+            icon: Handshake,
+        });
+    }
+
+    items.push({
+        title: 'Announcements',
+        href: '/admin/community/announcements',
+        icon: Mail,
+    });
+
+    return { label: 'Community', items };
+});
+
+const pendingCoursesCount = computed(
+    () =>
+        (page.props as Record<string, unknown>).pendingCoursesCount as
+            | number
+            | null,
+);
 
 const lmsGroup = computed<NavGroup>(() => ({
     label: 'LMS',
@@ -365,7 +436,10 @@ const userGroups: NavGroup[] = [
                 title: 'Notifications',
                 href: '/dashboard/notifications',
                 icon: Mail,
-                badge: unreadNotificationsCount.value > 0 ? unreadNotificationsCount.value : undefined,
+                badge:
+                    unreadNotificationsCount.value > 0
+                        ? unreadNotificationsCount.value
+                        : undefined,
             },
         ],
     },
@@ -520,35 +594,105 @@ const standaloneItems = computed<NavItem[]>(() => {
     return userStandaloneItems;
 });
 
-const internshipAccess = computed(() => (page.props as Record<string, unknown>).internshipAccess as { is_intern?: boolean; supervises?: boolean } | undefined);
+const internshipAccess = computed(
+    () =>
+        (page.props as Record<string, unknown>).internshipAccess as
+            | { is_intern?: boolean; supervises?: boolean }
+            | undefined,
+);
+
+const tacAccess = computed(
+    () =>
+        (page.props as Record<string, unknown>).tacAccess as
+            | { can_admin?: boolean; is_executive?: boolean; is_partnership_lead?: boolean }
+            | undefined,
+);
 
 const internshipGroup = computed<NavGroup | null>(() => {
     const items: NavItem[] = [];
     if (isAdmin.value) {
-        items.push({ title: 'Cohorts', href: '/admin/internships/cohorts', icon: Users });
-        items.push({ title: 'Intern Activity', href: '/supervisor/interns', icon: ClipboardList });
+        items.push({
+            title: 'Cohorts',
+            href: '/admin/internships/cohorts',
+            icon: Users,
+        });
+        items.push({
+            title: 'Intern Activity',
+            href: '/supervisor/interns',
+            icon: ClipboardList,
+        });
     } else if (internshipAccess.value?.supervises) {
         // Tutors who also supervise have their own (teaching) home, so give them
         // a link into the supervisor overview. Pure supervisors already land
         // there as their main Dashboard, so no duplicate link for them.
         if (isTutor.value) {
-            items.push({ title: 'Supervisor Overview', href: '/supervisor/dashboard', icon: LayoutGrid });
+            items.push({
+                title: 'Supervisor Overview',
+                href: '/supervisor/dashboard',
+                icon: LayoutGrid,
+            });
         } else {
             // Pure supervisors get the learning-ops tools here (tutors already
             // have them in their own Learning Ops group).
-            items.push({ title: 'Live Classes', href: '/tutor/live-classes', icon: Video, activeMatch: 'prefix' });
-            items.push({ title: 'Tasks', href: '/tutor/assignments', icon: ClipboardList, activeMatch: 'prefix' });
-            items.push({ title: 'Schedule', href: '/tutor/schedules', icon: Calendar, activeMatch: 'prefix' });
-            items.push({ title: 'Resources', href: '/tutor/resources', icon: Library, activeMatch: 'prefix' });
-            items.push({ title: 'Notifications', href: '/tutor/notifications', icon: Mail, activeMatch: 'prefix' });
+            items.push({
+                title: 'Live Classes',
+                href: '/tutor/live-classes',
+                icon: Video,
+                activeMatch: 'prefix',
+            });
+            items.push({
+                title: 'Tasks',
+                href: '/tutor/assignments',
+                icon: ClipboardList,
+                activeMatch: 'prefix',
+            });
+            items.push({
+                title: 'Schedule',
+                href: '/tutor/schedules',
+                icon: Calendar,
+                activeMatch: 'prefix',
+            });
+            items.push({
+                title: 'Resources',
+                href: '/tutor/resources',
+                icon: Library,
+                activeMatch: 'prefix',
+            });
+            items.push({
+                title: 'Notifications',
+                href: '/tutor/notifications',
+                icon: Mail,
+                activeMatch: 'prefix',
+            });
         }
-        items.push({ title: 'My Interns', href: '/supervisor/interns', icon: ClipboardList });
-        items.push({ title: 'Cohorts', href: '/supervisor/cohorts', icon: Layers, activeMatch: 'prefix' });
+        items.push({
+            title: 'My Interns',
+            href: '/supervisor/interns',
+            icon: ClipboardList,
+        });
+        items.push({
+            title: 'Cohorts',
+            href: '/supervisor/cohorts',
+            icon: Layers,
+            activeMatch: 'prefix',
+        });
     }
     if (internshipAccess.value?.is_intern) {
-        items.push({ title: 'My Internship', href: '/dashboard/internship', icon: Briefcase });
-        items.push({ title: 'My Logbook', href: '/dashboard/internship/logbook', icon: NotebookPen });
-        items.push({ title: 'Program Resources', href: '/dashboard/program-resources', icon: Library });
+        items.push({
+            title: 'My Internship',
+            href: '/dashboard/internship',
+            icon: Briefcase,
+        });
+        items.push({
+            title: 'My Logbook',
+            href: '/dashboard/internship/logbook',
+            icon: NotebookPen,
+        });
+        items.push({
+            title: 'Program Resources',
+            href: '/dashboard/program-resources',
+            icon: Library,
+        });
     }
 
     return items.length ? { label: 'Internships', items } : null;
@@ -556,7 +700,14 @@ const internshipGroup = computed<NavGroup | null>(() => {
 
 const navGroups = computed<NavGroup[]>(() => {
     if (isAdmin.value) {
-        const groups: NavGroup[] = [academyGroup, admissionsGroup, isExecutive.value ? financeGroupWithWithdrawals : financeGroup, contentGroup, eventsGroup];
+        const groups: NavGroup[] = [
+            academyGroup,
+            admissionsGroup,
+            isExecutive.value ? financeGroupWithWithdrawals : financeGroup,
+            contentGroup,
+            eventsGroup,
+            communityGroup.value,
+        ];
         // Internships sits before Learning Ops/LMS.
         if (internshipGroup.value) groups.push(internshipGroup.value);
         groups.push(learningOpsGroup);
@@ -571,19 +722,44 @@ const navGroups = computed<NavGroup[]>(() => {
     // from internshipGroup already, and never went through an application/
     // payment flow — the generic learner-facing "My Account", "Learning", and
     // "Courses" groups would just show them empty/irrelevant pages.
-    const isPureSupervisor = !isTutor.value && internshipAccess.value?.supervises && !internshipAccess.value?.is_intern;
+    const isPureSupervisor =
+        !isTutor.value &&
+        internshipAccess.value?.supervises &&
+        !internshipAccess.value?.is_intern;
+
+    // A TAC leader who isn't otherwise staff, doesn't supervise interns, and
+    // isn't an active intern/student themselves has no use for the generic
+    // learner sidebar — Community is the whole job, so it's the whole menu.
+    const isPureTacLeader =
+        !isTutor.value &&
+        !internshipAccess.value?.supervises &&
+        !internshipAccess.value?.is_intern &&
+        Boolean(tacAccess.value?.can_admin);
+
+    if (isPureTacLeader) {
+        return [communityGroup.value];
+    }
 
     const groups: NavGroup[] = isTutor.value
         ? [...tutorGroups]
         : isPureSupervisor
-          ? userGroups.filter((g) => g.label !== 'My Account' && g.label !== 'Learning' && g.label !== 'Courses')
+          ? userGroups.filter(
+                (g) =>
+                    g.label !== 'My Account' &&
+                    g.label !== 'Learning' &&
+                    g.label !== 'Courses',
+            )
           : [...userGroups];
     if (internshipGroup.value) {
         // Place Internships before the general Learning section if present,
         // else before the course-management section.
-        let lmsIndex = groups.findIndex((g) => g.label === 'Learning' || g.label === 'Learning Ops');
+        let lmsIndex = groups.findIndex(
+            (g) => g.label === 'Learning' || g.label === 'Learning Ops',
+        );
         if (lmsIndex < 0) {
-            lmsIndex = groups.findIndex((g) => g.label === 'Courses' || g.label === 'Course Management');
+            lmsIndex = groups.findIndex(
+                (g) => g.label === 'Courses' || g.label === 'Course Management',
+            );
         }
         if (lmsIndex >= 0) {
             groups.splice(lmsIndex, 0, internshipGroup.value);
@@ -592,13 +768,23 @@ const navGroups = computed<NavGroup[]>(() => {
         }
     }
 
+    // A TAC track mentor or school lead is often a plain `user` account, so
+    // their community admin has to be reachable outside the admin branch.
+    if (tacAccess.value?.can_admin) {
+        groups.push(communityGroup.value);
+    }
+
     return groups;
 });
 
 // Home link based on role
 const homeLink = computed(() => {
     if (isAdmin.value) return '/admin/dashboard';
-    if (!isTutor.value && internshipAccess.value?.supervises) return '/supervisor/dashboard';
+    if (!isTutor.value && internshipAccess.value?.supervises)
+        return '/supervisor/dashboard';
+    // A TAC leader's home is the community they lead, not the generic
+    // learner dashboard — even when they're also a plain `user` account.
+    if (tacAccess.value?.can_admin) return '/admin/community';
     return '/dashboard';
 });
 

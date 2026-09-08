@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./vendor/bin/pint --test app/ routes/ database/)",
+      "Bash(./vendor/bin/pint app/ routes/ database/ tests/)"
+    ]
+  }
+}

@@ -5,9 +5,17 @@ import { computed } from 'vue';
 import { home } from '@/routes';
 
 const page = usePage();
-const siteSettings = computed(() => page.props.siteSettings as Record<string, string> | undefined);
-const logoUrl = computed(() => siteSettings.value?.logo_url || '/images/Tratz Academy-Horizontal Profile.svg');
-const siteName = computed(() => siteSettings.value?.site_title || 'Traitz Academy');
+const siteSettings = computed(
+    () => page.props.siteSettings as Record<string, string> | undefined,
+);
+const logoUrl = computed(
+    () =>
+        siteSettings.value?.logo_url ||
+        '/images/Tratz Academy-Horizontal Profile.svg',
+);
+const siteName = computed(
+    () => siteSettings.value?.site_title || 'Traitz Academy',
+);
 
 defineProps<{
     title?: string;
@@ -27,7 +35,11 @@ defineProps<{
                 :href="home()"
                 class="relative z-20 flex items-center text-lg font-medium"
             >
-                <img :src="logoUrl" :alt="siteName" class="mr-2 h-8 w-auto object-contain" />
+                <img
+                    :src="logoUrl"
+                    :alt="siteName"
+                    class="mr-2 h-8 w-auto object-contain"
+                />
                 {{ siteName }}
             </Link>
         </div>
