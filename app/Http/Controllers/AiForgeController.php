@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\SettingHelper;
 use App\Models\AiForgeEvent;
 use App\Models\AiForgeRegistration;
 use App\Models\AiForgeSwag;
 use App\Notifications\AiForgeRegistrationConfirmation;
-use App\Notifications\NewAiForgeRegistration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -91,12 +89,6 @@ class AiForgeController extends Controller
         $stats = $event->stats ?? [];
         $stats['total_registered'] = $event->registrations()->count();
         $event->update(['stats' => $stats]);
-
-        // Notify admin
-        $adminEmail = SettingHelper::contactEmail() ?? config('mail.from.address');
-        $notifiable = new AnonymousNotifiable;
-        $notifiable->route('mail', $adminEmail)
-            ->notify(new NewAiForgeRegistration($registration));
 
         // Notify registrant
         $registrant = new AnonymousNotifiable;

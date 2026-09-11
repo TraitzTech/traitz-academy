@@ -8,35 +8,9 @@ use App\Models\User;
 use App\Notifications\ApplicationAcceptanceNotification;
 use App\Notifications\ApplicationConfirmation;
 use App\Notifications\EventRegistrationConfirmation;
-use App\Notifications\NewApplicationSubmitted;
-use App\Notifications\NewEventRegistration;
 use Illuminate\Support\Facades\Notification;
 
 describe('Application Submission Notifications', function () {
-    test('application submission sends notification', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-        $program = Program::factory()->create(['category' => 'professional-training']);
-
-        $this->actingAs($user)->post(route('applications.store'), [
-            'program_id' => $program->id,
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john@example.com',
-            'phone' => '+234123456789',
-            'country' => 'Nigeria',
-            'bio' => 'Software developer',
-            'education_level' => 'bachelor',
-            'institution_name' => 'University of Lagos',
-            'academic_duration' => '2020-2024',
-            'motivation' => 'I want to improve my skills',
-            'experience' => '3 years of experience',
-        ]);
-
-        Notification::assertSentOnDemand(NewApplicationSubmitted::class);
-    });
-
     test('application submission sends confirmation email to applicant', function () {
         Notification::fake();
 
@@ -64,33 +38,6 @@ describe('Application Submission Notifications', function () {
             return in_array('mail', $channels, true)
                 && str_contains($mail, route('applications.index'));
         });
-    });
-
-    test('application notification includes program title', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-        $program = Program::factory()->create([
-            'title' => 'Advanced Python Course',
-            'category' => 'professional-training',
-        ]);
-
-        $this->actingAs($user)->post(route('applications.store'), [
-            'program_id' => $program->id,
-            'first_name' => 'Bob',
-            'last_name' => 'Johnson',
-            'email' => 'bob@example.com',
-            'phone' => '+234555555555',
-            'country' => 'Kenya',
-            'bio' => 'Python developer',
-            'education_level' => 'bachelor',
-            'institution_name' => 'Tech University',
-            'academic_duration' => '2019-2023',
-            'motivation' => 'Want to learn Python',
-            'experience' => '1 year',
-        ]);
-
-        Notification::assertSentOnDemand(NewApplicationSubmitted::class);
     });
 
     test('user can apply multiple times with same email to different programs', function () {
@@ -211,38 +158,6 @@ describe('Application Acceptance Notifications', function () {
 });
 
 describe('Event Registration Notifications', function () {
-    test('event registration sends notification', function () {
-        Notification::fake();
-
-        $event = Event::factory()->create();
-
-        $this->post(route('events.register'), [
-            'event_id' => $event->id,
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'email' => 'john@example.com',
-            'phone' => '+234123456789',
-        ]);
-
-        Notification::assertSentOnDemand(NewEventRegistration::class);
-    });
-
-    test('event registration notification includes event title', function () {
-        Notification::fake();
-
-        $event = Event::factory()->create(['title' => 'AI Workshop 2026']);
-
-        $this->post(route('events.register'), [
-            'event_id' => $event->id,
-            'first_name' => 'Bob',
-            'last_name' => 'Wilson',
-            'email' => 'bob@example.com',
-            'phone' => '+234555555555',
-        ]);
-
-        Notification::assertSentOnDemand(NewEventRegistration::class);
-    });
-
     test('event registration sends confirmation email to registrant', function () {
         Notification::fake();
 

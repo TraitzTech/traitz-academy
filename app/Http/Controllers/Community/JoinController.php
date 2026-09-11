@@ -7,11 +7,8 @@ use App\Http\Controllers\Community\Concerns\ResolvesCommunityMember;
 use App\Http\Controllers\Controller;
 use App\Models\CommunityMember;
 use App\Models\TacTrack;
-use App\Notifications\Tac\NewCommunityMemberNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\AnonymousNotifiable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -89,8 +86,6 @@ class JoinController extends Controller
                 ->with('info', "You were already part of TAC, {$member->first_name} — we have updated your details and tracks.");
         }
 
-        $this->notifyAdmins($member);
-
         return redirect()
             ->route('community.welcome')
             ->with('joined_member_id', $member->id)
@@ -129,19 +124,5 @@ class JoinController extends Controller
                 ->get(['id', 'title', 'slug', 'type', 'starts_at', 'location', 'location_type', 'tac_track_id']),
             'whatsappLink' => SettingHelper::whatsAppCommunityLink(),
         ]);
-    }
-
-    private function notifyAdmins(CommunityMember $member): void
-    {
-        try {
-            (new AnonymousNotifiable)
-                ->route('mail', SettingHelper::contactEmail() ?? config('mail.from.address'))
-                ->notify(new NewCommunityMemberNotification($member));
-        } catch (\Throwable $e) {
-            Log::warning('Could not notify admins of new TAC member', [
-                'community_member_id' => $member->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 }

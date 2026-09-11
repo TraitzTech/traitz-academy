@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\SettingHelper;
 use App\Http\Requests\StoreApplicationRequest;
 use App\Models\Application;
 use App\Models\Program;
 use App\Notifications\ApplicationConfirmation;
-use App\Notifications\NewApplicationSubmitted;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Inertia\Inertia;
@@ -59,12 +57,6 @@ class ApplicationController extends Controller
         unset($validated['cv']);
 
         $application = Application::create($validated);
-
-        // Send notification email to admin
-        $adminEmail = SettingHelper::contactEmail() ?? config('mail.from.address');
-        $notifiable = new AnonymousNotifiable;
-        $notifiable->route('mail', $adminEmail)
-            ->notify(new NewApplicationSubmitted($application));
 
         // Send confirmation email to applicant
         $applicantNotifiable = new AnonymousNotifiable;

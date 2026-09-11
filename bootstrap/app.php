@@ -45,5 +45,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // The forgot-password flow used to 500 whenever the mailer hiccuped
+        // (e.g. an SMTP rate limit) because the reset email sent inline with
+        // the request. The email is queued now, but this is a second safety
+        // net: any leftover failure here should still land the user back on
+        // the form with a plain-language message instead of a crash page.
+        $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
+            if ($request->routeIs('password.email', 'password.update') && ! $request->expectsJson()) {
+                \Illuminate\Support\Facades\Log::error('Password reset request failed', [
+                    'route' => $request->route()?->getName(),
+                    'email' => $request->input('email'),
+                    'error' => $e->getMessage(),
+                ]);
+
+                return back()->withInput($request->except('password', 'password_confirmation'))
+                    ->with('error', 'Something went wrong on our end and we could not process your password reset. Please try again shortly.');
+            }
+        });
     })->create();

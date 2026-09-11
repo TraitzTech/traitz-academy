@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\SettingHelper;
 use App\Http\Requests\RegisterEventRequest;
 use App\Models\Event;
 use App\Models\EventRegistration;
 use App\Notifications\EventRegistrationConfirmation;
-use App\Notifications\NewEventRegistration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Inertia\Inertia;
@@ -53,12 +51,6 @@ class EventController extends Controller
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
         $registration = EventRegistration::create($validated);
-
-        // Send notification email to admin
-        $adminEmail = SettingHelper::contactEmail() ?? config('mail.from.address');
-        $notifiable = new AnonymousNotifiable;
-        $notifiable->route('mail', $adminEmail)
-            ->notify(new NewEventRegistration($registration));
 
         // Send confirmation email to registrant
         $registrant = new AnonymousNotifiable;

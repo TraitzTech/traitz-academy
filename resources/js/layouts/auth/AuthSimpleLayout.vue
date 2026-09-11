@@ -52,6 +52,18 @@ const siteName = computed(
                         </p>
                     </div>
                 </div>
+                <div
+                    v-if="page.props.flash?.error"
+                    class="rounded-md border-l-4 border-red-500 bg-red-50 p-4 text-sm text-red-800"
+                >
+                    {{ page.props.flash.error }}
+                </div>
+                <div
+                    v-if="page.props.flash?.success"
+                    class="rounded-md border-l-4 border-green-500 bg-green-50 p-4 text-sm text-green-800"
+                >
+                    {{ page.props.flash.success }}
+                </div>
                 <slot />
             </div>
         </div>

@@ -13,3 +13,5 @@ Schedule::command('lms:send-instalment-reminders')->dailyAt('08:00');
 Schedule::command('internship:send-logbook-reminders')
     ->dailyAt(config('internship.logbook.reminder_time', '20:00'))
     ->withoutOverlapping();
+
+Schedule::command('admin:send-weekly-digest')->fridays()->at('17:00');
