@@ -110,6 +110,7 @@ class TacActivity extends Model
             'registration_opens_at' => 'datetime',
             'registration_closes_at' => 'datetime',
             'published_at' => 'datetime',
+            'members_notified_at' => 'datetime',
             'is_recurring' => 'boolean',
             'registration_required' => 'boolean',
             'is_paid' => 'boolean',

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin\Community;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\StoreTacActivityRequest;
+use App\Jobs\Tac\NotifyActivityMembersJob;
+use App\Models\CommunityMember;
 use App\Models\Program;
 use App\Models\TacActivity;
 use App\Models\TacActivityRsvp;
@@ -92,6 +94,8 @@ class ActivityController extends Controller
 
             return $activity;
         });
+
+        $this->notifyMembersIfPublished($activity);
 
         return redirect()
             ->route('admin.community.activities.show', $activity)
@@ -200,7 +204,38 @@ class ActivityController extends Controller
                 : $activity->published_at,
         ]);
 
+        $this->notifyMembersIfPublished($activity);
+
         return back()->with('success', "“{$activity->title}” is now {$validated['status']}.");
+    }
+
+    /**
+     * Email members about a freshly published activity — track members if
+     * the activity is scoped to a track, otherwise everyone mailable. Only
+     * fires once per activity (guarded by members_notified_at), since this
+     * runs from both creating an activity as published and later publishing
+     * a draft.
+     */
+    private function notifyMembersIfPublished(TacActivity $activity): void
+    {
+        if ($activity->status !== TacActivity::STATUS_PUBLISHED || $activity->members_notified_at) {
+            return;
+        }
+
+        $memberIds = CommunityMember::query()
+            ->mailable()
+            ->when(
+                $activity->tac_track_id,
+                fn ($query) => $query->whereHas('tracks', fn ($t) => $t->where('tac_tracks.id', $activity->tac_track_id))
+            )
+            ->pluck('id')
+            ->all();
+
+        $activity->forceFill(['members_notified_at' => now()])->saveQuietly();
+
+        if ($memberIds !== []) {
+            NotifyActivityMembersJob::dispatch($activity->id, $memberIds);
+        }
     }
 
     public function toggleFeatured(TacActivity $activity): RedirectResponse
