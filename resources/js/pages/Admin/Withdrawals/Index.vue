@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage, WhenVisible } from '@inertiajs/vue3'
+import { Head, useForm, WhenVisible } from '@inertiajs/vue3'
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -71,13 +71,11 @@ interface Props {
   } | null
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 defineOptions({
   layout: AppLayout,
 })
-
-const page = usePage()
 
 // State
 const showPinSetup = ref(false)
@@ -231,7 +229,7 @@ const verifyAccount = async () => {
       verifyError.value = data.message || 'Could not verify account automatically.'
       canProceedManually.value = data.can_proceed_manually ?? false
     }
-  } catch (e) {
+  } catch {
     verifyError.value = 'Network error. Please check your connection and try again.'
     canProceedManually.value = false
   } finally {
@@ -906,10 +904,10 @@ const goBackToVerificationFromPin = () => {
           </div>
 
           <!-- Withdrawal-level Error -->
-          <div v-if="(withdrawForm.errors as Record<string, string>).withdrawal" class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+          <div v-if="withdrawForm.errors.withdrawal" class="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
             <div class="flex items-start gap-2">
               <AlertTriangle class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-red-700 dark:text-red-300">{{ (withdrawForm.errors as Record<string, string>).withdrawal }}</p>
+              <p class="text-sm text-red-700 dark:text-red-300">{{ withdrawForm.errors.withdrawal }}</p>
             </div>
           </div>
 
