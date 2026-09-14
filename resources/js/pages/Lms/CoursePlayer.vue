@@ -227,15 +227,15 @@ const noteMessage = ref('');
 const notesPanelSectionRef = ref<HTMLElement | null>(null);
 let notesSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
-const lessonNotes = ref<LessonNotePayload[]>([]);
+const lessonNotesState = ref<LessonNotePayload[]>([]);
 
 const generalLessonNote = computed(
     () =>
-        lessonNotes.value.find((note) => note.timestamp_seconds === null) ??
+        lessonNotesState.value.find((note) => note.timestamp_seconds === null) ??
         null,
 );
 const timestampNotes = computed(() =>
-    lessonNotes.value
+    lessonNotesState.value
         .filter((note) => note.timestamp_seconds !== null)
         .sort(
             (a, b) => (a.timestamp_seconds ?? 0) - (b.timestamp_seconds ?? 0),
@@ -302,7 +302,7 @@ function notesBasePath(): string {
 }
 
 function resetNotesStateFromProps() {
-    lessonNotes.value = [...props.lessonNotes];
+    lessonNotesState.value = [...props.lessonNotes];
     lessonNoteDraft.value = generalLessonNote.value?.content ?? '';
     noteMessage.value = '';
     notesSaving.value = false;
@@ -336,10 +336,10 @@ async function saveGeneralLessonNote() {
 
         const payload = await response.json();
         const incoming = payload.note as LessonNotePayload | null;
-        const withoutGeneral = lessonNotes.value.filter(
+        const withoutGeneral = lessonNotesState.value.filter(
             (note) => note.timestamp_seconds !== null,
         );
-        lessonNotes.value = incoming
+        lessonNotesState.value = incoming
             ? [incoming, ...withoutGeneral]
             : withoutGeneral;
         noteMessage.value = incoming ? 'Saved' : 'Cleared';
@@ -565,8 +565,8 @@ async function takeTimestampNote() {
 
         const payload = await response.json();
         if (payload.note) {
-            lessonNotes.value = [
-                ...lessonNotes.value.filter(
+            lessonNotesState.value = [
+                ...lessonNotesState.value.filter(
                     (note) => note.id !== payload.note.id,
                 ),
                 payload.note,

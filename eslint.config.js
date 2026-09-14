@@ -35,6 +35,11 @@ export default defineConfigWithVueTs(
         rules: {
             'vue/multi-word-component-names': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-unused-expressions': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+            'vue/block-lang': 'off',
+            'vue/no-mutating-props': 'off',
+            'vue/no-v-text-v-html-on-component': 'off',
             'import/order': [
                 'error',
                 {
